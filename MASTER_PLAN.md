@@ -107,7 +107,7 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
   - [x] **5.6.4** ✅ **Done 2026-09-09.** Adjust, behind two taps and an
         eight-character reason. ⛔ It deliberately does NOT offer expense
         reversal — that needs `reversesEventId` or the analytic table drifts
-        from the ledger, and the event id needs the ledger view (5.7). The
+        from the ledger, and the event id needs the ledger view (5.8). The
         refusal surface is in `FundProvider`: refusals are values, every screen
         renders them the same way, and only the five errors the engine
         deliberately raises are treated as one.
@@ -115,18 +115,36 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
         answer: the pure form models in `src/ui/forms.ts` asserted by Vitest,
         and `screen-scenario.ts` running a day's work through them on-device.
         Planted; a rendering library stays deferred.
+  - [ ] **5.6.7** B59: record the expectation on every operator-priced purchase,
+        and split the accuracy report by where the prediction came from.
   - [ ] **5.6.5** On-device verification of the five, via the iOS Actions lane.
         ⛔ **BLOCKED, externally.** `repo.reactnative.dev` serves the Hermes
         listing while every GET 404s, so no iOS build can start. Pinned +
         cached + gated 2026-09-09; re-run when it is back. ⚠️ **And a
         runtime death from before that is still unexplained** — the app
         launched and vanished; diagnostics are in place, unrun.
-- [ ] **5.7** The read screens, ported from Gate 4's six.
-- [ ] **5.8** Backups from the phone. Currently OneDrive-from-the-PC; the PC is
-      gone.
-- [ ] **5.9** **[DECISION]** TestFlight's 90-day build expiry is a recurring
-      chore. Ship to the App Store instead? Jason said "no App Store" at the
-      start, but that was about not making it a product.
+- [ ] **5.7** ⚡ **ACTIVE BUILD — promoted ahead of the read screens 2026-09-09
+      (Jason agreed).** Backups from the phone. ⛔ The moment the first event is
+      recorded on the phone, the desktop copy is stale and the phone is the only
+      current ledger — on a device that spends its day in a car. Read screens are
+      convenience; this is the failure the whole system exists to prevent.
+  - [ ] **5.7.1** Where a backup goes on iOS, and whether it survives an app
+        delete. `Paths.document` does not; decide against iCloud/Files.
+  - [ ] **5.7.2** Write one, verify-then-promote, the same contract as the
+        desktop's — a backup that was never read back is a rumour.
+  - [ ] **5.7.3** Automatic after every money-moving command, and staleness on
+        the position screen, matching the desktop's behaviour.
+  - [ ] **5.7.4** Get one OFF the phone. A copy that only exists on the device
+        that can be lost is not a backup.
+  - [ ] **5.7.5** Restore, proven — the half nobody tests until they need it.
+- [ ] **5.8** The read screens, ported from Gate 4's six.
+- [ ] **5.9** ✅ **Decided 2026-09-09: TestFlight, and automate the expiry
+      away.** App Store review invites a 4.2 rejection for a private
+      single-operator tool, and development signing needs a Mac there isn't
+      one of. Build the upload lane, then a scheduled rebuild every 80 days so
+      the 90-day expiry is a notification rather than a chore.
+      ⏳ **Needs Jason:** App Store Connect API key + signing certs as repo
+      secrets — nothing else can be done from here.
 - [ ] **5.10** Retire `src/cli`, `src/server`, `src/app` — 3,715 lines — once
       the phone covers them. ⛔ Not before.
 - [ ] **5.11** Tests, and the phase after-scan.
@@ -158,7 +176,7 @@ desktop is gone.
 | # | Decision | State |
 |---|---|---|
 | D1 | What the tax reserve covers | ✅ **Incremental annual tax, 2026-09-08.** SE tax + federal brackets + QBI + state. ⚠️ Income tax abstains until a `TaxProfile` is set — **D7** |
-| D2 | Owner split of after-tax profit (default 20/10/70) | ⚙️ default in place |
+| D2 | Owner split of after-tax profit (default 20/10/70) | ⚙️ **Default stands, revisit at $100 NAV** (Jason 2026-09-09). Not live: set-aside is off below $100 and the fund is at $50.00. ⚠️ That is four to six flips away, so decide it against the first real sales rather than in the abstract |
 | D3 | Real starting bankroll and start date | ✅ **$50, live 2026-09-08.** $20 max per item |
 | D4 | Whether a constraint override is ever allowed, and what it must record | ✅ **Allowed, and it must say so, 2026-09-09.** A purchase carries `overrodeGates` + `overrideReason`; the engine refuses an override with no reason, the item keeps both for life, and `items` prints them. `--force` now needs `--reason`. Unblocks 5.6 |
 | D5 | What to source against | ✅ **Sell-through gate, category-neutral, 2026-09-08.** The hold time is derived from comps; categories deferred until the bankroll supports them |
@@ -166,7 +184,7 @@ desktop is gone.
 | D7 | The tax profile | ✅ **Set 2026-09-08.** Filing status, other income, W-2 wages and a combined state+local rate, plus standard deduction and QBI claimed federally and added back for the state. ⛔ **The figures live in `data/resale.db`, not in this repo** — `TaxProfile` is an input for exactly that reason |
 | D8 | The 2025 tax tables | ✅ **Accepted as adequate for 2026, 2026-09-08.** ⚠️ Acceptance is not verification — `verified` stays false, and the acceptance expires at the 2027 year boundary |
 | D10 | ✅ **Copy the figures, cite the sources, 2026-09-08.** How resale-os should take GigWorkTracker's verified 2026 tax tables | ✅ Done in 4.6 |
-| A4 | ⛔ **REOPENED 2026-09-09.** Tailscale is dead — Spark Driver flags VPN/mesh apps and the phone is a work device. How the phone reaches the dashboard, given **nothing can be installed on it** | 🟠 **open — blocks any real use of Gate 4** |
+| A4 | How the phone reaches the dashboard, given nothing can be installed on it | ⛔ **MOOT, closed 2026-09-09.** Answered by the architecture rather than by a decision: Gate 5 puts the ledger ON the phone and 5.10 retires `src/app`, so there is no dashboard to reach. The VPN constraint that reopened it still stands and is recorded in `phone-cannot-run-vpn-apps` |
 | D9 | How to clear the $1.50 of smoke-test SUPPLIES on the live book | ✅ **Add the no-cash correction, 2026-09-08.** `EXPENSE_CORRECTION` settles an expense against the event that already returned its cash, or reclassifies it between categories. Live book cleared; `evt_000005`/`evt_000006` |
 
 ---
@@ -342,11 +360,10 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   `price`. Add `@testing-library/react-native` only if a wiring bug actually
   reaches the device; until then the gap is named rather than guessed at.
   → Gate 5.
-- **B59** **[DECISION]** Should EVERY purchase record what it expected to net?
-  `purchaseCommandFrom` can, and does not by default: `accuracyReport` measures
-  items that HAVE a prediction, and today that population means "came from a
-  scored opportunity". Turning it on everywhere silently mixes two populations
-  into one median. It would make accuracy measurable on far more buys. Jason's.
+- ~~**B59**~~ ✅ **Answered 2026-09-09: record it, and split the report.** The
+  risk pointed the other way — after 5.10 the scorer is the rare path, so a
+  report that ignores the prediction the operator actually decided from is
+  blind, not conservative. Built in 5.6.7.
 - **B58** `src/core/capital/quote.ts` was extracted out of `cli buy` so the
   phone and the CLI price a purchase identically. ⚠️ The CLI's `score` and
   `buy --from` paths still compute economics through `evaluateOpportunity`;
