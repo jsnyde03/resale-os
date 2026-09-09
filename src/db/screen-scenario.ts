@@ -26,6 +26,7 @@ import { itemIdFrom } from '../core/ids.js';
 import { adjustModel, sellModel, spendModel } from '../ui/forms.js';
 import { profitReport } from './reporting.js';
 import { makeVerifiedBackup } from './backup-portable.js';
+import { dashboardView } from '../server/views.js';
 import { importLedger, type LedgerExport } from './portable.js';
 import type { TaxProfile } from '../core/tax/profile.js';
 import type { ScenarioCase } from './engine-scenario.js';
@@ -316,6 +317,56 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
         before.navCents,
         'the restored fund should be the same fund',
       );
+    },
+  },
+  {
+    // ⛔ 5.8. The read screens render `views.ts` — the model the Gate 4
+    // dashboard used — rather than recomputing anything. This runs it against
+    // whatever SQLite is underneath, because it reaches the store, the
+    // postings scan, an engine replay and the tax tables in one pass.
+    name: 'reports: the read model agrees with the ledger it was built from',
+    run: (db) => {
+      const store = funded(db, 50_000);
+      const { itemId } = buy(store, {
+        name: 'Lego set',
+        category: 'TOYS',
+        price: 1_000,
+        resale: 4_000,
+        sold: 90,
+      });
+      store.commit(
+        spendModel({ kind: 'EXPENSE', amount: '4.50', category: 'POSTAGE', itemId: null })
+          .command(T0)!,
+      );
+      const item = store.state().items[itemId]!;
+      store.commit(
+        sellModel(item, { gross: '40.00', fee: '5.70', postage: '5.00', packaging: '0.35' })
+          .command(T30)!,
+      );
+
+      const view = dashboardView(store);
+
+      // The headline is the same fund the metrics report.
+      eq(
+        view.headline.nav.cents,
+        computeMetrics(store.derivedState()).navCents,
+        'the headline NAV matches a cold derivation',
+      );
+      eq(view.headline.eventCount, store.derivedState().eventCount, 'event count');
+      eq(view.profit.businessExpenses.cents, 450, 'the expense reached the profit view');
+      eq(view.profit.soldItems, 1, 'one sale');
+
+      // ⛔ B59 through the whole stack: the sale was priced by the operator, so
+      // it is QUOTED — and the view must keep that apart rather than pooling.
+      eq(view.accuracy.n, 1, 'one measurable sale');
+      eq(view.accuracy.quotedN, 1, 'priced by the operator');
+      eq(view.accuracy.scoredN, 0, 'nothing came through the scorer');
+      ok(!view.accuracy.readable, 'one sale is not a trend, and the view must say so');
+
+      // Integrity is a read too, and it is the one that must never be wrong.
+      ok(view.integrity.chainOk, 'the chain verifies');
+      ok(view.integrity.replayOk, 'the postings scan agrees with an engine replay');
+      ok(view.integrity.expenseDriftOk, 'the analytic expense table agrees with the ledger');
     },
   },
   {

@@ -2772,3 +2772,58 @@ disagree with itself about what it was allowed to buy depending on which
 surface recorded it.
 
 **574 tests on the desktop, 41 on the device.**
+
+## 2026-09-09 (5.8) — the read screens, and a gate that walks the graph
+
+### The switch-in audit corrected the item before it started
+
+The plan said *"ported from Gate 4's six"*. Verified against the code: there
+are seven `page.tsx` files (six content screens plus login), and more
+importantly **`src/server/views.ts` is 338 lines of tested read model the phone
+can REUSE rather than port.** `FundStore` already satisfies `LedgerReader`
+structurally, so 5.8.0 turned out to be nothing to build — recorded as nothing
+rather than invented into work.
+
+### ⛔ It was one import from dragging the desktop SQLite driver into the app
+
+`views.ts` imports no node builtin. It imports `db/backup.js`, which imports
+`node:fs` — and reaches `node:sqlite` two hops later through `driver.ts`.
+
+⚡ **The existing import lint checks DIRECT imports, one level deep, which is
+not the property that matters for a bundle.** So `scripts/check-phone-bundle.mjs`
+walks the graph: it starts from every `src/` module the phone actually imports
+and fails if anything on that closure reaches a builtin, naming the chain.
+
+⚠️ **The roots are DISCOVERED, not listed** — by scanning `mobile/` for what it
+imports. Every hand-written list of places to look on this project has turned
+out short, three times in two days, and this one would have been written before
+the read screens existed.
+
+Planted by importing `views.ts` from a screen: it printed
+`views.ts -> backup.ts -> driver.ts -> node:sqlite`. One import redirected to
+`backup-types.js` and the same plant is clean. Now in `npm run check` and both
+CI lanes — and it is no longer hypothetical: the app imports `views.ts` today
+and the gate reports 24 roots, 46 modules, no builtins reached.
+
+→ **B62**: 5.10 plans to retire `src/server`, and `views.ts` must MOVE rather
+than go with it. Filed before the retirement could get it wrong.
+
+### The screens
+
+**Items** is the shelf and the history as one filtered list — an item's whole
+point is that it moves between those states, and splitting them makes "what
+happened to that thing I bought" a navigation problem. D4's override shows on
+the item for life.
+
+**Ledger** shows every event, its postings, its hash and the chain's verdict.
+⚡ **The event ids are the point**: 5.6.4 withheld expense reversal because it
+needs `reversesEventId`, and this is what makes the id reachable.
+
+**Reports** is three tabs, not three screens — profit, accuracy, tax. Accuracy
+keeps B59's split apart on screen, and refuses to draw a trend below five sales
+because the view carries `readable` for exactly that.
+
+⚠️ **The tax tab says loudly when income tax is abstaining.** A reserve that
+silently omits it looks like a small reserve rather than an incomplete one.
+
+**575 tests, and the read model now runs on-device in the contract.**

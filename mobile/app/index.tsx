@@ -141,9 +141,23 @@ function Position() {
         <Button label="Money out" onPress={() => router.push('/spend')} />
       </View>
 
-      <Link href="/adjust" style={{ color: C.faint, paddingTop: 4 }}>
-        the books are wrong →
-      </Link>
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <View style={{ flex: 1 }}>
+          <Button label="Items" onPress={() => router.push('/items')} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button label="Reports" onPress={() => router.push('/reports')} />
+        </View>
+      </View>
+
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Link href="/ledger" style={{ color: C.faint, paddingTop: 4 }}>
+          every event →
+        </Link>
+        <Link href="/adjust" style={{ color: C.faint, paddingTop: 4 }}>
+          the books are wrong →
+        </Link>
+      </View>
     </View>
   );
 }

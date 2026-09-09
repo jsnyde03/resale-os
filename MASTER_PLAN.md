@@ -148,20 +148,19 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       the phone can REUSE**, and it was one import from dragging the desktop
       SQLite driver into the bundle. Fixed, and `lint:phone` now walks the
       whole graph so it cannot recur.
-  - [ ] **5.8.0** Reuse `views.ts` from the phone: a mobile-side reader that
-        satisfies `LedgerReader`, so the screens consume the same view objects
-        the Gate 4 dashboard did.
-  - [ ] **5.8.1** Items: what the fund is holding, what each cost, how long it
-        has been held, and D4's override where it applies.
-  - [ ] **5.8.2** The ledger view — every event, and the event ids that
-        `reversesEventId` needs. ⛔ This is what unblocks expense reversal on
-        the phone (5.6.4 deliberately withheld it).
-  - [ ] **5.8.3** Profit and expenses, including the item-vs-operating split
-        that an attached expense moves between.
-  - [ ] **5.8.4** Accuracy, with B59's SCORED / QUOTED split visible rather
-        than pooled.
-  - [ ] **5.8.5** Tax: the reserve, what it covers, and the year to date.
-  - [ ] **5.8.6** On-device verification, via the lane that is now green.
+  - [x] **5.8.0** ✅ **Nothing to build.** `FundStore` already satisfies
+        `LedgerReader` structurally, so the phone passes its store straight to
+        the views. Recorded rather than invented.
+  - [x] **5.8.1** ✅ Items — shelf and history as one filtered list, with D4's
+        override shown on the item for life.
+  - [x] **5.8.2** ✅ The ledger: every event, its postings, its hash, and the
+        chain's verdict. ⚡ The event ids are reachable, which is what expense
+        reversal needed.
+  - [x] **5.8.3–5.8.5** ✅ One **Reports** screen with three tabs rather than
+        three screens — profit, accuracy (B59's split kept apart), tax. All
+        rendered from `views.ts`, none recomputed.
+  - [x] **5.8.6** ✅ A contract case runs the read model against whatever
+        SQLite is underneath; planted by pooling the split, red.
 - [~] **5.9** ✅ **Decided 2026-09-09: TestFlight via CODEMAGIC** (Jason —
       "look at the debt app for how one used it before"). `codemagic.yaml`
       written, adapted from `debt-app-v1`'s proven Expo-56 lane and carrying
@@ -380,6 +379,10 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
 - **B28** Revisit categories (books as a margin play, per-category risk inputs)
   when the bankroll supports the hold tolerance. → Growth mode.
 - ~~**B25**~~ ✅ closed in **4.8**.
+- **B63** `store.events()` loads the whole ledger to render the last 40. Fine
+  at 55 events and linear forever. Add a limit/offset read when the ledger is
+  big enough to notice — not before, and the ledger screen already caps what it
+  DRAWS. → post-Gate 5.
 - **B62** ⚠️ **5.10 plans to retire `src/server`, and `views.ts` must NOT go
   with it** — the phone now depends on it. Move it to `src/ui/` (beside the
   form models) when the retirement happens, rather than deleting a read model

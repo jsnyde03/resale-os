@@ -283,6 +283,17 @@ export interface AccuracyView {
   readonly n: number;
   /** Sold or recovered items that carried no prediction. Not a failure — a gap. */
   readonly unpredictedN: number;
+  /**
+   * B59: of `n`, how many predictions came through the scorer and how many the
+   * operator made at the point of buying.
+   *
+   * ⚠️ Carried through rather than summed. A model's expectation and a
+   * person's are both worth measuring and a single median over the two answers
+   * a question nobody asked — which is the whole reason the report keeps them
+   * apart, and a view that flattened them would undo it.
+   */
+  readonly scoredN: number;
+  readonly quotedN: number;
   readonly verdict: string;
   readonly medianDaysError: number;
   /** Above 10000 = slower than predicted. */
@@ -307,6 +318,8 @@ export function accuracyView(store: LedgerReader): AccuracyView {
   return {
     n: report.n,
     unpredictedN: report.unpredictedN,
+    scoredN: report.scoredN,
+    quotedN: report.quotedN,
     verdict: accuracyVerdict(report),
     medianDaysError: report.medianDaysErrorDays,
     daysRatioBps: report.daysRatioBps,
