@@ -158,7 +158,7 @@ desktop is gone.
 | 3 | Inventory & sale lifecycle, expenses, reserves, distributions, charge-offs, recoveries | ✅ Done 2026-09-08 |
 | 4 | Dashboard + rules/config UI | ✅ Done 2026-09-08 |
 | 5 | **The phone is the system** — engine ported, ledger on-device, desktop retired | ⚡ **ACTIVE** |
-| 6 | eBay ingestion + source adapters *(was Gate 5)* | Open |
+| 6 | **Sourcing: the app finds and recommends** — Browse API for candidates, SoldComps for value, own history accumulating | ⚡ **NEXT** — data route settled (**D12**) |
 | 7 | Market Radar beta — scarcity, demand, momentum, market opportunity, confidence | Open |
 | 8 | *(architecture only until 1–7 are reliable)* authorization states, drop intel, autonomy | Not started, not startable |
 
@@ -171,6 +171,7 @@ desktop is gone.
 | # | Decision | State |
 |---|---|---|
 | D1 | What the tax reserve covers | ✅ **Incremental annual tax, 2026-09-08.** SE tax + federal brackets + QBI + state. ⚠️ Income tax abstains until a `TaxProfile` is set — **D7** |
+| D12 | How the app values what it finds | ✅ **Browse API to find, SoldComps to value, own history to accumulate, manual as fallback — 2026-09-09.** ⛔ Sold comps are gated (Marketplace Insights is Limited Release and individual devs are denied; the logged-out sold search hit a login wall Aug 2026), and **without them the 45% confidence gate refuses nearly every purchase** — so this is a precondition, not an enhancement. Start on the free tier (100/mo); **Jason: "9 bucks is nothing"**, so Starter (2,000/mo) is pre-approved when it bites. ⚠️ The resellers work around eBay and the direction of travel is tightening — the manual path stays wired |
 | D11 | When the fund starts buying | ⛔ **Not until the system is ready, and never arbitrarily** (Jason 2026-09-09): *"It doesn't make sense to arbitrarily buy something."* A purchase this system cannot justify is the exact thing it exists to prevent, so "exercise it with a real buy" is not a reason. **Ready means the phone can decide, not just record** — 5.9c |
 | D2 | Owner split of after-tax profit (default 20/10/70) | ⚙️ **Default stands, revisit at $100 NAV** (Jason 2026-09-09). Not live: set-aside is off below $100 and the fund is at $50.00. ⚠️ That is four to six flips away, so decide it against the first real sales rather than in the abstract |
 | D3 | Real starting bankroll and start date | ✅ **$50, live 2026-09-08.** $20 max per item |

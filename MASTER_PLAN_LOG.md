@@ -2908,3 +2908,47 @@ an `opportunityId`, so B59's accuracy report counts it as SCORED rather than
 QUOTED. Without a sourcing screen the phone can only ever produce QUOTED buys,
 and the scored population would stay permanently empty — a split with one side
 that can never fill is not a split.
+
+## 2026-09-09 (D12) — how the app values what it finds
+
+Jason: *"I want the app to be smart enough to find and recommend items for me to
+purchase."* Then, on the pricing: *"Starter plan would even be okay if we needed
+to. 9 bucks is nothing."*
+
+### The crux was never finding — it was valuing
+
+| | |
+|---|---|
+| **Active listings** | eBay Browse API. Free, open, easy. This is the *finding* half. |
+| **Sold listings** | Marketplace Insights — **Limited Release, application-only, individual developers routinely denied.** |
+| **Scraping instead** | Closed: since late August 2026 a logged-out sold-items search redirects to sign-in. |
+
+⚡ **And the consequence is sharper than "it would be nice to have".** The scorer's
+strongest input is sell-through from sold comps. Without them the fallback is
+`estimateFromOperator`, which carries **30% confidence against a 45% gate** — a
+refusal we hit for real earlier the same day (`CONFIDENCE_TOO_LOW`). So sold data
+is a **precondition for the fund to transact at all**, not an enhancement to
+sourcing. That is the system working correctly, and it is also the wall.
+
+### The correction
+
+⛔ **I dismissed the paid route on cost without checking it, and Jason asked for
+the number.** Free tier is 100 requests/month at $0 with no card; Starter is
+2,000/month at $9. Against a $50 bankroll $9 is 18% of NAV and I had treated
+that as decisive — but the free tier is ~3 lookups a day and plausibly enough
+for months, and Jason's answer was that the spend is not a constraint anyway.
+
+**A cost objection nobody priced is an assumption, not an argument.**
+
+⚡ **90 days of history is exactly the window `estimateFromComps(soldLast90Days,
+activeListings)` takes** — the data drops into the existing input with no
+adaptation, which is a real point in this vendor's favour and not a coincidence
+worth ignoring.
+
+### What was kept despite the budget
+
+⚠️ These resellers work around eBay's own restrictions and eBay put the login
+wall up in August 2026 — the direction of travel is tightening. So: the manual
+comps path stays wired, and the fund keeps accumulating **its own** price
+history from every sale it records. A dependency that can vanish must not be the
+only way the fund can value anything.
