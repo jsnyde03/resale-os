@@ -119,12 +119,10 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
         operator said they expect to net, and `accuracy` reports SCORED and
         QUOTED separately rather than pooling them. An assumed 3x flip is
         recorded as nothing — that is the app's guess, not a prediction.
-  - [~] **5.6.5** ⚙️ **The app runs on device again and reports 38/40** — the
-        earlier silent death is gone. ⚡ The two failures were a REAL bug the
-        contract existed to find: expo-sqlite caches connections by name, so a
-        scratch `:memory:` database was shared and **every backup after the
-        first would have been refused**. Driver fixed, contract widened, and
-        re-run pending.
+  - [x] **5.6.5** ✅ **41/41 on a real iOS simulator, 2026-09-09** — driver,
+        store, screens and the backup's restore, all against Apple's SQLite.
+        ⚡ Getting here found a live bug: expo-sqlite caches connections by
+        name, so every backup after the first would have been refused.
         ⛔ **BLOCKED, externally.** `repo.reactnative.dev` serves the Hermes
         listing while every GET 404s, so no iOS build can start. Pinned +
         cached + gated 2026-09-09; re-run when it is back. ⚠️ **And a
@@ -145,7 +143,18 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
         drag is the operator's. ⛔ **A one-tap share needs `expo-sharing`, a
         native module — deferred until a build can validate it, because no iOS
         build can start today.** → **B61**.
-- [ ] **5.8** The read screens, ported from Gate 4's six.
+- [ ] **5.8** ⚡ **ACTIVE BUILD.** The read screens, ported from Gate 4's six.
+  - [ ] **5.8.1** Items: what the fund is holding, what each cost, how long it
+        has been held, and D4's override where it applies.
+  - [ ] **5.8.2** The ledger view — every event, and the event ids that
+        `reversesEventId` needs. ⛔ This is what unblocks expense reversal on
+        the phone (5.6.4 deliberately withheld it).
+  - [ ] **5.8.3** Profit and expenses, including the item-vs-operating split
+        that an attached expense moves between.
+  - [ ] **5.8.4** Accuracy, with B59's SCORED / QUOTED split visible rather
+        than pooled.
+  - [ ] **5.8.5** Tax: the reserve, what it covers, and the year to date.
+  - [ ] **5.8.6** On-device verification, via the lane that is now green.
 - [~] **5.9** ✅ **Decided 2026-09-09: TestFlight via CODEMAGIC** (Jason —
       "look at the debt app for how one used it before"). `codemagic.yaml`
       written, adapted from `debt-app-v1`'s proven Expo-56 lane and carrying

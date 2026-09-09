@@ -2734,3 +2734,41 @@ crude; run in isolation the independence case reds on its own. Both were
 checked, because a plant that reds early hides the assertion you meant to test.
 
 **574 tests.**
+
+## 2026-09-09 (5.6 CLOSED) — 41/41 on a real simulator
+
+The lane is green: driver, store, screens and the backup's restore, all against
+Apple's SQLite, in Hermes, on hardware this machine does not have.
+
+Getting there cost four separate diagnoses, and only one of them was our code:
+
+| what looked broken | what was actually broken |
+|---|---|
+| the app "did not run" | it ran; the lane could not say anything about it — RN strips `console.log` from Release, so a JS error left no trace and "no result file" read identically to "never started" |
+| a compile error in the app | `repo.reactnative.dev` served the Hermes listing while every GET 404'd, and the podspec's silent fallback compiled the tip of a branch instead |
+| the Hermes pin not holding | the pin held; the CONTROL guessed an extraction path. `Podfile.lock` said `Pre-built` all along |
+| two contract cases failing | **a live bug** — expo-sqlite caches connections by name, so every backup after the first would have been refused |
+
+⚡ **Three of the four were checks, not the thing under test.** That is now the
+recurring shape on this project, and the rule earned again: when something is
+"not caught", diagnose the check before the code.
+
+### The one that mattered
+
+The connection cache would have broken backups on the device holding the only
+copy of the fund — silently, first-one-works, with the home screen showing
+"stale" and no reason. It was caught on the platform where it happens, by a
+contract, before it ever ran on a real ledger.
+
+And it was catchable only because the contract was widened to say something it
+had always assumed: **two opens are two databases.**
+
+### 5.6 as a whole
+
+Six write screens, a shell that holds exactly one store, an import, a backup
+verified by restore, and a form layer pure enough that Vitest and the device
+run the same code. The arithmetic is shared with the CLI — a fund must not
+disagree with itself about what it was allowed to buy depending on which
+surface recorded it.
+
+**574 tests on the desktop, 41 on the device.**
