@@ -181,21 +181,28 @@ jobs:
         working-directory: mobile/ios
         run: pod install
 
-      # ⚡ The control on the pin above. A prebuilt tarball extracts a
-      # `destroot` containing the framework; a source build has nothing there
-      # until it has compiled for six minutes. If this is missing, the podspec
-      # took the fallback and the pin did not hold — say so now, in one line,
-      # rather than at the far end of a C++ log.
       - name: Hermes came from the tarball, not from a branch
         working-directory: mobile
         run: |
-          FRAMEWORK=ios/Pods/hermes-engine/destroot/Library/Frameworks/ios/hermesvm.framework
-          grep -E 'hermes-engine' ios/Podfile.lock | head -5 || true
-          if [ ! -d "$FRAMEWORK" ]; then
-            echo "::error::Hermes is being built from source — the prebuilt pin did not hold."
+          # ⚡ The control on the pin above, and it reads the RESOLVER'S OWN
+          # ANSWER rather than inferring one. The first version asserted that
+          # `destroot/Library/Frameworks/ios/hermesvm.framework` existed after
+          # pod install — a guess at an extraction path, and a wrong one: the
+          # pin had held and the check failed anyway, 2026-09-09.
+          #
+          # ⛔ Diagnose the CHECK before the thing under test. `Podfile.lock`
+          # records which subspec CocoaPods chose, and `Pre-built` is the
+          # podspec's own word for "this came from a tarball"; building from
+          # source resolves a different subspec entirely.
+          # ⚠️ Verified against both real strings, not assumed: the podspec
+          # branches `isPrebuilt -> subspec 'Pre-built'` and `isFromSource ->
+          # subspec 'Hermes'`, so the two are mutually exclusive in the lock.
+          grep -E "hermes-engine" ios/Podfile.lock || true
+          if ! grep -q "hermes-engine/Pre-built" ios/Podfile.lock; then
+            echo "::error::Hermes did not resolve to the Pre-built subspec — the pin did not hold."
             exit 1
           fi
-          echo "prebuilt: $FRAMEWORK"
+          echo "hermes-engine resolved Pre-built: the pinned tarball was used."
 
       - name: Build for the simulator
         working-directory: mobile
