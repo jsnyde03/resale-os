@@ -19,7 +19,7 @@ describe('driver contract — node:sqlite', () => {
       try {
         db.exec(CONTRACT_SCHEMA);
         // A case throws with a human-readable message on failure.
-        expect(() => run(db)).not.toThrow();
+        expect(() => run(db, () => openDb(':memory:'))).not.toThrow();
       } finally {
         db.close();
       }

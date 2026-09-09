@@ -2693,3 +2693,44 @@ attempted**, and it is marked as such in the file. Planted by deleting the
 empty-ledger refusal: red in Vitest and in the on-device contract.
 
 **573 tests.**
+
+## 2026-09-09 — the contract earned its keep: expo-sqlite caches connections
+
+The iOS lane reached the app for the first time since the Hermes outage and
+reported **38/40**. The silent death was gone; two cases failed, both with
+`destination already has events; import needs an empty ledger`.
+
+### ⛔ Not a test failure — a live bug on the device holding the only ledger
+
+`openDatabaseSync(name)` **caches connections by name**: *"whether to create a
+new connection even if a connection with the same database name exists in
+cache, default false."* So two `openExpoDb(':memory:')` calls returned the SAME
+database, where `node:sqlite` returns a fresh one each time.
+
+⚡ **`writeDeviceBackup` opens a scratch `:memory:` database to replay the
+ledger into before writing a backup.** With a shared connection the first backup
+of an app session succeeds and **every one after it is refused** — on the phone
+that holds the only copy of the fund, silently, with the home screen reporting
+the backup as stale and no obvious reason why.
+
+Caught before it ever ran on a real ledger, by the contract, on the platform
+where it happens. That is the entire argument for the contract in one incident.
+
+### The contract could not have caught it, and now can
+
+`ContractCase.run` took only `(db)`, so there was no way to express "two opens
+are two databases" — the suite **assumed** it from the day it was written and
+never said it. An assumption a contract relies on and does not assert is not
+part of the contract.
+
+`run` now takes `(db, open)` and a case asserts the property directly: a fresh
+database sees none of the first one's rows, a write to it does not appear in the
+first, and closing it does not take the first down.
+
+⚠️ **Planted by giving `node:sqlite` the same caching bug** — a `Map` keyed by
+path in `openDb`. Run whole, it reds most of the suite (the first case's
+`close()` kills the shared handle for everything after), which is loud but
+crude; run in isolation the independence case reds on its own. Both were
+checked, because a plant that reds early hides the assertion you meant to test.
+
+**574 tests.**

@@ -119,7 +119,12 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
         operator said they expect to net, and `accuracy` reports SCORED and
         QUOTED separately rather than pooling them. An assumed 3x flip is
         recorded as nothing — that is the app's guess, not a prediction.
-  - [ ] **5.6.5** On-device verification of the five, via the iOS Actions lane.
+  - [~] **5.6.5** ⚙️ **The app runs on device again and reports 38/40** — the
+        earlier silent death is gone. ⚡ The two failures were a REAL bug the
+        contract existed to find: expo-sqlite caches connections by name, so a
+        scratch `:memory:` database was shared and **every backup after the
+        first would have been refused**. Driver fixed, contract widened, and
+        re-run pending.
         ⛔ **BLOCKED, externally.** `repo.reactnative.dev` serves the Hermes
         listing while every GET 404s, so no iOS build can start. Pinned +
         cached + gated 2026-09-09; re-run when it is back. ⚠️ **And a

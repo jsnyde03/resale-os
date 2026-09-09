@@ -23,8 +23,13 @@ import type { Db } from './db-types.js';
 
 export interface ContractCase {
   readonly name: string;
-  /** Throws on failure. The message is what a human reads. */
-  readonly run: (db: Db) => void;
+  /**
+   * Throws on failure. The message is what a human reads.
+   *
+   * `open` makes ANOTHER database. Added 2026-09-09 for the one property the
+   * contract could not previously state: that two opens are two databases.
+   */
+  readonly run: (db: Db, open: () => Db) => void;
 }
 
 class ContractFailure extends Error {
@@ -260,6 +265,55 @@ export const DRIVER_CONTRACT: readonly ContractCase[] = [
       eq(db.run('DELETE FROM t WHERE amount_cents = ?', [99]).changes, 0, 'no-op delete changes');
     },
   },
+  {
+    /**
+     * ⛔ TWO OPENS ARE TWO DATABASES.
+     *
+     * The contract assumed this from the day it was written and never said it,
+     * which is why nothing caught expo-sqlite CACHING connections by name:
+     * `openDatabaseSync(':memory:')` returned the SAME database every time
+     * while `node:sqlite` returned a fresh one.
+     *
+     * ⚠️ It surfaced as a REAL bug, not a test failure. The backup replays the
+     * ledger into a scratch `:memory:` database before writing a file; with a
+     * shared connection the first backup of a session succeeded and every one
+     * after it was refused, on the device holding the only copy of the fund.
+     *
+     * An assumption a contract relies on and does not assert is not part of
+     * the contract.
+     */
+    name: 'two opens are two independent databases',
+    run: (db, open) => {
+      db.run('INSERT INTO t (id, label, amount_cents) VALUES (?,?,?)', [1, 'first', 100]);
+
+      const other = open();
+      try {
+        other.exec(CONTRACT_SCHEMA);
+        eq(
+          other.get<{ n: number }>('SELECT COUNT(*) AS n FROM t')?.n,
+          0,
+          'a freshly opened database must not see rows written to another',
+        );
+
+        other.run('INSERT INTO t (id, label, amount_cents) VALUES (?,?,?)', [2, 'second', 200]);
+        eq(
+          db.get<{ n: number }>('SELECT COUNT(*) AS n FROM t')?.n,
+          1,
+          'and a write to it must not appear in the first',
+        );
+      } finally {
+        other.close();
+      }
+
+      // ⚠️ And closing the second must not take the first down with it — a
+      // shared handle would.
+      eq(
+        db.get<{ label: string }>('SELECT label FROM t WHERE id = 1')?.label,
+        'first',
+        'the original database still works after the other one closed',
+      );
+    },
+  },
 ];
 
 export interface CaseResult {
@@ -280,7 +334,7 @@ export function runDriverContract(open: () => Db): CaseResult[] {
     const db = open();
     try {
       db.exec(CONTRACT_SCHEMA);
-      run(db);
+      run(db, open);
       return { name, passed: true };
     } catch (err) {
       return { name, passed: false, error: (err as Error).message };

@@ -85,7 +85,20 @@ class ExpoDb implements Db {
  * suite never touches the real ledger.
  */
 export function openExpoDb(name: string): Db {
-  const db = SQLite.openDatabaseSync(name);
+  // ⛔ `useNewConnection: true`, and it is not an optimisation.
+  //
+  // expo-sqlite CACHES connections by database name — *"whether to create new
+  // connection even if connection with the same database name exists in
+  // cache, default false"*. So two `openExpoDb(':memory:')` calls returned the
+  // SAME in-memory database, while `node:sqlite` gives a fresh one each time.
+  //
+  // ⚠️ That is not a test-harness detail. `writeDeviceBackup` opens a scratch
+  // `:memory:` database to replay the ledger into before writing a backup —
+  // with a shared connection the first backup of an app session succeeds and
+  // **every one after it is refused** with "destination already has events",
+  // on the device holding the only copy of the fund. Caught by the on-device
+  // contract on 2026-09-09, before it ever ran on a real ledger.
+  const db = SQLite.openDatabaseSync(name, { useNewConnection: true });
   // Same pragmas as the desktop driver. Foreign keys are ON in this schema and
   // migration 005 depends on being able to turn them off deliberately.
   db.execSync('PRAGMA journal_mode = WAL');
