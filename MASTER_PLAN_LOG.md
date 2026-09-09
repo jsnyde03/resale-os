@@ -2869,3 +2869,42 @@ Planted by dropping `reversesEventId` — the field the whole feature is about.
 Red in Vitest and red in the on-device contract.
 
 **583 tests.**
+
+## 2026-09-09 — "no purchases until the system is ready"
+
+Jason, on being told the most valuable thing left was to buy something:
+*"No purchases until the system is ready. It doesn't make sense to arbitrarily
+buy something."*
+
+⛔ **He is right, and the suggestion was wrong on the system's own terms.** The
+entire apparatus — gates, scores, a walk-away price, a profit floor — exists to
+stop unjustified purchases. "Buy one to exercise the machinery" is a purchase
+justified by nothing except wanting to see the machinery run, which is the case
+the machinery is built to refuse. Recorded as **D11**.
+
+### And it exposed a real gap
+
+Asking what "ready" means turned out to be productive. The phone has twelve
+screens and **not one of them answers the question you actually have standing in
+a shop**: *should I buy this, and at what price?*
+
+`buy.tsx` assesses a price already chosen — it says whether a purchase you have
+decided on is permitted. `evaluateOpportunity` does the harder thing and it is
+already built, tested, and unreachable from the device:
+
+| | |
+|---|---|
+| `maxPriceCents` | the walk-away number |
+| `boundBy` | **which** limit binds — the one to argue with |
+| `recommendation` + `reasons` | ordered, headline first |
+| buy / risk scores, confidence | how much to trust it |
+
+That is the difference between recording and deciding, and Gate 5's premise is
+*the phone is the system*. → **5.9c**, admitted as Category 1: the gate would be
+incomplete-for-its-job without it.
+
+⚠️ **It also fixes a second thing.** A purchase made through the scorer carries
+an `opportunityId`, so B59's accuracy report counts it as SCORED rather than
+QUOTED. Without a sourcing screen the phone can only ever produce QUOTED buys,
+and the scored population would stay permanently empty — a split with one side
+that can never fill is not a split.

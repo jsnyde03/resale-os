@@ -124,6 +124,20 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
         older one from a list.
   - [ ] **5.9b.3** Say what "off the phone" means on the home screen: the
         second obligation is discharged only when a copy has actually left.
+- [ ] **5.9c** ⛔ **THE GAP BETWEEN RECORDING AND DECIDING.** A sourcing screen:
+      score an opportunity in the field and get the **walk-away price**.
+      ⚠️ Found 2026-09-09 by asking what "ready" means — twelve screens on the
+      phone and none answers *"should I buy this, and at what price?"*. `buy`
+      only assesses a price already chosen.
+  - [ ] **5.9c.1** Enter what is in front of you: asking price, comps, category,
+        condition, hassle. The same inputs `parseOpportunity` already takes.
+  - [ ] **5.9c.2** Show `maxPriceCents` **and `boundBy`** — the number to stop
+        at, and which rule set it, because that is the one to argue with.
+  - [ ] **5.9c.3** The recommendation and its ordered reasons, headline first.
+  - [ ] **5.9c.4** Hand it to the buy screen at the price actually paid, so a
+        scored purchase records its `opportunityId` and lands in accuracy as
+        SCORED rather than QUOTED.
+  - [ ] **5.9c.5** On-device verification.
 - [ ] **5.10** Retire `src/cli`, `src/server`, `src/app` — 3,715 lines — once
       the phone covers them. ⛔ Not before, and ⚠️ **not until the fund has
       actually moved**: `cli export` is how it gets onto the phone. `views.ts`
@@ -157,6 +171,7 @@ desktop is gone.
 | # | Decision | State |
 |---|---|---|
 | D1 | What the tax reserve covers | ✅ **Incremental annual tax, 2026-09-08.** SE tax + federal brackets + QBI + state. ⚠️ Income tax abstains until a `TaxProfile` is set — **D7** |
+| D11 | When the fund starts buying | ⛔ **Not until the system is ready, and never arbitrarily** (Jason 2026-09-09): *"It doesn't make sense to arbitrarily buy something."* A purchase this system cannot justify is the exact thing it exists to prevent, so "exercise it with a real buy" is not a reason. **Ready means the phone can decide, not just record** — 5.9c |
 | D2 | Owner split of after-tax profit (default 20/10/70) | ⚙️ **Default stands, revisit at $100 NAV** (Jason 2026-09-09). Not live: set-aside is off below $100 and the fund is at $50.00. ⚠️ That is four to six flips away, so decide it against the first real sales rather than in the abstract |
 | D3 | Real starting bankroll and start date | ✅ **$50, live 2026-09-08.** $20 max per item |
 | D4 | Whether a constraint override is ever allowed, and what it must record | ✅ **Allowed, and it must say so, 2026-09-09.** A purchase carries `overrodeGates` + `overrideReason`; the engine refuses an override with no reason, the item keeps both for life, and `items` prints them. `--force` now needs `--reason`. Unblocks 5.6 |
