@@ -3013,3 +3013,26 @@ remembering: online drops are where the competition is scripts. **In-store
 allocation is where it is people — and Jason is in and out of stores all day for
 Spark.** That edge cannot be out-automated, and it is the one the drop watchlist
 should serve.
+
+## 2026-09-09 (5.9b) — off the phone, and saying only what is observable
+
+`expo-sharing`, added now because the deferral's stated condition had expired:
+*"a native module cannot be added blind while no iOS build will start."* The
+lane is green, so a green lane is what validates it.
+
+### ⛔ The screen refuses to claim the thing it cannot see
+
+`shareAsync` resolves when the SHEET CLOSES — not when the file arrives
+anywhere, and identically if the operator cancelled. The app cannot see which
+destination was picked or whether it went through.
+
+So the wording is *"handed to the share sheet"*, never *"sent"*, and the home
+screen still says the fund exists on exactly one device. ⚡ **A backup screen
+that reported "backed up" on a cancelled share would be the most dangerous lie
+this app could tell** — it is the one claim an operator would act on by not
+checking.
+
+⚠️ Caught in review: the first version formatted a byte count with
+`formatCents`, which would have rendered a file size as `$4.50`. Bytes are not
+money, and the money-arithmetic lint only watches for `Cents / 100` — it would
+never have seen this one.

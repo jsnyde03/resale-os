@@ -123,11 +123,14 @@ function Position() {
 
       {/* ⚠️ The second obligation, and the one nothing here can discharge. A
           copy in this app's own folder dies with the app and with the phone. */}
+      {/* ⚠️ The honest version: the app knows a copy exists HERE. It cannot
+          know whether one ever left, so it says what it knows and points at
+          the screen that can do something about it. */}
       <Muted>
-        Copies are written here after every change. Getting one OFF this phone is still yours to
-        do — open Files, find Resale OS, and drag a backup to iCloud Drive. Until then the fund
-        exists on exactly one device.
+        Copies are written here after every change. Getting one off this phone is a separate
+        thing, and until you do it the fund exists on exactly one device.
       </Muted>
+      <Button label="Backups" onPress={() => router.push('/backups')} />
 
       <View style={{ gap: 10 }}>
         <View style={{ flexDirection: 'row', gap: 10 }}>

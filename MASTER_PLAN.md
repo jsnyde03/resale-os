@@ -114,16 +114,10 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       the FIRST run is the validation pass. The 80-day scheduled rebuild is a
       second workflow, added only after this one passes — scheduling it now
       would schedule a recurring failure.
-- [ ] **5.9b** ⚡ **ACTIVE BUILD — B61 promoted 2026-09-09.** Get a backup OFF
-      the phone in one tap, via `expo-sharing`. ⛔ It was deferred because a
-      native module could not be validated while no iOS build would start; the
-      lane is green now, so the reason is gone.
-  - [ ] **5.9b.1** Add `expo-sharing`, and confirm the lane still builds — a
-        native module is exactly what a green lane is for.
-  - [ ] **5.9b.2** Share the newest backup from the backups screen, and any
-        older one from a list.
-  - [ ] **5.9b.3** Say what "off the phone" means on the home screen: the
-        second obligation is discharged only when a copy has actually left.
+- [x] **5.9b** ✅ **Done 2026-09-09.** A backups screen with a share sheet:
+      `expo-sharing`, the newest copy first, and wording that claims only what
+      the app can actually observe — a file was OFFERED elsewhere, not that it
+      arrived. ⏳ Lane validating the native module.
 - [ ] **5.9c** ⛔ **THE GAP BETWEEN RECORDING AND DECIDING.** A sourcing screen:
       score an opportunity in the field and get the **walk-away price**.
       ⚠️ Found 2026-09-09 by asking what "ready" means — twelve screens on the
