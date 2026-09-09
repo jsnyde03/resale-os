@@ -168,6 +168,8 @@ export interface LedgerReader {
   taxTablesAcceptance(): TaxTablesAcceptance | null;
   backupSettings(): BackupSettings;
   backupState(): BackupState;
+  /** What is left of a business expense after any reversals against it. */
+  outstandingExpense(eventId: string): Cents;
   /**
    * ⚠️ A READER, not the repository. `opportunities()` returns something that
    * can `save()` and `setStatus()`; this cannot, which is why the dashboard
@@ -688,7 +690,21 @@ export class FundStore {
     return total;
   }
 
-  /** What is left of an expense after any reversals already recorded against it. */
+  /**
+   * What is left of an expense after any reversals already recorded against it.
+   *
+   * ⛔ Public since 2026-09-09, because a screen offering to reverse an expense
+   * has to show how much of it is still standing. Without it the operator
+   * guesses an amount and learns it was wrong from a refusal — and the honest
+   * default (reverse all of it) is unavailable to the UI that needs it most.
+   *
+   * It is a READ. `#assertReversalIsPossible` remains the authority; this
+   * exists so the screen can agree with it in advance rather than argue after.
+   */
+  outstandingExpense(eventId: string): Cents {
+    return this.#outstandingExpense(eventId);
+  }
+
   #outstandingExpense(eventId: string): Cents {
     const row = this.db.get<{ v: number | null }>(
       `SELECT SUM(amount_cents) AS v FROM expenses

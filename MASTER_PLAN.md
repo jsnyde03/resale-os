@@ -143,24 +143,14 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
         drag is the operator's. ⛔ **A one-tap share needs `expo-sharing`, a
         native module — deferred until a build can validate it, because no iOS
         build can start today.** → **B61**.
-- [ ] **5.8** ⚡ **ACTIVE BUILD.** The read screens. ⚠️ **Switch-in correction:
-      not "ported" — `src/server/views.ts` is 338 lines of tested read model
-      the phone can REUSE**, and it was one import from dragging the desktop
-      SQLite driver into the bundle. Fixed, and `lint:phone` now walks the
-      whole graph so it cannot recur.
-  - [x] **5.8.0** ✅ **Nothing to build.** `FundStore` already satisfies
-        `LedgerReader` structurally, so the phone passes its store straight to
-        the views. Recorded rather than invented.
-  - [x] **5.8.1** ✅ Items — shelf and history as one filtered list, with D4's
-        override shown on the item for life.
-  - [x] **5.8.2** ✅ The ledger: every event, its postings, its hash, and the
-        chain's verdict. ⚡ The event ids are reachable, which is what expense
-        reversal needed.
-  - [x] **5.8.3–5.8.5** ✅ One **Reports** screen with three tabs rather than
-        three screens — profit, accuracy (B59's split kept apart), tax. All
-        rendered from `views.ts`, none recomputed.
-  - [x] **5.8.6** ✅ A contract case runs the read model against whatever
-        SQLite is underneath; planted by pooling the split, red.
+- [x] **5.8** ✅ **Done 2026-09-09, 42/42 on device.** The read screens —
+      items, ledger, and one Reports screen with profit / accuracy / tax —
+      rendering `src/server/views.ts` rather than porting it. ⚡ It was one
+      import from dragging the desktop SQLite driver into the bundle;
+      `lint:phone` now walks the whole graph. → **B62**, **B63**.
+- [x] **5.8.7** ✅ **Expense reversal, the half 5.6.4 withheld.** Reached from
+      the ledger row that has the event id, capped at what is still standing,
+      and proven on-device to move the ledger and the analytic table together.
 - [~] **5.9** ✅ **Decided 2026-09-09: TestFlight via CODEMAGIC** (Jason —
       "look at the debt app for how one used it before"). `codemagic.yaml`
       written, adapted from `debt-app-v1`'s proven Expo-56 lane and carrying
@@ -170,8 +160,20 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       the FIRST run is the validation pass. The 80-day scheduled rebuild is a
       second workflow, added only after this one passes — scheduling it now
       would schedule a recurring failure.
+- [ ] **5.9b** ⚡ **ACTIVE BUILD — B61 promoted 2026-09-09.** Get a backup OFF
+      the phone in one tap, via `expo-sharing`. ⛔ It was deferred because a
+      native module could not be validated while no iOS build would start; the
+      lane is green now, so the reason is gone.
+  - [ ] **5.9b.1** Add `expo-sharing`, and confirm the lane still builds — a
+        native module is exactly what a green lane is for.
+  - [ ] **5.9b.2** Share the newest backup from the backups screen, and any
+        older one from a list.
+  - [ ] **5.9b.3** Say what "off the phone" means on the home screen: the
+        second obligation is discharged only when a copy has actually left.
 - [ ] **5.10** Retire `src/cli`, `src/server`, `src/app` — 3,715 lines — once
-      the phone covers them. ⛔ Not before.
+      the phone covers them. ⛔ Not before, and ⚠️ **not until the fund has
+      actually moved**: `cli export` is how it gets onto the phone. `views.ts`
+      MOVES rather than goes (**B62**).
 - [ ] **5.11** Tests, and the phase after-scan.
 
 **Exit:** the fund lives on the phone, knows its exact position offline, and the
@@ -388,11 +390,8 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   form models) when the retirement happens, rather than deleting a read model
   the app is built on. Filed at 5.8's switch-in, before the retirement can get
   it wrong. → 5.10.
-- **B61** One-tap "send this backup somewhere else" via `expo-sharing`. Today
-  the copies land in the app's Documents and reach iCloud only if the operator
-  opens Files and drags one — a chore, and therefore a backup that will not
-  happen. ⚠️ It is a native module, so it cannot be added blind while the iOS
-  build is blocked; do it in the same cycle as the first green build. → Gate 5.
+- ~~**B61**~~ ⚡ **Promoted to 5.9b, 2026-09-09** — the lane is green, so a
+  native module can be validated.
 - **B60** ⚙️ **Half closed 2026-09-09** (Jason: *both — contract now, RNTL
   later*). The form models are pure, tested and executed on-device. ⚠️ **What
   is still uncovered is the JSX binding** — whether the price box is wired to

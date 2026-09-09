@@ -190,3 +190,70 @@ export function adjustModel(fields: AdjustFields): AdjustModel {
         : null,
   };
 }
+
+// --- reversing an expense -------------------------------------------------
+
+/**
+ * Money that went out and came back.
+ *
+ * ⛔ **This is an ADJUSTMENT with `reversesEventId`, and the field is not
+ * optional decoration.** A business expense lives in two places — the ledger
+ * and the analytic `expenses` table that operating profit and the category
+ * breakdown are read from. A bare adjustment moves only the first, and the two
+ * quietly disagree ever after. Setting the link makes the store write the
+ * compensating expense row and restore the year's business income.
+ *
+ * ⚠️ The shape is fixed by the store: `account: 'LIQUID'` and a POSITIVE
+ * amount, because that is what getting money back looks like. Over-reversing
+ * is refused there — this model exists so the screen can agree in advance
+ * rather than argue afterwards.
+ */
+export interface ReverseFields {
+  readonly eventId: string;
+  /** What is still standing against that expense, from the store. */
+  readonly outstandingCents: Cents;
+  readonly amount: string;
+  readonly reason: string;
+}
+
+export interface ReverseModel {
+  readonly amountCents: Cents | undefined;
+  readonly ready: boolean;
+  /** Set when the amount is readable but the store would refuse it. */
+  readonly problem: string | null;
+  readonly command: (occurredAt: string) => AdjustmentCommand | null;
+}
+
+export function reverseModel(fields: ReverseFields): ReverseModel {
+  const amountCents = centsOrNothing(fields.amount);
+  const reason = fields.reason.trim();
+
+  const problem =
+    amountCents === undefined
+      ? null
+      : amountCents <= 0
+        ? 'A reversal is money coming back, so it has to be positive.'
+        : amountCents > fields.outstandingCents
+          ? `Only ${fields.outstandingCents} cents of that expense are still standing.`
+          : null;
+
+  const ready =
+    amountCents !== undefined && problem === null && reason.length >= MIN_ADJUSTMENT_REASON;
+
+  return {
+    amountCents,
+    ready,
+    problem,
+    command: (occurredAt) =>
+      ready && amountCents !== undefined
+        ? {
+            type: 'ADJUSTMENT',
+            account: 'LIQUID',
+            amountCents,
+            reason,
+            reversesEventId: fields.eventId,
+            occurredAt,
+          }
+        : null,
+  };
+}

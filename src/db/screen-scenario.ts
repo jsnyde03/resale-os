@@ -23,7 +23,7 @@ import { reconcile } from './replay.js';
 import { computeMetrics } from '../core/capital/metrics.js';
 import { assessQuote, purchaseCommandFrom } from '../core/capital/quote.js';
 import { itemIdFrom } from '../core/ids.js';
-import { adjustModel, sellModel, spendModel } from '../ui/forms.js';
+import { adjustModel, reverseModel, sellModel, spendModel } from '../ui/forms.js';
 import { profitReport } from './reporting.js';
 import { makeVerifiedBackup } from './backup-portable.js';
 import { dashboardView } from '../server/views.js';
@@ -367,6 +367,63 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
       ok(view.integrity.chainOk, 'the chain verifies');
       ok(view.integrity.replayOk, 'the postings scan agrees with an engine replay');
       ok(view.integrity.expenseDriftOk, 'the analytic expense table agrees with the ledger');
+    },
+  },
+  {
+    // ⛔ The one that needed a ledger view to exist. An expense lives in the
+    // ledger AND in the analytic `expenses` table; only an ADJUSTMENT carrying
+    // `reversesEventId` moves both, and a bare one leaves the two disagreeing
+    // while each goes on looking plausible.
+    name: 'reverse: an expense that came back moves the ledger and the projection together',
+    run: (db) => {
+      const store = funded(db, 50_000);
+      const expense = store.commit(
+        spendModel({ kind: 'EXPENSE', amount: '4.50', category: 'POSTAGE', itemId: null })
+          .command(T0)!,
+      ).event.eventId;
+      eq(profitReport(db).businessExpenseCents, 450, 'the expense is in the projection');
+      eq(store.outstandingExpense(expense), 450, 'all of it is standing');
+
+      // Half of it comes back.
+      const partial = reverseModel({
+        eventId: expense,
+        outstandingCents: store.outstandingExpense(expense),
+        amount: '2.00',
+        reason: 'the seller refunded half the postage',
+      });
+      ok(partial.ready, 'a partial reversal is allowed');
+      store.commit(partial.command(T30)!);
+
+      eq(profitReport(db).businessExpenseCents, 250, 'the projection moved with the ledger');
+      eq(store.outstandingExpense(expense), 250, 'and the outstanding amount agrees');
+      eq(reconcile(store), { ok: true, differences: [] }, 'reconcile after a reversal');
+
+      // ⚠️ Over-reversing would turn a correction into invented income. The
+      // model refuses to build it, and the store refuses it if anything else
+      // does — both are checked, because only one of them is in the app.
+      const tooMuch = reverseModel({
+        eventId: expense,
+        outstandingCents: store.outstandingExpense(expense),
+        amount: '99.00',
+        reason: 'this should never be recorded',
+      });
+      ok(!tooMuch.ready, 'the form refuses to over-reverse');
+      eq(tooMuch.command(T30), null, 'and builds nothing');
+
+      let refused = false;
+      try {
+        store.commit({
+          type: 'ADJUSTMENT',
+          account: 'LIQUID',
+          amountCents: 9_900,
+          reason: 'bypassing the form entirely',
+          reversesEventId: expense,
+          occurredAt: T30,
+        });
+      } catch {
+        refused = true;
+      }
+      ok(refused, 'and the store refuses it even without the form');
     },
   },
   {

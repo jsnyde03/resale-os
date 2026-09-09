@@ -14,6 +14,7 @@ import {
   adjustModel,
   centsOrNothing,
   countOrNothing,
+  reverseModel,
   sellModel,
   spendModel,
 } from '@/ui/forms.js';
@@ -211,5 +212,76 @@ describe('adjust', () => {
 
   it('builds nothing while it is not ready', () => {
     expect(adjustModel({ ...ok, reason: 'no' }).command(T0)).toBeNull();
+  });
+});
+
+/**
+ * Reversing an expense.
+ *
+ * ⛔ The store is the authority — it refuses a non-expense and refuses
+ * over-reversal. This model exists so the screen can AGREE with it in advance
+ * rather than argue afterwards, and the two must not drift: every rule below
+ * mirrors one in `#assertReversalIsPossible`.
+ */
+describe('reverse an expense', () => {
+  const base = {
+    eventId: 'evt_000004',
+    outstandingCents: 450,
+    amount: '4.50',
+    reason: 'the seller refunded the postage',
+  };
+
+  it('builds an ADJUSTMENT linked to the expense it reverses', () => {
+    expect(reverseModel(base).command(T0)).toEqual({
+      type: 'ADJUSTMENT',
+      account: 'LIQUID',
+      amountCents: 450,
+      reason: 'the seller refunded the postage',
+      // ⛔ Without this the ledger moves and the analytic expenses table does
+      // not, and operating profit disagrees with the category breakdown for
+      // the rest of the fund's life.
+      reversesEventId: 'evt_000004',
+      occurredAt: T0,
+    });
+  });
+
+  it('allows reversing part of one', () => {
+    const m = reverseModel({ ...base, amount: '2.00' });
+    expect(m.ready).toBe(true);
+    expect(m.command(T0)?.amountCents).toBe(200);
+  });
+
+  // ⚠️ Mirrors REVERSAL_EXCEEDS_EXPENSE. Over-reversing would turn a
+  // correction into invented income.
+  it('refuses more than is still standing, and says how much that is', () => {
+    const m = reverseModel({ ...base, amount: '5.00' });
+    expect(m.ready).toBe(false);
+    expect(m.problem).toMatch(/450 cents/);
+    expect(m.command(T0)).toBeNull();
+  });
+
+  it('refuses a negative or zero reversal, because money coming back is positive', () => {
+    expect(reverseModel({ ...base, amount: '-1.00' }).problem).toMatch(/positive/);
+    expect(reverseModel({ ...base, amount: '0' }).problem).toMatch(/positive/);
+    expect(reverseModel({ ...base, amount: '0' }).ready).toBe(false);
+  });
+
+  it('needs a reason, like every other adjustment', () => {
+    expect(reverseModel({ ...base, reason: 'oops' }).ready).toBe(false);
+    expect(reverseModel({ ...base, reason: '' }).ready).toBe(false);
+  });
+
+  // Half-typed is not a problem, it is just not ready yet — the screen must
+  // not shout at someone mid-keystroke.
+  it('reports no problem while the amount is still being typed', () => {
+    const m = reverseModel({ ...base, amount: '' });
+    expect(m.problem).toBeNull();
+    expect(m.ready).toBe(false);
+  });
+
+  it('cannot reverse anything against an expense with nothing left', () => {
+    const m = reverseModel({ ...base, outstandingCents: 0, amount: '0.01' });
+    expect(m.ready).toBe(false);
+    expect(m.problem).toMatch(/0 cents/);
   });
 });

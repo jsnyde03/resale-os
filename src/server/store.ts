@@ -69,6 +69,9 @@ function readerFor(store: FundStore): LedgerReader {
     taxTablesAcceptance: () => store.taxTablesAcceptance(),
     backupSettings: () => store.backupSettings(),
     backupState: () => store.backupState(),
+    // A read. It answers "how much of this expense is still standing", which a
+    // screen offering to reverse one has to show before it asks for an amount.
+    outstandingExpense: (eventId) => store.outstandingExpense(eventId),
     opportunityReader: () => store.opportunityReader(),
   };
 }

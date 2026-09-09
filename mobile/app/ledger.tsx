@@ -74,6 +74,17 @@ function EventRow({
             <Text selectable style={{ color: C.faint, fontSize: 11, marginTop: 8 }}>
               hash {event.hash.slice(0, 16)}…
             </Text>
+
+            {/* ⛔ Only from here. Reversing an expense needs its event id, and
+                this is the only screen that has one. */}
+            {event.type === 'BUSINESS_EXPENSE' ? (
+              <Link
+                href={{ pathname: '/reverse', params: { eventId: event.event_id } }}
+                style={{ color: C.dim, fontSize: 13, paddingTop: 10 }}
+              >
+                money came back →
+              </Link>
+            ) : null}
           </View>
         ) : null}
       </Card>

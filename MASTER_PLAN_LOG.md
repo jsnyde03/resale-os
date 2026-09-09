@@ -2827,3 +2827,45 @@ because the view carries `readable` for exactly that.
 silently omits it looks like a small reserve rather than an incomplete one.
 
 **575 tests, and the read model now runs on-device in the contract.**
+
+## 2026-09-09 (5.8.7) — the half that needed a ledger view
+
+5.6.4 built the adjust screen and **deliberately refused to offer expense
+reversal**, because a bare `ADJUSTMENT` moves the ledger and not the analytic
+`expenses` table that operating profit and the category breakdown are read
+from — after which the two disagree forever while each goes on looking
+plausible. The correct command carries `reversesEventId`; that needs the event
+id; the id needed somewhere to come from. 5.8 built it.
+
+⚡ **A deferral that names its own unblocking condition is worth more than a
+half-built feature**, and this one collected: the screen it was waiting for
+arrived and the work was an hour, not a rewrite.
+
+### What it needed from the store
+
+`outstandingExpense(eventId)` is public now. A screen offering to reverse an
+expense has to show how much is still standing — without it the operator
+guesses and learns they were wrong from a refusal, and the honest default
+(*reverse all of it*, pre-filled) is unavailable to the UI that needs it most.
+
+⚠️ **`src/server/store.ts`'s positive allowlist caught the addition immediately**
+— `LedgerReader` gained a method and the reader would not compile until it was
+added on purpose. That is the allowlist doing exactly the job its comment
+claims: *"anything new on `FundStore` is invisible here until it is added on
+purpose."* An `Omit<>` would have passed it through silently.
+
+### Both guards, because only one of them is in the app
+
+`reverseModel` mirrors `#assertReversalIsPossible`: positive amounts only, never
+more than is outstanding, and a reason like every other adjustment. The store
+remains the authority — the model exists so the screen can **agree in advance
+rather than argue afterwards**.
+
+The on-device case checks both: the form refuses to build an over-reversal, and
+the store refuses one submitted without the form. A rule enforced in one place
+and asserted in the other is a rule with a bypass.
+
+Planted by dropping `reversesEventId` — the field the whole feature is about.
+Red in Vitest and red in the on-device contract.
+
+**583 tests.**
