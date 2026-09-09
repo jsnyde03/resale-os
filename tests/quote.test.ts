@@ -199,20 +199,26 @@ describe('the purchase command a quote implies', () => {
     expect(command.inboundShippingCents).toBe(250);
   });
 
-  // ⚠️ `accuracyReport` measures the items that HAVE a prediction, and today
-  // that population means "came from a scored opportunity". Recording one on
-  // every purchase would silently mix two populations into one median — B59.
-  it('records no prediction by default', () => {
-    const command = purchaseCommandFrom(input, quotePurchase(input), meta);
-    expect(command.expectedNetProceedsCents).toBeUndefined();
-    expect(command.expectedProfitCents).toBeUndefined();
-  });
-
-  it('records one when asked, and it is the quote', () => {
+  // B59: the number the operator decided from is the one worth scoring, so it
+  // goes on the record.
+  it('records what the operator said they expect to net', () => {
     const quote = quotePurchase(input);
-    const command = purchaseCommandFrom(input, quote, { ...meta, recordPrediction: true });
+    const command = purchaseCommandFrom(input, quote, meta);
     expect(command.expectedNetProceedsCents).toBe(quote.estimate.netCents);
     expect(command.expectedProfitCents).toBe(quote.expectedProfitCents);
+  });
+
+  // ⛔ The exclusion matters as much as the inclusion. With no expected gross
+  // the quote assumes a 3x flip — the app's guess, not a prediction. Scoring
+  // accuracy against it would measure DEFAULT_MULTIPLE while looking like it
+  // measured judgement.
+  it('records nothing when the sale price was assumed rather than given', () => {
+    const assumed = { category: 'TOYS', purchasePriceCents: 1_000 } as const;
+    const quote = quotePurchase(assumed);
+    expect(quote.grossWasAssumed).toBe(true);
+    const command = purchaseCommandFrom(assumed, quote, meta);
+    expect('expectedNetProceedsCents' in command).toBe(false);
+    expect('expectedProfitCents' in command).toBe(false);
   });
 
   it('omits every optional the operator did not supply', () => {

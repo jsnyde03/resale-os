@@ -150,16 +150,6 @@ export interface PurchaseCommandInput {
    * silent buy.
    */
   readonly override?: { readonly gates: readonly string[]; readonly reason: string };
-  /**
-   * ⚠️ OFF by default, and deliberately.
-   *
-   * A quote is an expectation, so it *could* be stored on every purchase — but
-   * `accuracyReport` measures the items that HAVE a prediction, and today that
-   * population means "came from a scored opportunity". Turning this on
-   * everywhere would silently mix two populations into one median. Whether it
-   * should is a decision, filed as B59, not a default.
-   */
-  readonly recordPrediction?: boolean;
 }
 
 /**
@@ -191,12 +181,24 @@ export function purchaseCommandFrom(
     // of them, and that is the number the hold-time gate was assessed against.
     expectedDaysToSale: quote.velocity.expectedDaysToSale,
     expectedResaleCents: quote.expectedGrossCents,
-    ...(meta.recordPrediction
-      ? {
+    // ⛔ B59, answered 2026-09-09: record it — but only when the operator said
+    // what they expect to sell for.
+    //
+    // `accuracyReport` measures the items that HAVE a prediction, and that
+    // population used to mean "came through the scorer". After 5.10 retires the
+    // CLI the scorer is the RARE path, so a report that ignores the number the
+    // operator actually decided from is blind rather than conservative.
+    //
+    // ⚠️ And the exclusion matters as much as the inclusion. When no expected
+    // gross was given the quote assumes a 3x flip — that is the app's guess,
+    // not a prediction, and scoring accuracy against it would measure
+    // `DEFAULT_MULTIPLE` while looking like it measured judgement.
+    ...(quote.grossWasAssumed
+      ? {}
+      : {
           expectedNetProceedsCents: quote.estimate.netCents,
           expectedProfitCents: quote.expectedProfitCents,
-        }
-      : {}),
+        }),
     ...(input.marketplace !== undefined ? { marketplace: input.marketplace } : {}),
     ...(meta.opportunityId !== undefined ? { opportunityId: meta.opportunityId } : {}),
     listingLive: meta.listingLive ?? false,

@@ -115,8 +115,10 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
         answer: the pure form models in `src/ui/forms.ts` asserted by Vitest,
         and `screen-scenario.ts` running a day's work through them on-device.
         Planted; a rendering library stays deferred.
-  - [ ] **5.6.7** B59: record the expectation on every operator-priced purchase,
-        and split the accuracy report by where the prediction came from.
+  - [x] **5.6.7** ✅ **Done 2026-09-09.** B59: a purchase records what the
+        operator said they expect to net, and `accuracy` reports SCORED and
+        QUOTED separately rather than pooling them. An assumed 3x flip is
+        recorded as nothing — that is the app's guess, not a prediction.
   - [ ] **5.6.5** On-device verification of the five, via the iOS Actions lane.
         ⛔ **BLOCKED, externally.** `repo.reactnative.dev` serves the Hermes
         listing while every GET 404s, so no iOS build can start. Pinned +

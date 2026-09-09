@@ -1047,11 +1047,21 @@ ${m.mode}`);
 
       case 'accuracy': {
         // How good the estimates were. The instrument for risk R1.
-        const report = accuracyReport(store.state());
+        // ⛔ B59: `--scored` / `--quoted` narrow it. Pooling a model's
+        // expectation with an operator's answers a question nobody asked, so
+        // the split is always printed even when the whole population is shown.
+        const only =
+          args.flags.scored !== undefined ? 'SCORED' : args.flags.quoted !== undefined ? 'QUOTED' : null;
+        const report = accuracyReport(store.state(), only);
         console.log(accuracyVerdict(report));
         console.log('');
         if (report.n > 0) {
-          console.log(`${pad('scored sales', 24)}${report.n}`);
+          console.log(`${pad('sales measured', 24)}${report.n}`);
+          console.log(
+            `${pad('  from the scorer', 24)}${report.scoredN}` +
+              `
+${pad('  priced by you', 24)}${report.quotedN}`,
+          );
           console.log(`${pad('median days error', 24)}${report.medianDaysErrorDays >= 0 ? '+' : ''}${report.medianDaysErrorDays}d`);
           console.log(`${pad('sold on time or early', 24)}${Math.round(report.onTimeBps / 100)}%`);
           console.log(`${pad('median proceeds error', 24)}${formatCents(report.medianProceedsErrorCents)}`);
@@ -1063,8 +1073,9 @@ ${m.mode}`);
         if (report.unpredictedN > 0) {
           console.log('');
           console.log(
-            `${report.unpredictedN} sold item(s) had no scored prediction and are excluded. ` +
-              'Buy with --from-opp to include them.',
+            `${report.unpredictedN} sold item(s) carried no prediction and are excluded — ` +
+              'bought before this was recorded, or with no expected sale price given. ' +
+              'Say what you expect to sell for and the buy is measurable.',
           );
         }
         if (args.flags.items) {

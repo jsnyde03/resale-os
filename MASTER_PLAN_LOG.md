@@ -2580,3 +2580,50 @@ covered; the binding is not. → **B60**, half closed.
 Making `sellModel` record the *expected* hold instead of the derived one reds a
 Vitest case **and** a screen-scenario case. Making every spend a payout reds
 three and two. That is the property worth having: one defect, both runners.
+
+## 2026-09-09 (5.6.7) — B59: measure the prediction the decision was made from
+
+Jason agreed with the recommendation, which had reversed on a second look.
+
+### The risk pointed the other way
+
+`accuracyReport` measured only purchases that came through `buy --from-opp`.
+The worry filed as B59 was that recording an expectation on every purchase
+would **mix two populations into one median**.
+
+⚡ **True, and much less important than what the exclusion was already doing.**
+After 5.10 retires the CLI, the scorer is the *rare* path: the phone's buy
+screen shows an expected profit and that is the number the operator decides
+from. An instrument that ignores it is not conservative, it is blind.
+
+So the answer is not a binary — **record it, and keep the provenance so the
+report can split.** `ItemAccuracy` gains a `source`: `SCORED` when an
+`opportunityId` is behind it, `QUOTED` when the operator priced it, `null` when
+there was no expectation at all. `accuracyReport(state, only?)` narrows the
+statistics and **still reports the size of the population it left out**, so a
+filtered number can never read as the whole picture.
+
+### ⛔ What is deliberately NOT recorded
+
+When the operator gives no expected sale price the quote assumes a 3x flip.
+That is `DEFAULT_MULTIPLE`, not a prediction, and scoring accuracy against it
+would measure a constant while looking like it measured judgement. So the
+prediction is recorded **only when the operator said what they expect to sell
+for** — which also makes the instrument something the operator can opt into by
+typing one number.
+
+Three honest groups, and the third cannot be retrofitted: every purchase before
+today that did not go through the scorer has no expectation, and inventing one
+now would be fabricating a record.
+
+### Language
+
+`accuracyVerdict` said *"no scored predictions yet"* and *"N scored sales"*.
+Since a prediction can now come from the operator, "scored" would misdescribe
+most of them — it says "predictions" unless the report was narrowed, in which
+case it names which kind. The `--from-opp` advice in the excluded-items line is
+replaced by the thing that actually helps: *say what you expect to sell for and
+the buy is measurable.*
+
+Planted both halves — everything counted as `SCORED`, and an assumed 3x
+recorded as a prediction. Both red. **562 tests.**

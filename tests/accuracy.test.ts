@@ -65,13 +65,95 @@ describe('a missing prediction is excluded, not counted as zero', () => {
     expect(r.medianDaysErrorDays).toBe(0);
   });
 
-  it('says so plainly when nothing has been scored', () => {
+  // ⚠️ "predictions", not "scored predictions". Since B59 a prediction can come
+  // from the operator as well as from the scorer, and calling both "scored"
+  // would misdescribe most of them.
+  it('says so plainly when nothing carried a prediction', () => {
     const fund = Fund.withBankroll(15_000)
       .do(purchase({ itemId: 'i1', purchasePriceCents: 1_000 }))
       .do(sale({ itemId: 'i1', grossProceedsCents: 2_000, daysToSale: 5 }));
     const r = accuracyReport(fund.state);
     expect(r.n).toBe(0);
-    expect(accuracyVerdict(r)).toMatch(/no scored predictions/);
+    expect(r.unpredictedN).toBe(1);
+    expect(accuracyVerdict(r)).toMatch(/no predictions yet/);
+  });
+
+  it('names the kind when the report was narrowed to one', () => {
+    const fund = Fund.withBankroll(15_000)
+      .do(purchase({ itemId: 'i1', purchasePriceCents: 1_000 }))
+      .do(sale({ itemId: 'i1', grossProceedsCents: 2_000, daysToSale: 5 }));
+    expect(accuracyVerdict(accuracyReport(fund.state, 'SCORED'))).toMatch(/no scored predictions/);
+    expect(accuracyVerdict(accuracyReport(fund.state, 'QUOTED'))).toMatch(/no priced predictions/);
+  });
+});
+
+/**
+ * B59: a prediction from the scorer and a prediction from the operator are
+ * both worth measuring, and a single median over the two answers a question
+ * nobody asked.
+ */
+describe('predictions are counted by where they came from', () => {
+  /** Sold, with an expectation, and no opportunity behind it. */
+  function quoted(itemId: string) {
+    return purchase({
+      itemId,
+      purchasePriceCents: 1_000,
+      expectedResaleCents: 3_000,
+      expectedNetProceedsCents: 2_400,
+      expectedProfitCents: 1_400,
+    });
+  }
+
+  it('calls an expectation with no opportunity behind it QUOTED', () => {
+    const fund = Fund.withBankroll(50_000)
+      .do(quoted('q1'))
+      .do(sale({ itemId: 'q1', grossProceedsCents: 3_000, daysToSale: 7 }));
+    const r = accuracyReport(fund.state);
+    expect(r.items[0]?.source).toBe('QUOTED');
+    expect(r.quotedN).toBe(1);
+    expect(r.scoredN).toBe(0);
+    expect(r.n).toBe(1);
+  });
+
+  it('calls one that came through the scorer SCORED', () => {
+    const fund = Fund.withBankroll(50_000)
+      .do({ ...quoted('s1'), opportunityId: 'opp-1' })
+      .do(sale({ itemId: 's1', grossProceedsCents: 3_000, daysToSale: 7 }));
+    const r = accuracyReport(fund.state);
+    expect(r.items[0]?.source).toBe('SCORED');
+    expect(r.scoredN).toBe(1);
+    expect(r.quotedN).toBe(0);
+  });
+
+  it('leaves an item with no expectation sourceless, and excluded', () => {
+    const fund = Fund.withBankroll(50_000)
+      .do(purchase({ itemId: 'n1', purchasePriceCents: 1_000 }))
+      .do(sale({ itemId: 'n1', grossProceedsCents: 3_000, daysToSale: 7 }));
+    const r = accuracyReport(fund.state);
+    expect(r.items[0]?.source).toBeNull();
+    expect(r.n).toBe(0);
+    expect(r.unpredictedN).toBe(1);
+  });
+
+  // ⛔ The point of the split: a filtered report measures one population and
+  // still says how big the other one is.
+  it('narrows the statistics without hiding what it left out', () => {
+    const fund = Fund.withBankroll(50_000)
+      .do(quoted('q1'))
+      .do(sale({ itemId: 'q1', grossProceedsCents: 3_000, daysToSale: 7 }))
+      .do({ ...quoted('s1'), opportunityId: 'opp-1' })
+      .do(sale({ itemId: 's1', grossProceedsCents: 3_000, daysToSale: 7 }));
+
+    const all = accuracyReport(fund.state);
+    expect(all.n).toBe(2);
+    expect(all.only).toBeNull();
+
+    const scored = accuracyReport(fund.state, 'SCORED');
+    expect(scored.n).toBe(1);
+    expect(scored.only).toBe('SCORED');
+    // The counts still describe the whole population.
+    expect(scored.quotedN).toBe(1);
+    expect(scored.scoredN).toBe(1);
   });
 });
 
