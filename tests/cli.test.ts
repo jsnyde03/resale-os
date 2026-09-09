@@ -184,3 +184,35 @@ describe('overriding the capital gates', () => {
     expect(cli('verify').status).toBe(0);
   }, CLI_TIMEOUT);
 });
+
+/**
+ * ⛔ **A tested helper is not a used helper.** `daysBetween` has its own unit
+ * tests; this asserts the CLI actually CALLS it.
+ *
+ * The consequence is not cosmetic: `accuracy` excludes any sold item whose
+ * `daysToSale` is undefined, so before this a sale recorded without `--days`
+ * was invisible to the instrument that measures whether the estimates are any
+ * good.
+ */
+describe('a sale records how long it was actually held', () => {
+  it('appears in the accuracy report without anyone typing --days', () => {
+    // ⚠️ This block runs last, so it may fund itself without disturbing the
+    // balances the earlier reads assert.
+    expect(cli('contribute', '--amount=200.00').status).toBe(0);
+    // Comps rather than a guess: an operator estimate carries 30% confidence
+    // and the gate wants 45%, which is the rule working, not an obstacle.
+    const bought = cli('buy', '--id=held-01', '--category=BOOKS', '--price=2.00',
+      '--resale=20.00', '--sold=90', '--active=10');
+    expect(bought.all).not.toContain('fails the capital rules');
+    expect(bought.status).toBe(0);
+    expect(cli('sell', '--id=held-01', '--gross=20.00', '--fee=3.05', '--postage=4.00').status)
+      .toBe(0);
+
+    const rows = cli('accuracy', '--items').stdout;
+    // Bought and sold in the same second, so the hold is 0 days — which is the
+    // honest answer, and is a different fact from "not recorded".
+    expect(rows).toContain('held-01');
+    // itemId, expected days (from the velocity model), then ACTUAL days.
+    expect(rows).toMatch(/held-01\s+\d+\s+0\s/);
+  }, CLI_TIMEOUT);
+});

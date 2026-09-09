@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { itemIdFrom } from '@/core/ids.js';
+import { daysBetween, itemIdFrom } from '@/core/ids.js';
 
 describe('itemIdFrom', () => {
   it('slugs a name and numbers it from the event count', () => {
@@ -51,5 +51,33 @@ describe('itemIdFrom', () => {
     // The next one is longer, and lexical order gives up here.
     expect(itemIdFrom('pin', 9_999)).toBe('pin-10000');
     expect(['pin-9999', 'pin-10000'].sort()).toEqual(['pin-10000', 'pin-9999']);
+  });
+});
+
+describe('daysBetween', () => {
+  it('counts whole days', () => {
+    expect(daysBetween('2026-09-01T12:00:00.000Z', '2026-09-08T12:00:00.000Z')).toBe(7);
+  });
+
+  // ⚠️ Floored, not rounded. A same-day flip held for six hours is 0 days, and
+  // saying 1 to avoid a zero would be a lie in the accuracy report.
+  it('is zero under twenty-four hours, not one', () => {
+    expect(daysBetween('2026-09-01T00:00:00.000Z', '2026-09-01T18:00:00.000Z')).toBe(0);
+    expect(daysBetween('2026-09-01T00:00:00.000Z', '2026-09-02T00:00:00.000Z')).toBe(1);
+    expect(daysBetween('2026-09-01T00:00:00.000Z', '2026-09-01T23:59:59.000Z')).toBe(0);
+  });
+
+  // A clock that went backwards, or a back-dated sale, must not produce a
+  // negative hold that would poison the accuracy median.
+  it('never goes negative', () => {
+    expect(daysBetween('2026-09-08T00:00:00.000Z', '2026-09-01T00:00:00.000Z')).toBe(0);
+  });
+
+  it('crosses a month and a leap day', () => {
+    expect(daysBetween('2028-02-27T00:00:00.000Z', '2028-03-01T00:00:00.000Z')).toBe(3);
+  });
+
+  it('refuses a timestamp it cannot read rather than returning NaN days', () => {
+    expect(() => daysBetween('yesterday', '2026-09-01T00:00:00.000Z')).toThrow(/timestamps/);
   });
 });

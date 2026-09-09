@@ -18,6 +18,7 @@ import { computeMetrics } from '../core/capital/metrics.js';
 import { maxAffordableLandedCost } from '../core/capital/constraints.js';
 import { assessQuote, purchaseCommandFrom } from '../core/capital/quote.js';
 import { applyBps, formatCents, parseDollars, toBps } from '../core/money.js';
+import { daysBetween } from '../core/ids.js';
 import { estimateNetProceeds, feeModel, grossNeededForNet } from '../core/fees.js';
 import {
   estimateFromComps,
@@ -486,6 +487,10 @@ Global: --db=path  --at=ISO-timestamp`);
       }
 
       case 'sell': {
+        // ⛔ Derived from the two timestamps unless the operator overrides it.
+        // `--days` alone meant a real hold was recorded as whatever they
+        // remembered, or as nothing at all — and it feeds accuracy reporting.
+        const sold = store.state().items[req(args, 'id')];
         const result = store.commit({
           type: 'SALE',
           itemId: req(args, 'id'),
@@ -494,7 +499,11 @@ Global: --db=path  --at=ISO-timestamp`);
           paymentFeeCents: args.flags.payment ? money(args, 'payment') : 0,
           outboundShippingCents: args.flags.postage ? money(args, 'postage') : 0,
           packagingCents: args.flags.packaging ? money(args, 'packaging') : 0,
-          ...(args.flags.days ? { daysToSale: int(args, 'days') } : {}),
+          ...(args.flags.days
+            ? { daysToSale: int(args, 'days') }
+            : sold
+              ? { daysToSale: daysBetween(sold.acquiredAt, now) }
+              : {}),
           occurredAt: now,
         });
         const a = result.allocation!;

@@ -2457,3 +2457,39 @@ that is a mitigation, not a test. → **B60**, to be decided before 5.6.5.
 purchase expected to net, and deliberately does not by default, because
 `accuracyReport` measures the items that have a prediction and that population
 currently means "came from a scored opportunity".
+
+## 2026-09-09 (5.6.2) — sell, and a number that should never have been typed
+
+An item picker over everything holding capital, the gross, and the three costs.
+
+**The fees are suggested, never assumed.** The marketplace model knows what eBay
+usually charges, and what eBay usually charges is not what *this* sale charged —
+so it fills the boxes on request and the operator corrects them against the
+payout. The recorded numbers are always the ones they saw.
+
+### ⛔ `daysToSale` was a flag, and it should have been a subtraction
+
+`cli sell` took `--days`. So a real hold was recorded as whatever the operator
+remembered, or — far more often — as nothing at all. Both timestamps were
+already on the record.
+
+⚡ **And the consequence was not cosmetic.** `accuracy`'s `hasOutcome` requires
+`daysToSale !== undefined`, so **a sale recorded without `--days` was invisible
+to the instrument that measures whether the estimates are any good.** Planting
+the derivation away turned the whole report into "no sales yet".
+
+`daysBetween` is in `src/core/ids.ts`, floored at whole days and at zero: a
+same-day flip is 0, not 1, because rounding it up to look better would be a lie
+in a median. A back-dated sale cannot produce a negative hold.
+
+⚠️ **A tested helper is not a used helper.** `daysBetween` has unit tests; the
+CLI test asserts the CLI *calls* it — the item appears in `accuracy --items`
+with an actual-days column, without anyone typing a flag. That test found its
+own premise wrong twice: the purchase needed comps rather than an operator
+guess, because a guess carries 30% confidence against a 45% gate. The rule
+working, not an obstacle.
+
+⚠️ **And the restore after that plant silently failed** — the replacement string
+was no longer unique, `typecheck` passed because the plant is valid TypeScript,
+and only re-running the suite caught that the fix was still missing. Restoring
+is an edit like any other and needs verifying like one.

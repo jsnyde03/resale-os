@@ -95,7 +95,14 @@ function Position() {
         <Row label="Events recorded" value={String(state.eventCount)} tone="dim" />
       </Card>
 
-      <Button label="Buy" onPress={() => router.push('/buy')} tone="primary" />
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <View style={{ flex: 1 }}>
+          <Button label="Buy" onPress={() => router.push('/buy')} tone="primary" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button label="Sell" onPress={() => router.push('/sell')} />
+        </View>
+      </View>
     </View>
   );
 }

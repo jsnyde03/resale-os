@@ -30,3 +30,24 @@ export function itemIdFrom(name: string, eventCount: number): string {
       .replace(/-$/, '') || 'item';
   return `${slug}-${String(eventCount + 1).padStart(4, '0')}`;
 }
+
+/**
+ * Whole days between two ISO timestamps, floored at zero.
+ *
+ * ⛔ **Derived, never typed.** `daysToSale` feeds the prediction-accuracy
+ * report, and the CLI made it an optional `--days` flag the operator supplied
+ * by hand — so an item bought on the 1st and sold on the 8th was recorded as
+ * however many days the operator remembered, or as nothing at all. Both
+ * timestamps are already on the record; the number should come from them.
+ *
+ * ⚠️ Whole days by floor, so anything under 24 hours is 0, which is the honest
+ * answer for a same-day flip. It is not rounded up to 1 to look better.
+ */
+export function daysBetween(fromIso: string, toIso: string): number {
+  const from = Date.parse(fromIso);
+  const to = Date.parse(toIso);
+  if (!Number.isFinite(from) || !Number.isFinite(to)) {
+    throw new Error(`cannot read "${fromIso}" and "${toIso}" as timestamps`);
+  }
+  return Math.max(0, Math.floor((to - from) / 86_400_000));
+}

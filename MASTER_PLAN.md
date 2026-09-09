@@ -96,7 +96,11 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
   - [x] **5.6.1** ✅ **Done 2026-09-09.** The buy screen, D4's override path
         included. ⚡ `core/capital/quote.ts` extracted out of `cli buy` so both
         surfaces price a purchase and build the command identically.
-  - [ ] **5.6.2** Sell.
+  - [x] **5.6.2** ✅ **Done 2026-09-09.** Sell: an item picker over what the
+        fund is holding, fees suggested from the marketplace model and then
+        corrected against the payout, and the hold time **derived** from the two
+        timestamps rather than typed — which is what puts a sale into the
+        accuracy report at all. CLI matched.
   - [ ] **5.6.3** Expense and payout.
   - [ ] **5.6.4** Adjust, and the refusal surface: a rejected command must read
         like a refusal on a phone, not a red box.
