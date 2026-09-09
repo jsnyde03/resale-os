@@ -15,7 +15,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { EngineError } from '../core/capital/engine.js';
 import { InvariantViolation } from '../core/ledger/invariants.js';
 import { computeMetrics } from '../core/capital/metrics.js';
-import { assessPurchase, maxAffordableLandedCost } from '../core/capital/constraints.js';
+import { maxAffordableLandedCost } from '../core/capital/constraints.js';
+import { assessQuote } from '../core/capital/quote.js';
 import { applyBps, formatCents, parseDollars, toBps } from '../core/money.js';
 import { estimateNetProceeds, feeModel, grossNeededForNet } from '../core/fees.js';
 import {
@@ -390,14 +391,31 @@ Global: --db=path  --at=ISO-timestamp`);
         const inboundShippingCents = args.flags.shipping ? money(args, 'shipping') : 0;
         const salesTaxCents = args.flags.tax ? money(args, 'tax') : 0;
         const acquisitionTravelCents = args.flags.travel ? money(args, 'travel') : 0;
-        const landed =
-          purchasePriceCents + inboundShippingCents + salesTaxCents + acquisitionTravelCents;
-        // Comps if we have them, a flagged guess if we do not.
-        const velocity =
-          args.flags.sold !== undefined
-            ? estimateFromComps(int(args, 'sold'), int(args, 'active', 0))
-            : estimateFromOperator(int(args, 'days', 7));
+
+        // ⛔ The arithmetic lives in `core/capital/quote.ts`, not here. The
+        // phone's buy screen has to reach the same verdict from the same
+        // numbers, and two implementations of "what will this net" is how a
+        // fund starts disagreeing with itself about what it was allowed to buy.
+        const { quote, assessment } = assessQuote(store.state(), {
+          category: req(args, 'category'),
+          purchasePriceCents,
+          inboundShippingCents,
+          salesTaxCents,
+          acquisitionTravelCents,
+          ...(args.flags.resale ? { expectedGrossCents: money(args, 'resale') } : {}),
+          ...(args.flags.marketplace ? { marketplace: args.flags.marketplace } : {}),
+          ...(args.flags['est-postage'] ? { estPostageCents: money(args, 'est-postage') } : {}),
+          ...(args.flags.sold !== undefined
+            ? { soldLast90Days: int(args, 'sold'), activeListings: int(args, 'active', 0) }
+            : { operatorDaysEstimate: int(args, 'days', 7) }),
+        });
+        const landed = quote.landedCostCents;
+        const velocity = quote.velocity;
         const expectedDaysToSale = velocity.expectedDaysToSale;
+        const expectedGrossCents = quote.expectedGrossCents;
+        const model = quote.feeModel;
+        const estimate = quote.estimate;
+        const expectedProfit = quote.expectedProfitCents;
 
         if (velocity.source === 'COMPS') {
           console.log(
@@ -413,15 +431,6 @@ Global: --db=path  --at=ISO-timestamp`);
               `Pass --sold= --active= to derive it instead.`,
           );
         }
-        // --resale is the GROSS price you expect to sell at. Fees and postage
-        // come off it before any gate sees a profit figure.
-        const expectedGrossCents = args.flags.resale ? money(args, 'resale') : landed * 3;
-        const model = feeModel(args.flags.marketplace);
-        const estimate = estimateNetProceeds(expectedGrossCents, model, {
-          ...(args.flags['est-postage'] ? { postageCents: money(args, 'est-postage') } : {}),
-        });
-        const expectedProfit = estimate.netCents - landed;
-
         console.log(
           `${formatCents(expectedGrossCents)} gross on ${model.marketplace}` +
             `  -  fees ${formatCents(estimate.marketplaceFeeCents)}` +
@@ -434,23 +443,6 @@ Global: --db=path  --at=ISO-timestamp`);
             `${formatCents(expectedProfit)} expected profit
 `,
         );
-
-        const assessment = assessPurchase(store.state(), {
-          category: req(args, 'category'),
-          landedCostCents: landed,
-          expectedDaysToSale,
-          // Fire-sale at 40% of gross, net of the same fees.
-          modeledDownsideCents: Math.max(
-            0,
-            landed - estimateNetProceeds(applyBps(expectedGrossCents, 4_000), model).netCents,
-          ),
-          expectedNetProfitCents: expectedProfit,
-          expectedRoiBps: landed === 0 ? 0 : toBps(expectedProfit, landed),
-          confidenceBps: velocity.confidenceBps,
-          ...(velocity.source === 'COMPS'
-            ? { sellThroughBps: velocity.sellThroughBps }
-            : {}),
-        });
 
         let overrodeGates: string[] | undefined;
         let overrideReason: string | undefined;

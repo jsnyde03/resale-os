@@ -98,8 +98,11 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
   - [ ] **5.6.4** Adjust, and the refusal surface: a rejected command must read
         like a refusal on a phone, not a red box.
   - [ ] **5.6.5** On-device verification of the five, via the iOS Actions lane.
-        ⛔ **The lane is RED** — the app installs, launches and dies before
-        writing a verdict. Diagnostics added 2026-09-09; cause unknown.
+        ⛔ **BLOCKED, externally.** `repo.reactnative.dev` serves the Hermes
+        listing while every GET 404s, so no iOS build can start. Pinned +
+        cached + gated 2026-09-09; re-run when it is back. ⚠️ **And a
+        runtime death from before that is still unexplained** — the app
+        launched and vanished; diagnostics are in place, unrun.
 - [ ] **5.7** The read screens, ported from Gate 4's six.
 - [ ] **5.8** Backups from the phone. Currently OneDrive-from-the-PC; the PC is
       gone.
@@ -315,6 +318,11 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
 - **B28** Revisit categories (books as a margin play, per-category risk inputs)
   when the bankroll supports the hold tolerance. → Growth mode.
 - ~~**B25**~~ ✅ closed in **4.8**.
+- **B58** `src/core/capital/quote.ts` was extracted out of `cli buy` so the
+  phone and the CLI price a purchase identically. ⚠️ The CLI's `score` and
+  `buy --from` paths still compute economics through `evaluateOpportunity`;
+  check the two agree before **5.10** retires the CLI, or the disagreement
+  becomes invisible. → Gate 5.
 - **B57** The app has no icon — a white square on the home screen. Cosmetic,
   and only visible because a CI screenshot caught it. → before any TestFlight
   build (**5.9**).

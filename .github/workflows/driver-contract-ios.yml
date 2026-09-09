@@ -102,29 +102,64 @@ jobs:
       # `LOCAL_PREBUILT_TARBALL` outranks every other source type. A download
       # that genuinely fails now stops the job instead of quietly compiling
       # something else.
+      - name: Which Hermes this React Native wants
+        id: hermes
+        working-directory: mobile
+        run: |
+          PROPS=node_modules/react-native/sdks/hermes-engine/version.properties
+          # RCT_HERMES_V1_ENABLED is unset, so the podspec takes the V1 name.
+          echo "version=$(grep '^HERMES_V1_VERSION_NAME=' "$PROPS" | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+
+      # ⚡ Cached by VERSION, so this lane stops depending on a third party
+      # being up. `repo.reactnative.dev` calls itself a "React Native Maven
+      # Cache", and on 2026-09-09 it served the directory listing — the file
+      # named, sized at 23 MB, dated March — while every GET returned 404, for
+      # three consecutive versions. Nothing we can fix; everything we can
+      # survive, once.
+      - name: Restore the pinned Hermes
+        id: hermes-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: mobile/hermes-ios.tar.gz
+          key: hermes-ios-${{ steps.hermes.outputs.version }}-release
+
       - name: Pin the Hermes binary
         working-directory: mobile
         run: |
           set -euo pipefail
-          PROPS=node_modules/react-native/sdks/hermes-engine/version.properties
-          # RCT_HERMES_V1_ENABLED is unset, so the podspec takes the V1 name.
-          V=$(grep '^HERMES_V1_VERSION_NAME=' "$PROPS" | cut -d= -f2)
-          URL="https://repo1.maven.org/maven2/com/facebook/hermes/hermes-ios/$V/hermes-ios-$V-hermes-ios-release.tar.gz"
+          V='${{ steps.hermes.outputs.version }}'
           echo "hermes $V"
-          echo "$URL"
-          for i in 1 2 3 4 5; do
-            if curl -fsSL --retry 3 --retry-delay 2 -o hermes-ios.tar.gz "$URL"; then break; fi
-            echo "attempt $i failed; retrying"
-            sleep $(( i * 10 ))
-          done
+          if [ -s hermes-ios.tar.gz ]; then
+            echo "from cache"
+          else
+            URL="https://repo1.maven.org/maven2/com/facebook/hermes/hermes-ios/$V/hermes-ios-$V-hermes-ios-release.tar.gz"
+            echo "$URL"
+            for i in 1 2 3 4 5; do
+              if curl -fsSL --retry 3 --retry-delay 2 -o hermes-ios.tar.gz "$URL"; then break; fi
+              echo "attempt $i failed; retrying"
+              sleep $(( i * 10 ))
+            done
+          fi
           if [ ! -s hermes-ios.tar.gz ]; then
-            echo "::error::Could not fetch the prebuilt Hermes $V after 5 attempts."
+            echo "::error::Could not fetch the prebuilt Hermes $V, and nothing was cached."
             echo "Building from the branch tip instead is how this lane produced a"
             echo "jsi mismatch on 2026-09-09, so it stops here rather than guessing."
+            echo "If the listing shows the file but a GET 404s, the artifact host is"
+            echo "down and the only thing to do is wait and re-run."
             exit 1
           fi
           ls -l hermes-ios.tar.gz
           echo "HERMES_ENGINE_TARBALL_PATH=$PWD/hermes-ios.tar.gz" >> "$GITHUB_ENV"
+
+      # ⚠️ Saved explicitly rather than by `actions/cache`'s post step, which
+      # runs only when the job succeeds. The whole point is to hold on to a
+      # binary fetched during a run that then failed for some other reason.
+      - name: Keep it
+        if: always() && steps.hermes-cache.outputs.cache-hit != 'true' && hashFiles('mobile/hermes-ios.tar.gz') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: mobile/hermes-ios.tar.gz
+          key: hermes-ios-${{ steps.hermes.outputs.version }}-release
 
       - name: Generate the native project
         working-directory: mobile
