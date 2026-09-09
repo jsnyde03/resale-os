@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 
 import { formatCents } from '../../src/core/money.js';
@@ -19,6 +19,7 @@ import { Button, C, Card, H1, Muted, Row } from '../src/ui/theme.js';
  */
 function Position() {
   const { metrics: m, state, isEmpty } = useFund();
+  const router = useRouter();
 
   if (isEmpty) {
     return (
@@ -28,9 +29,7 @@ function Position() {
           The database was created and migrated, and it holds no events. Import a fund to start —
           the import replays every command and refuses anything whose hash it cannot reproduce.
         </Muted>
-        <Link href="/import" asChild>
-          <Button label="Import a fund" onPress={() => {}} tone="primary" />
-        </Link>
+        <Button label="Import a fund" onPress={() => router.push('/import')} tone="primary" />
       </View>
     );
   }
@@ -95,6 +94,8 @@ function Position() {
         <Row label="Active items" value={String(m.activeItemCount)} />
         <Row label="Events recorded" value={String(state.eventCount)} tone="dim" />
       </Card>
+
+      <Button label="Buy" onPress={() => router.push('/buy')} tone="primary" />
     </View>
   );
 }

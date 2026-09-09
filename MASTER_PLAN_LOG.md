@@ -2408,3 +2408,52 @@ immediately and a source build only has after six minutes of compiling.
 shell. The lane now captures the app's console, any crash report written to the
 host, and the process's own lines from the simulator log — none of which existed
 when it happened.
+
+## 2026-09-09 (5.6.1) — the buy screen, and one arithmetic for two surfaces
+
+The screen the whole gate is for. A category and a price are enough to see what
+the rules say; the quote updates as you type; a failing purchase lists the gates
+it failed and offers the D4 override, which will not submit without a reason.
+
+### ⛔ None of the arithmetic is in the screen
+
+`cli buy` had it inline — landed cost, velocity, fees, the fire-sale downside,
+the candidate. The phone needs the identical numbers, and **two implementations
+of "what will this net" is how a fund starts disagreeing with itself about what
+it was allowed to buy.** Extracted to `core/capital/quote.ts`; the CLI calls it.
+
+Then the same argument one level up: `purchaseCommandFrom` builds the PURCHASE
+command, because **the fields the engine hashes must not depend on which surface
+recorded the buy.** A phone writing `expectedDaysToSale` from the operator's raw
+guess while the CLI writes it from the velocity model would produce two
+different events, and two different hashes, for the same purchase.
+
+### The tests are the point of the extraction
+
+The CLI's own tests exercise all of this end to end and assert only **which gate
+refused** — so they would sit green through a wrong fee, a wrong fire-sale rate
+or a wrong multiple. `tests/quote.test.ts` asserts the figures, every one
+derived by hand from the published fee model rather than copied from output.
+
+Planted five ways — the fire-sale rate, the default multiple, the sell-through
+that must stay **absent** for an operator estimate so the gate abstains rather
+than failing an unknown, the days coming from the model rather than the input,
+and the empty-gate-list case that must not become an override. All red.
+
+⚠️ **`itemIdFrom` moved to `src/core/ids.ts` and got its own tests.** It was a
+helper at the bottom of a screen, and an item id is **hashed into the ledger and
+permanent** — it cannot be renamed later without breaking the chain. The tests
+pin the fallback for a name with nothing Latin in it, the trailing hyphen that
+survives truncation, and the point at which four digits of padding stops sorting
+in ledger order (9,999 events) rather than assuming it never will.
+
+### What the after-scan found and did not fix
+
+⛔ **Nothing can see a screen.** `mobile/` has no test setup, so the wiring is
+covered by nothing. The logic was pushed into `src/` where it is tested, but
+that is a mitigation, not a test. → **B60**, to be decided before 5.6.5.
+
+**B59** is a decision for Jason: `purchaseCommandFrom` *can* record what a
+purchase expected to net, and deliberately does not by default, because
+`accuracyReport` measures the items that have a prediction and that population
+currently means "came from a scored opportunity".

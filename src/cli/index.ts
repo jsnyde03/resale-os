@@ -16,7 +16,7 @@ import { EngineError } from '../core/capital/engine.js';
 import { InvariantViolation } from '../core/ledger/invariants.js';
 import { computeMetrics } from '../core/capital/metrics.js';
 import { maxAffordableLandedCost } from '../core/capital/constraints.js';
-import { assessQuote } from '../core/capital/quote.js';
+import { assessQuote, purchaseCommandFrom } from '../core/capital/quote.js';
 import { applyBps, formatCents, parseDollars, toBps } from '../core/money.js';
 import { estimateNetProceeds, feeModel, grossNeededForNet } from '../core/fees.js';
 import {
@@ -396,7 +396,7 @@ Global: --db=path  --at=ISO-timestamp`);
         // phone's buy screen has to reach the same verdict from the same
         // numbers, and two implementations of "what will this net" is how a
         // fund starts disagreeing with itself about what it was allowed to buy.
-        const { quote, assessment } = assessQuote(store.state(), {
+        const quoteInput = {
           category: req(args, 'category'),
           purchasePriceCents,
           inboundShippingCents,
@@ -408,7 +408,8 @@ Global: --db=path  --at=ISO-timestamp`);
           ...(args.flags.sold !== undefined
             ? { soldLast90Days: int(args, 'sold'), activeListings: int(args, 'active', 0) }
             : { operatorDaysEstimate: int(args, 'days', 7) }),
-        });
+        };
+        const { quote, assessment } = assessQuote(store.state(), quoteInput);
         const landed = quote.landedCostCents;
         const velocity = quote.velocity;
         const expectedDaysToSale = velocity.expectedDaysToSale;
@@ -468,22 +469,17 @@ Global: --db=path  --at=ISO-timestamp`);
           console.log(`\n--force given: recorded as overriding ${overrodeGates.join(', ')}.`);
         }
 
-        store.commit({
-          type: 'PURCHASE',
-          itemId: req(args, 'id'),
-          name: args.flags.name ?? req(args, 'id'),
-          category: req(args, 'category'),
-          purchasePriceCents,
-          inboundShippingCents,
-          salesTaxCents,
-          acquisitionTravelCents,
-          expectedDaysToSale,
-          expectedResaleCents: expectedGrossCents,
-          listingLive: args.flags['listing-live'] === 'true',
-          ...(overrodeGates ? { overrodeGates, overrideReason } : {}),
-          ...(args.flags.marketplace ? { marketplace: args.flags.marketplace } : {}),
-          occurredAt: now,
-        });
+        store.commit(
+          purchaseCommandFrom(quoteInput, quote, {
+            itemId: req(args, 'id'),
+            name: args.flags.name ?? req(args, 'id'),
+            occurredAt: now,
+            listingLive: args.flags['listing-live'] === 'true',
+            ...(overrodeGates && overrideReason
+              ? { override: { gates: overrodeGates, reason: overrideReason } }
+              : {}),
+          }),
+        );
         console.log(`bought ${req(args, 'id')} at a landed cost of ${formatCents(landed)}`);
         printStatus(store);
         break;

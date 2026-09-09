@@ -15,7 +15,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { quotePurchase, assessQuote, landedCostOf } from '@/core/capital/quote.js';
+import {
+  quotePurchase,
+  assessQuote,
+  landedCostOf,
+  purchaseCommandFrom,
+} from '@/core/capital/quote.js';
 import { Fund } from './helpers.js';
 
 describe('landed cost is every cent it took to own the thing', () => {
@@ -159,5 +164,106 @@ describe('the quote meets the capital rules', () => {
     });
     expect(assessment.passed).toBe(false);
     expect(assessment.failures.map((f) => f.code)).toContain('MAX_PER_ITEM_EXCEEDED');
+  });
+});
+
+/**
+ * The command a quote implies.
+ *
+ * ⛔ Shared by the CLI and the phone deliberately: the fields the engine
+ * HASHES must not depend on which surface recorded the buy. A phone that wrote
+ * `expectedDaysToSale` from the operator's raw guess while the CLI wrote it
+ * from the velocity model would produce two different events — and two
+ * different hashes — for the same purchase.
+ */
+describe('the purchase command a quote implies', () => {
+  const input = {
+    category: 'TOYS',
+    purchasePriceCents: 1_000,
+    inboundShippingCents: 250,
+    expectedGrossCents: 4_000,
+    // Comps say 90/10; the operator never typed a number of days.
+    soldLast90Days: 90,
+    activeListings: 10,
+  } as const;
+  const meta = { itemId: 'lego-0007', name: 'Lego set', occurredAt: '2026-09-09T12:00:00.000Z' };
+
+  it('takes the days from the velocity model, not from the operator', () => {
+    const quote = quotePurchase(input);
+    const command = purchaseCommandFrom(input, quote, meta);
+    // The hold-time gate was assessed against this number, so this is the
+    // number that has to go on the record.
+    expect(command.expectedDaysToSale).toBe(quote.velocity.expectedDaysToSale);
+    expect(command.expectedResaleCents).toBe(4_000);
+    expect(command.purchasePriceCents).toBe(1_000);
+    expect(command.inboundShippingCents).toBe(250);
+  });
+
+  // ⚠️ `accuracyReport` measures the items that HAVE a prediction, and today
+  // that population means "came from a scored opportunity". Recording one on
+  // every purchase would silently mix two populations into one median — B59.
+  it('records no prediction by default', () => {
+    const command = purchaseCommandFrom(input, quotePurchase(input), meta);
+    expect(command.expectedNetProceedsCents).toBeUndefined();
+    expect(command.expectedProfitCents).toBeUndefined();
+  });
+
+  it('records one when asked, and it is the quote', () => {
+    const quote = quotePurchase(input);
+    const command = purchaseCommandFrom(input, quote, { ...meta, recordPrediction: true });
+    expect(command.expectedNetProceedsCents).toBe(quote.estimate.netCents);
+    expect(command.expectedProfitCents).toBe(quote.expectedProfitCents);
+  });
+
+  it('omits every optional the operator did not supply', () => {
+    const bare = { category: 'TOYS', purchasePriceCents: 1_000 } as const;
+    const command = purchaseCommandFrom(bare, quotePurchase(bare), meta);
+    expect('inboundShippingCents' in command).toBe(false);
+    expect('salesTaxCents' in command).toBe(false);
+    expect('marketplace' in command).toBe(false);
+    expect('opportunityId' in command).toBe(false);
+    expect(command.listingLive).toBe(false);
+  });
+
+  describe('D4, through the shared builder', () => {
+    it('carries the gates and the reason', () => {
+      const command = purchaseCommandFrom(input, quotePurchase(input), {
+        ...meta,
+        override: { gates: ['MAX_PER_ITEM_EXCEEDED'], reason: 'seller would not split the lot' },
+      });
+      expect(command.overrodeGates).toEqual(['MAX_PER_ITEM_EXCEEDED']);
+      expect(command.overrideReason).toBe('seller would not split the lot');
+    });
+
+    // An empty gate list is not an override, and must not become a purchase
+    // that owes the engine a reason.
+    it('treats an empty gate list as no override', () => {
+      const command = purchaseCommandFrom(input, quotePurchase(input), {
+        ...meta,
+        override: { gates: [], reason: '' },
+      });
+      expect('overrodeGates' in command).toBe(false);
+    });
+
+    it('produces a command the engine accepts, end to end', () => {
+      const fund = Fund.withBankroll(5_000);
+      const { quote, assessment } = assessQuote(fund.state, {
+        category: 'TOYS',
+        purchasePriceCents: 4_000,
+        expectedGrossCents: 12_000,
+        soldLast90Days: 90,
+        activeListings: 10,
+      });
+      expect(assessment.passed).toBe(false);
+      const command = purchaseCommandFrom(
+        { category: 'TOYS', purchasePriceCents: 4_000, expectedGrossCents: 12_000,
+          soldLast90Days: 90, activeListings: 10 },
+        quote,
+        { ...meta, override: { gates: assessment.failures.map((f) => f.code), reason: 'lot deal' } },
+      );
+      const item = fund.do(command).item('lego-0007');
+      expect(item.overrideReason).toBe('lot deal');
+      expect(item.overrodeGates).toContain('MAX_PER_ITEM_EXCEEDED');
+    });
   });
 });

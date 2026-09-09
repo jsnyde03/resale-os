@@ -22,6 +22,7 @@ import { estimateNetProceeds, feeModel, type FeeModel, type NetProceedsEstimate 
 import { estimateFromComps, estimateFromOperator, type VelocityEstimate } from '../velocity.js';
 import { assessPurchase, type ConstraintAssessment, type PurchaseCandidate } from './constraints.js';
 import type { FundState } from './state.js';
+import type { PurchaseCommand } from './commands.js';
 
 /**
  * A liquidation is modelled at 40% of the expected gross, net of the same fees.
@@ -135,4 +136,73 @@ export function assessQuote(state: FundState, input: PurchaseQuoteInput): {
 } {
   const quote = quotePurchase(input);
   return { quote, assessment: assessPurchase(state, quote.candidate) };
+}
+
+export interface PurchaseCommandInput {
+  readonly itemId: string;
+  readonly name: string;
+  readonly occurredAt: string;
+  readonly listingLive?: boolean;
+  readonly opportunityId?: string;
+  /**
+   * D4: the gates this purchase overruled, and why. The engine refuses an
+   * override with no reason, so passing gates without one is a refusal, not a
+   * silent buy.
+   */
+  readonly override?: { readonly gates: readonly string[]; readonly reason: string };
+  /**
+   * ⚠️ OFF by default, and deliberately.
+   *
+   * A quote is an expectation, so it *could* be stored on every purchase — but
+   * `accuracyReport` measures the items that HAVE a prediction, and today that
+   * population means "came from a scored opportunity". Turning this on
+   * everywhere would silently mix two populations into one median. Whether it
+   * should is a decision, filed as B59, not a default.
+   */
+  readonly recordPrediction?: boolean;
+}
+
+/**
+ * The PURCHASE command a quote implies.
+ *
+ * ⛔ Shared by the CLI and the phone for the same reason the quote is: the
+ * fields the engine hashes must not depend on which surface recorded the buy.
+ */
+export function purchaseCommandFrom(
+  input: PurchaseQuoteInput,
+  quote: PurchaseQuote,
+  meta: PurchaseCommandInput,
+): PurchaseCommand {
+  return {
+    type: 'PURCHASE',
+    itemId: meta.itemId,
+    name: meta.name,
+    category: input.category,
+    purchasePriceCents: input.purchasePriceCents,
+    ...(input.inboundShippingCents !== undefined
+      ? { inboundShippingCents: input.inboundShippingCents }
+      : {}),
+    ...(input.salesTaxCents !== undefined ? { salesTaxCents: input.salesTaxCents } : {}),
+    ...(input.acquisitionTravelCents !== undefined
+      ? { acquisitionTravelCents: input.acquisitionTravelCents }
+      : {}),
+    // ⚠️ From the QUOTE, not from the input. The operator supplies comps or a
+    // guess; the days that go on the record are what the velocity model made
+    // of them, and that is the number the hold-time gate was assessed against.
+    expectedDaysToSale: quote.velocity.expectedDaysToSale,
+    expectedResaleCents: quote.expectedGrossCents,
+    ...(meta.recordPrediction
+      ? {
+          expectedNetProceedsCents: quote.estimate.netCents,
+          expectedProfitCents: quote.expectedProfitCents,
+        }
+      : {}),
+    ...(input.marketplace !== undefined ? { marketplace: input.marketplace } : {}),
+    ...(meta.opportunityId !== undefined ? { opportunityId: meta.opportunityId } : {}),
+    listingLive: meta.listingLive ?? false,
+    ...(meta.override && meta.override.gates.length > 0
+      ? { overrodeGates: meta.override.gates, overrideReason: meta.override.reason }
+      : {}),
+    occurredAt: meta.occurredAt,
+  };
 }

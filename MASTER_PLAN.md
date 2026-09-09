@@ -89,10 +89,13 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       ⚠️ **Switch-in correction 2026-09-09: there is no app to put them in.**
       `mobile/app/` holds a proof harness and the contract runner; no device
       database, no `FundStore`, no navigation — so 5.6.0 was inserted.
-  - [ ] **5.6.0** The shell: open the real on-device ledger, migrate it, hold
-        ONE store in context, and an import path — without which 5.5 cannot
-        finish and every screen below runs against an empty fund.
-  - [ ] **5.6.1** The buy screen — scored, assessed, and D4's override path.
+  - [x] **5.6.0** ✅ **Done 2026-09-09.** `FundProvider` holds one store over the
+        real device ledger; refusals are values, not exceptions; the contract
+        lane still runs without it. Import screen, and `FundStore.invalidate()`
+        because an import replays through a store of its own.
+  - [x] **5.6.1** ✅ **Done 2026-09-09.** The buy screen, D4's override path
+        included. ⚡ `core/capital/quote.ts` extracted out of `cli buy` so both
+        surfaces price a purchase and build the command identically.
   - [ ] **5.6.2** Sell.
   - [ ] **5.6.3** Expense and payout.
   - [ ] **5.6.4** Adjust, and the refusal surface: a rejected command must read
@@ -318,6 +321,18 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
 - **B28** Revisit categories (books as a margin play, per-category risk inputs)
   when the bankroll supports the hold tolerance. → Growth mode.
 - ~~**B25**~~ ✅ closed in **4.8**.
+- **B60** ⛔ **Nothing can see a screen.** `mobile/` has no test setup at all,
+  so `buy`, `import` and the position screen are unasserted — the wiring
+  (which field feeds which input, whether the override button is disabled) is
+  covered by nothing. Mitigated by pushing the logic into `src/` where it IS
+  tested, but the mitigation is not the test. Decide the shape before **5.6.5**:
+  a React Native testing-library setup, or accept the lane's on-device run as
+  the only screen coverage and say so. → Gate 5.
+- **B59** **[DECISION]** Should EVERY purchase record what it expected to net?
+  `purchaseCommandFrom` can, and does not by default: `accuracyReport` measures
+  items that HAVE a prediction, and today that population means "came from a
+  scored opportunity". Turning it on everywhere silently mixes two populations
+  into one median. It would make accuracy measurable on far more buys. Jason's.
 - **B58** `src/core/capital/quote.ts` was extracted out of `cli buy` so the
   phone and the CLI price a purchase identically. ⚠️ The CLI's `score` and
   `buy --from` paths still compute economics through `evaluateOpportunity`;
