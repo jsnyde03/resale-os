@@ -2627,3 +2627,69 @@ the buy is measurable.*
 
 Planted both halves — everything counted as `SCORED`, and an assumed 3x
 recorded as a prediction. Both red. **562 tests.**
+
+## 2026-09-09 (5.7) — a backup that proves itself by being restored
+
+Promoted ahead of the read screens because the phone becomes the **only current
+ledger** at the first event recorded on it, on a device that spends its day in a
+car. Read screens are convenience.
+
+### ⛔ Not a copy of the database file
+
+The desktop copies `resale.db` and verifies the copy opens and its chain
+verifies. Good — and it still only proves the bytes moved. `makeVerifiedBackup`
+exports the ledger's **commands** and *replays them into a scratch database*,
+comparing every regenerated hash, before any file exists.
+
+⚡ **That is the stronger guarantee, and it is the one that matters: the failure
+a backup exists to survive is not "the file went missing", it is "the file is
+there and will not come back".** Only a restore sees that coming, and this does
+the restore at write time rather than at panic time.
+
+It is also platform-free — JSON, no `node:*` — so the phone and the desktop make
+the same artefact and either restores the other.
+
+### Two obligations, and only one of them is automatic
+
+1. **A verified copy exists** — after every write, in the app's Documents. Cheap
+   and automatic.
+2. **A copy exists somewhere else** — the operator's, because nothing on the
+   device can put a file on another machine without a network service this phone
+   may not carry.
+
+⚠️ A backup in the app's own folder survives a crash, a bad restore and a
+fat-fingered adjustment. It does **not** survive deleting the app, losing the
+phone, or replacing it — the failures that end a fund. `UIFileSharingEnabled`
+puts the folder in Files so a copy can be dragged to iCloud, and the home screen
+says plainly that until that happens *the fund exists on exactly one device*.
+The one-tap version needs `expo-sharing` and is **B61**, deferred rather than
+guessed at while no iOS build can start.
+
+### What implementation found
+
+⛔ **`openScratch()` was outside the try block**, so a device that could not
+open a scratch database threw past the caller — which on a phone is a red screen
+saying the app broke, rather than a refusal saying the backup was not written.
+Both mean no backup; only one tells the operator what to do. Caught by the test
+for it, not by reading.
+
+⛔ **`eventsBehind` was a duplicate of `backupStaleness`,** which has been the
+rule since the desktop backup existed and is already platform-free. Written,
+noticed, deleted on sight — a second answer to "is this fund backed up" that
+only one surface uses is exactly the drift this project keeps paying for.
+
+**`writeDeviceBackup` never throws.** A backup failure must not make a
+successful sale look lost, so the outcome is a value the screens read off
+`fund.backup`, and a failed copy shows as a card rather than as a crash.
+
+### The control
+
+Every other case in the module would still pass if the restore never ran — the
+"restores to the same fund" case does its own import and would prove the export
+good while the verification was skipped. **Handing it a scratch database the
+replay must reject is the only assertion that fails when the replay is not
+attempted**, and it is marked as such in the file. Planted by deleting the
+`importLedger` call: that one, and only that one, reds. Planted again on the
+empty-ledger refusal: red in Vitest and in the on-device contract.
+
+**573 tests.**

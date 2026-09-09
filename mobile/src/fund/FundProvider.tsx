@@ -31,6 +31,8 @@ import { PolicyError } from '../../../src/core/capital/policy.js';
 import { TaxProfileError } from '../../../src/core/tax/profile.js';
 import { LedgerTransferError } from '../../../src/db/portable.js';
 import { openMobileFundStore } from '../db/open-store.js';
+import { writeDeviceBackup } from '../backup/deviceBackup.js';
+import { backupStaleness } from '../../../src/db/backup-types.js';
 
 /**
  * The outcome of asking the fund to record something.
@@ -97,6 +99,8 @@ export interface Fund {
   readonly metrics: CapitalMetrics;
   /** True until a ledger exists here — a fresh install, or before an import. */
   readonly isEmpty: boolean;
+  /** How many events have happened since the last verified copy, and whether that is a problem. */
+  readonly backup: { readonly behind: number; readonly stale: boolean; readonly lastError: string | null };
   readonly commit: (command: Command) => CommitOutcome;
   /** Re-read after something wrote outside `commit` — an import, a restore. */
   readonly refresh: () => void;
@@ -148,15 +152,27 @@ export function FundProvider({
   const value = useMemo<Fund | null>(() => {
     if (!store) return null;
     const state = store.state();
+    const backupState = store.backupState();
     return {
       store,
       state,
       metrics: computeMetrics(state),
       isEmpty: state.eventCount === 0,
+      backup: {
+        ...backupStaleness(backupState, state.eventCount),
+        lastError: backupState.lastError,
+      },
       refresh,
       commit: (command: Command): CommitOutcome => {
         try {
           const result = store.commit(command);
+          // ⛔ Backed up before this returns, not on a timer and not on the way
+          // out of the app. The desktop copied after every command that moved
+          // money and the phone has a harder version of the same job: it holds
+          // the ONLY current copy. `writeDeviceBackup` never throws — a backup
+          // failure must not make a successful sale look lost — so the outcome
+          // is a value the screens read off `fund.backup`.
+          writeDeviceBackup(store);
           return { ok: true, eventId: result.event.eventId };
         } catch (err) {
           return refusalFrom(err);

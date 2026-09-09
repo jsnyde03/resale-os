@@ -6,7 +6,14 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "ios": { "supportsTablet": false, "bundleIdentifier": "com.jasonsnyder.resaleos" },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.jasonsnyder.resaleos",
+      "infoPlist": {
+        "UIFileSharingEnabled": true,
+        "LSSupportsOpeningDocumentsInPlace": true
+      }
+    },
     "plugins": ["expo-router"]
   }
 }

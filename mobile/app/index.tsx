@@ -1,5 +1,5 @@
 import { Link, useRouter } from 'expo-router';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
 import { formatCents } from '../../src/core/money.js';
 import { assessProfitFloor } from '../../src/core/capital/reachability.js';
@@ -18,7 +18,7 @@ import { Button, C, Card, H1, Muted, Row } from '../src/ui/theme.js';
  * with no network and nothing carried over from a desktop.
  */
 function Position() {
-  const { metrics: m, state, isEmpty } = useFund();
+  const { metrics: m, state, isEmpty, backup } = useFund();
   const router = useRouter();
 
   if (isEmpty) {
@@ -93,7 +93,41 @@ function Position() {
       <Card>
         <Row label="Active items" value={String(m.activeItemCount)} />
         <Row label="Events recorded" value={String(state.eventCount)} tone="dim" />
+        {/* ⛔ Whether the fund is backed up is a fact about safety, so it is on
+            the main screen rather than behind a menu nobody opens. The desktop
+            put it on `status` for the same reason — and this phone holds the
+            only current copy, which the desktop never did. */}
+        <Row
+          label="Backed up"
+          value={
+            backup.stale
+              ? backup.behind === state.eventCount
+                ? 'never'
+                : `${backup.behind} event${backup.behind === 1 ? '' : 's'} behind`
+              : 'current'
+          }
+          tone={backup.stale ? 'warn' : 'good'}
+        />
       </Card>
+
+      {backup.lastError ? (
+        <Card style={{ borderWidth: 1, borderColor: C.bad }}>
+          <Text style={{ color: C.bad, fontSize: 15, marginBottom: 6 }}>
+            The last backup did not happen
+          </Text>
+          <Text selectable style={{ color: C.dim, fontSize: 13, lineHeight: 19 }}>
+            {backup.lastError}
+          </Text>
+        </Card>
+      ) : null}
+
+      {/* ⚠️ The second obligation, and the one nothing here can discharge. A
+          copy in this app's own folder dies with the app and with the phone. */}
+      <Muted>
+        Copies are written here after every change. Getting one OFF this phone is still yours to
+        do — open Files, find Resale OS, and drag a backup to iCloud Drive. Until then the fund
+        exists on exactly one device.
+      </Muted>
 
       <View style={{ gap: 10 }}>
         <View style={{ flexDirection: 'row', gap: 10 }}>

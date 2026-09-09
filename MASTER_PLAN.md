@@ -130,15 +130,16 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       recorded on the phone, the desktop copy is stale and the phone is the only
       current ledger — on a device that spends its day in a car. Read screens are
       convenience; this is the failure the whole system exists to prevent.
-  - [ ] **5.7.1** Where a backup goes on iOS, and whether it survives an app
-        delete. `Paths.document` does not; decide against iCloud/Files.
-  - [ ] **5.7.2** Write one, verify-then-promote, the same contract as the
-        desktop's — a backup that was never read back is a rumour.
-  - [ ] **5.7.3** Automatic after every money-moving command, and staleness on
-        the position screen, matching the desktop's behaviour.
-  - [ ] **5.7.4** Get one OFF the phone. A copy that only exists on the device
-        that can be lost is not a backup.
-  - [ ] **5.7.5** Restore, proven — the half nobody tests until they need it.
+  - [x] **5.7.1–5.7.3, 5.7.5** ✅ **Done 2026-09-09.** A backup is the ledger's
+        COMMANDS, replayed into a scratch database before any file exists — so
+        it is verified by restore, not by opening a copy. Automatic after every
+        write, never throws, staleness on the position screen, 30 kept. The
+        restore is a case in the on-device contract.
+  - [~] **5.7.4** ⚙️ **Half done, and honestly half.** `UIFileSharingEnabled`
+        puts the copies in the Files app so they can be dragged to iCloud; the
+        drag is the operator's. ⛔ **A one-tap share needs `expo-sharing`, a
+        native module — deferred until a build can validate it, because no iOS
+        build can start today.** → **B61**.
 - [ ] **5.8** The read screens, ported from Gate 4's six.
 - [~] **5.9** ✅ **Decided 2026-09-09: TestFlight via CODEMAGIC** (Jason —
       "look at the debt app for how one used it before"). `codemagic.yaml`
@@ -358,6 +359,11 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
 - **B28** Revisit categories (books as a margin play, per-category risk inputs)
   when the bankroll supports the hold tolerance. → Growth mode.
 - ~~**B25**~~ ✅ closed in **4.8**.
+- **B61** One-tap "send this backup somewhere else" via `expo-sharing`. Today
+  the copies land in the app's Documents and reach iCloud only if the operator
+  opens Files and drags one — a chore, and therefore a backup that will not
+  happen. ⚠️ It is a native module, so it cannot be added blind while the iOS
+  build is blocked; do it in the same cycle as the first green build. → Gate 5.
 - **B60** ⚙️ **Half closed 2026-09-09** (Jason: *both — contract now, RNTL
   later*). The form models are pure, tested and executed on-device. ⚠️ **What
   is still uncovered is the JSX binding** — whether the price box is wired to

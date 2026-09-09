@@ -25,6 +25,8 @@ import { assessQuote, purchaseCommandFrom } from '../core/capital/quote.js';
 import { itemIdFrom } from '../core/ids.js';
 import { adjustModel, sellModel, spendModel } from '../ui/forms.js';
 import { profitReport } from './reporting.js';
+import { makeVerifiedBackup } from './backup-portable.js';
+import { importLedger, type LedgerExport } from './portable.js';
 import type { TaxProfile } from '../core/tax/profile.js';
 import type { ScenarioCase } from './engine-scenario.js';
 
@@ -273,6 +275,64 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
       eq(store.verifyChain(), { ok: true }, 'the chain verifies after four screens');
       eq(reconcile(store), { ok: true, differences: [] }, 'the postings agree with a replay');
       ok(computeMetrics(store.derivedState()).navCents > 0, 'the fund still has a bankroll');
+    },
+  },
+  {
+    // ⛔ 5.7. The phone holds the only current copy, so the backup is not a
+    // convenience — and the artefact is only worth having if it comes back.
+    // This runs the write AND the restore on whatever SQLite is underneath.
+    name: 'backup: a day of work is backed up, and the backup restores to the same fund',
+    run: (db, openScratch) => {
+      const store = funded(db, 50_000);
+      const { itemId } = buy(store, {
+        name: 'Lego set',
+        category: 'TOYS',
+        price: 1_000,
+        resale: 4_000,
+        sold: 90,
+      });
+      const item = store.state().items[itemId]!;
+      store.commit(
+        sellModel(item, { gross: '40.00', fee: '5.70', postage: '5.00', packaging: '0.35' })
+          .command(T30)!,
+      );
+      const before = computeMetrics(store.derivedState());
+
+      // ⚡ `makeVerifiedBackup` replays into a scratch database BEFORE handing
+      // back any bytes. If this build cannot rebuild the fund from its own
+      // history, no file is produced.
+      const backup = makeVerifiedBackup(store.db, openScratch, () => T30);
+      ok(backup.events >= 3, `expected a few events, got ${backup.events}`);
+      ok(backup.json.length > 0, 'the backup should have contents');
+
+      // And the half nobody tests until they need it.
+      const restored = openScratch();
+      const report = importLedger(restored, JSON.parse(backup.json) as LedgerExport, () => T30);
+      ok(report.hashesMatched, 'every hash should be reproduced on this platform');
+      ok(report.chainOk, 'the restored chain should verify');
+      ok(report.reconciled, 'the restored ledger should reconcile');
+      eq(
+        computeMetrics(new FundStore(restored).state()).navCents,
+        before.navCents,
+        'the restored fund should be the same fund',
+      );
+    },
+  },
+  {
+    name: 'backup: an empty ledger is refused rather than written as an empty file',
+    run: (db, openScratch) => {
+      migrateWith(db, T0);
+      const store = new FundStore(db, () => T0);
+      store.ensureSeeded();
+      let refused = false;
+      try {
+        makeVerifiedBackup(store.db, openScratch, () => T0);
+      } catch {
+        refused = true;
+      }
+      // ⚠️ A zero-event backup file is worse than none: it looks like a backup
+      // in a directory listing, and restores to nothing.
+      ok(refused, 'backing up an empty ledger must be refused');
     },
   },
 ];

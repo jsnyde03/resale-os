@@ -66,8 +66,15 @@ export function makeVerifiedBackup(
 
   // ⛔ The restore happens HERE, before the file exists — not the first time it
   // is needed. A backup nobody has restored is a rumour about a backup.
-  const scratch = openScratch();
+  //
+  // ⚠️ `openScratch()` is INSIDE the try. It was outside, and a device that
+  // could not open a scratch database threw a raw error straight past the
+  // caller — which on a phone is a red screen saying the app broke, rather
+  // than a refusal saying the backup was not written. Both mean no backup;
+  // only one of them tells the operator what to do about it.
+  let scratch: Db | undefined;
   try {
+    scratch = openScratch();
     const report = importLedger(scratch, exported, () => exportedAt);
     if (report.events !== exported.events.length) {
       throw new BackupRefused(
@@ -79,7 +86,7 @@ export function makeVerifiedBackup(
     throw new BackupRefused(`this ledger does not restore: ${(err as Error).message}`);
   } finally {
     try {
-      scratch.close();
+      scratch?.close();
     } catch {
       // A close failure must not mask the result of the check it was part of.
     }
@@ -98,12 +105,7 @@ export function makeVerifiedBackup(
   };
 }
 
-/**
- * How far behind the last successful backup is.
- *
- * Shared with the desktop's staleness rule so both surfaces agree on when to
- * start nagging. Zero events behind is current; anything else is not.
- */
-export function eventsBehind(lastBackedUpEventCount: number, eventCount: number): number {
-  return Math.max(0, eventCount - lastBackedUpEventCount);
-}
+// ⚠️ Staleness is NOT defined here. `backupStaleness` in `backup-types.ts` has
+// been the rule since the desktop backup existed, it is already platform-free,
+// and a second copy would be a second answer to "is this fund backed up" that
+// only one surface uses. It was written here first and deleted on sight.
