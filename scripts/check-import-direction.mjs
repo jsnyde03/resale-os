@@ -25,6 +25,10 @@ const FORBIDDEN = {
   // summing postings itself, which is a SECOND implementation of a number the
   // engine already owns — the one thing 4.2 exists to prevent.
   'src/app': ['src/db', 'src/cli'],
+  // The pure form models the write screens are made of. They may reach core;
+  // reaching the store would make a screen able to write without going through
+  // the one place that refreshes every other screen.
+  'src/ui': ['src/db', 'src/cli', 'src/server', 'src/app'],
 };
 
 /** Modules the pure layers may not touch, however they are reached. */
@@ -33,6 +37,7 @@ const FORBIDDEN_MODULES = {
   'src/scoring': ['node:sqlite', 'node:fs', 'node:child_process'],
   'src/domain': ['node:sqlite', 'node:child_process'],
   'src/app': ['node:sqlite'],
+  'src/ui': ['node:sqlite', 'node:fs', 'node:child_process'],
 };
 
 const toPosix = (p) => p.split(sep).join('/');
@@ -98,9 +103,16 @@ for (const [layer, banned] of Object.entries(FORBIDDEN)) {
   }
 }
 
-// The money-arithmetic sweep, over the screens only. `src/core` is where that
-// arithmetic belongs and is tested.
-for (const dir of ['src/app', 'src/server']) {
+// The money-arithmetic sweep, over every screen surface. `src/core` is where
+// that arithmetic belongs and is tested.
+//
+// ⛔ **`mobile/` was missing from this list until 2026-09-09, and by then the
+// sell screen had broken the rule three times in one file.** The list was
+// written when the only screens were Gate 4's; a new corpus does not announce
+// itself to an enumerated scope. This is the third time on this project that a
+// hand-written list of places to look has been short — search the tree, or at
+// minimum re-read the list every time a directory is born.
+for (const dir of ['src/app', 'src/server', 'src/ui', 'mobile/app', 'mobile/src']) {
   if (!existsSync(join(ROOT, dir))) continue;
   for (const file of walk(join(ROOT, dir))) {
     const rel = toPosix(relative(ROOT, file));

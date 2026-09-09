@@ -2,11 +2,12 @@ import { useMemo, useState } from 'react';
 import { Link, useRouter } from 'expo-router';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 
-import { formatCents } from '../../src/core/money.js';
+import { formatCents, toDollarsInput } from '../../src/core/money.js';
 import { daysBetween } from '../../src/core/ids.js';
-import { estimateNetProceeds, feeModel } from '../../src/core/fees.js';
+import { feeModel } from '../../src/core/fees.js';
+import { sellModel } from '../../src/ui/forms.js';
 import { holdsCapital } from '../../src/core/capital/state.js';
-import { useFund } from '../src/fund/FundProvider.js';
+import { refusalText, useFund } from '../src/fund/FundProvider.js';
 import { Button, C, Card, H1, Muted, Row } from '../src/ui/theme.js';
 import { Field, centsOrNothing } from '../src/ui/fields.js';
 import { ItemPicker } from '../src/ui/ItemPicker.js';
@@ -41,51 +42,36 @@ export default function Sell() {
     [state.items],
   );
   const item = itemId ? state.items[itemId] : undefined;
-  const grossCents = centsOrNothing(gross);
 
-  // The suggestion, recomputed as the gross changes — until the operator edits
-  // a box, after which their number stands and nothing overwrites it.
-  const suggested = useMemo(() => {
-    if (grossCents === undefined || !item) return null;
-    return estimateNetProceeds(grossCents, feeModel(item.marketplace));
-  }, [grossCents, item]);
+  // ⛔ Every number below comes from `sellModel`, which is pure and tested.
+  // Nothing on this screen decides what a sale is worth.
+  const model = useMemo(
+    () => (item ? sellModel(item, { gross, fee, postage, packaging }) : null),
+    [item, gross, fee, postage, packaging],
+  );
+  const suggested = touched ? null : (model?.suggestion ?? null);
 
   function useSuggestion() {
-    if (!suggested) return;
-    setFee((suggested.marketplaceFeeCents / 100).toFixed(2));
-    setPostage((suggested.postageCents / 100).toFixed(2));
-    setPackaging((suggested.packagingCents / 100).toFixed(2));
+    if (!model?.suggestion) return;
+    // `toDollarsInput`, not `/ 100`: dividing cents in a component is how
+    // `-$0.00` and off-by-one rounding turn up in two places at once, and it
+    // is lint-gated for exactly that reason.
+    setFee(toDollarsInput(model.suggestion.marketplaceFeeCents));
+    setPostage(toDollarsInput(model.suggestion.postageCents));
+    setPackaging(toDollarsInput(model.suggestion.packagingCents));
     setTouched(true);
   }
 
-  const feeCents = centsOrNothing(fee) ?? 0;
-  const postageCents = centsOrNothing(postage) ?? 0;
-  const packagingCents = centsOrNothing(packaging) ?? 0;
-  const netCents =
-    grossCents === undefined ? undefined : grossCents - feeCents - postageCents - packagingCents;
-  const profitCents =
-    netCents === undefined || !item ? undefined : netCents - item.bookValueCents;
-
   function record() {
-    if (!item || grossCents === undefined) return;
+    const command = model?.command(new Date().toISOString());
+    if (!command) return;
     setRefusal(null);
-    const occurredAt = new Date().toISOString();
-    const outcome = commit({
-      type: 'SALE',
-      itemId: item.itemId,
-      grossProceedsCents: grossCents,
-      marketplaceFeeCents: feeCents,
-      outboundShippingCents: postageCents,
-      packagingCents: packagingCents,
-      // ⛔ From the two timestamps, not from memory.
-      daysToSale: daysBetween(item.acquiredAt, occurredAt),
-      occurredAt,
-    });
+    const outcome = commit(command);
     if (outcome.ok) {
       router.replace('/');
       return;
     }
-    setRefusal(outcome.hint ? `${outcome.refusal}\n${outcome.hint}` : outcome.refusal);
+    setRefusal(refusalText(outcome));
   }
 
   return (
@@ -113,10 +99,10 @@ export default function Sell() {
                 placeholder="36.00"
                 keyboardType="decimal-pad"
                 hint="Gross, including anything the buyer paid for shipping."
-                invalid={gross.trim() !== '' && grossCents === undefined}
+                invalid={gross.trim() !== '' && model?.grossCents === undefined}
               />
 
-              {suggested && !touched ? (
+              {suggested ? (
                 <Card>
                   <Muted>
                     {feeModel(item.marketplace).marketplace} usually takes{' '}
@@ -137,17 +123,17 @@ export default function Sell() {
               <Card>
                 <Row label="Held" value={`${daysBetween(item.acquiredAt, new Date().toISOString())}d`} tone="dim" />
                 <Row label="What it cost" value={formatCents(item.bookValueCents)} tone="dim" />
-                {netCents !== undefined ? (
-                  <Row label="Net to the fund" value={formatCents(netCents)} />
+                {model?.netCents !== undefined ? (
+                  <Row label="Net to the fund" value={formatCents(model.netCents)} />
                 ) : null}
-                {profitCents !== undefined ? (
+                {model?.profitCents !== undefined ? (
                   <Row
                     label="Profit"
-                    value={formatCents(profitCents)}
-                    tone={profitCents >= 0 ? 'good' : 'bad'}
+                    value={formatCents(model.profitCents)}
+                    tone={model.profitCents >= 0 ? 'good' : 'bad'}
                   />
                 ) : null}
-                {item.expectedProfitCents !== undefined && profitCents !== undefined ? (
+                {item.expectedProfitCents !== undefined && model?.profitCents !== undefined ? (
                   <Row
                     label="You expected"
                     value={formatCents(item.expectedProfitCents)}
@@ -156,7 +142,7 @@ export default function Sell() {
                 ) : null}
               </Card>
 
-              {profitCents !== undefined && profitCents < 0 ? (
+              {model?.profitCents !== undefined && model.profitCents < 0 ? (
                 <Muted>
                   A loss is recorded exactly like a gain — the fund is made whole first, and what is
                   missing comes out of retained earnings. Nothing is hidden by it.
@@ -178,7 +164,7 @@ export default function Sell() {
                 label="Record the sale"
                 onPress={record}
                 tone="primary"
-                disabled={grossCents === undefined}
+                disabled={!model?.ready}
               />
             </>
           ) : null}

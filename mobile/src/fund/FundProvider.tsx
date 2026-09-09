@@ -80,6 +80,17 @@ function refusalFrom(err: unknown): CommitOutcome {
   throw err;
 }
 
+/**
+ * The refusal as one block of text.
+ *
+ * Four screens were formatting this identically, which is four places for the
+ * wording to drift apart while every one of them keeps looking right.
+ */
+export function refusalText(outcome: Extract<CommitOutcome, { ok: false }>): string {
+  return outcome.hint ? `${outcome.refusal}
+${outcome.hint}` : outcome.refusal;
+}
+
 export interface Fund {
   readonly store: FundStore;
   readonly state: FundState;

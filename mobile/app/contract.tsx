@@ -3,7 +3,8 @@ import { ScrollView, Text, View } from 'react-native';
 import { File, Paths } from 'expo-file-system';
 
 import { runDriverContract } from '../../src/db/driver-contract.js';
-import { runEngineScenario } from '../../src/db/engine-scenario.js';
+import { runEngineScenario, runScenario } from '../../src/db/engine-scenario.js';
+import { SCREEN_SCENARIO } from '../../src/db/screen-scenario.js';
 import { openExpoDb } from '../src/db/expo-driver.js';
 
 /**
@@ -22,9 +23,14 @@ export default function Contract() {
     // store built on top of them.
     const driver = runDriverContract(() => openExpoDb(':memory:'));
     const engine = runEngineScenario(() => openExpoDb(':memory:'));
+    // The third: a day's work driven through the same pure form models the
+    // write screens are made of. Not a rendering test — everything after the
+    // form is here, on Apple's SQLite, in Hermes, in order.
+    const screens = runScenario(SCREEN_SCENARIO, () => openExpoDb(':memory:'));
     const r = [
       ...driver.map((x) => ({ ...x, name: `driver: ${x.name}` })),
       ...engine.map((x) => ({ ...x, name: `engine: ${x.name}` })),
+      ...screens.map((x) => ({ ...x, name: `screen: ${x.name}` })),
     ];
     const bad = r.filter((x) => !x.passed);
     const summary = {

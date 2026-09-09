@@ -30,9 +30,16 @@ on:
     paths:
       - 'src/db/**'
       - 'src/core/**'
+      # ⚠️ `src/ui/**` was missing for as long as it existed — the pure form
+      # models the write screens are made of, and half of what the on-device
+      # screen contract executes. An enumerated path list is a list of the
+      # directories that existed when someone last thought about it.
+      - 'src/ui/**'
       - 'mobile/**'
       - 'tests/driver-node.test.ts'
       - 'tests/engine-scenario-node.test.ts'
+      - 'tests/screen-scenario-node.test.ts'
+      - 'tests/forms.test.ts'
       - 'tests/migrations-bundle.test.ts'
       - 'tests/hash.test.ts'
       - '.github/workflows/driver-contract-ios.yml'
@@ -81,7 +88,7 @@ jobs:
       # The contract also runs against node:sqlite here, so a failure on the
       # phone can be read against a known-good baseline in the same log.
       - name: Contract and scenario against node:sqlite (baseline)
-        run: npx vitest run tests/driver-node.test.ts tests/engine-scenario-node.test.ts tests/migrations-bundle.test.ts tests/hash.test.ts
+        run: npx vitest run tests/driver-node.test.ts tests/engine-scenario-node.test.ts tests/screen-scenario-node.test.ts tests/forms.test.ts tests/migrations-bundle.test.ts tests/hash.test.ts
 
       # ⛔ PIN HERMES, because the podspec's fallback is silent and moving.
       #

@@ -111,6 +111,10 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
         refusal surface is in `FundProvider`: refusals are values, every screen
         renders them the same way, and only the five errors the engine
         deliberately raises are treated as one.
+  - [x] **5.6.6** ✅ **Done 2026-09-09.** Screen coverage, both halves of D-B60's
+        answer: the pure form models in `src/ui/forms.ts` asserted by Vitest,
+        and `screen-scenario.ts` running a day's work through them on-device.
+        Planted; a rendering library stays deferred.
   - [ ] **5.6.5** On-device verification of the five, via the iOS Actions lane.
         ⛔ **BLOCKED, externally.** `repo.reactnative.dev` serves the Hermes
         listing while every GET 404s, so no iOS build can start. Pinned +
@@ -332,13 +336,12 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
 - **B28** Revisit categories (books as a margin play, per-category risk inputs)
   when the bankroll supports the hold tolerance. → Growth mode.
 - ~~**B25**~~ ✅ closed in **4.8**.
-- **B60** ⛔ **Nothing can see a screen.** `mobile/` has no test setup at all,
-  so `buy`, `import` and the position screen are unasserted — the wiring
-  (which field feeds which input, whether the override button is disabled) is
-  covered by nothing. Mitigated by pushing the logic into `src/` where it IS
-  tested, but the mitigation is not the test. Decide the shape before **5.6.5**:
-  a React Native testing-library setup, or accept the lane's on-device run as
-  the only screen coverage and say so. → Gate 5.
+- **B60** ⚙️ **Half closed 2026-09-09** (Jason: *both — contract now, RNTL
+  later*). The form models are pure, tested and executed on-device. ⚠️ **What
+  is still uncovered is the JSX binding** — whether the price box is wired to
+  `price`. Add `@testing-library/react-native` only if a wiring bug actually
+  reaches the device; until then the gap is named rather than guessed at.
+  → Gate 5.
 - **B59** **[DECISION]** Should EVERY purchase record what it expected to net?
   `purchaseCommandFrom` can, and does not by default: `accuracyReport` measures
   items that HAVE a prediction, and today that population means "came from a

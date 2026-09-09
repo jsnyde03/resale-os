@@ -11,27 +11,12 @@
  */
 
 import { Text, TextInput, View } from 'react-native';
-import { parseDollars, type Cents } from '../../../src/core/money.js';
 import { C, NUM } from './theme.js';
 
-/** Cents, or `undefined` when the text is not yet a complete amount. */
-export function centsOrNothing(text: string): Cents | undefined {
-  const trimmed = text.trim();
-  if (trimmed === '') return undefined;
-  try {
-    return parseDollars(trimmed);
-  } catch {
-    return undefined;
-  }
-}
-
-/** A non-negative whole number, or `undefined`. */
-export function countOrNothing(text: string): number | undefined {
-  const trimmed = text.trim();
-  if (trimmed === '') return undefined;
-  if (!/^\d+$/.test(trimmed)) return undefined;
-  return Number(trimmed);
-}
+// ⛔ Re-exported, not reimplemented. These live in `src/ui/forms.ts` where the
+// desktop suite can assert them; a second copy here would be a second set of
+// rules about what counts as a number, and only one of them would be tested.
+export { centsOrNothing, countOrNothing } from '../../../src/ui/forms.js';
 
 export function Field({
   label,

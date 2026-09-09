@@ -4,9 +4,10 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } fro
 
 import { formatCents } from '../../src/core/money.js';
 import { ACCOUNTS, type Account } from '../../src/core/ledger/accounts.js';
-import { useFund } from '../src/fund/FundProvider.js';
+import { refusalText, useFund } from '../src/fund/FundProvider.js';
 import { Button, C, Card, H1, Muted, Row } from '../src/ui/theme.js';
-import { Field, centsOrNothing } from '../src/ui/fields.js';
+import { Field } from '../src/ui/fields.js';
+import { MIN_ADJUSTMENT_REASON, adjustModel } from '../../src/ui/forms.js';
 
 /**
  * Correcting the books.
@@ -35,25 +36,20 @@ export default function Adjust() {
   const [confirming, setConfirming] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
 
-  const amountCents = centsOrNothing(amount);
-  const ready = account !== null && amountCents !== undefined && reason.trim().length >= 8;
+  const model = adjustModel({ account, amount, reason });
+  const amountCents = model.amountCents;
 
   function record() {
-    if (account === null || amountCents === undefined) return;
+    const command = model.command(new Date().toISOString());
+    if (!command) return;
     setRefusal(null);
-    const outcome = commit({
-      type: 'ADJUSTMENT',
-      account,
-      amountCents,
-      reason: reason.trim(),
-      occurredAt: new Date().toISOString(),
-    });
+    const outcome = commit(command);
     if (outcome.ok) {
       router.replace('/');
       return;
     }
     setConfirming(false);
-    setRefusal(outcome.hint ? `${outcome.refusal}\n${outcome.hint}` : outcome.refusal);
+    setRefusal(refusalText(outcome));
   }
 
   return (
@@ -117,7 +113,7 @@ export default function Adjust() {
             }}
             placeholder="miscounted the float on 6 Sept"
             autoCapitalize="words"
-            hint="This is the whole audit trail. In six months it is all there is."
+            hint={`This is the whole audit trail. In six months it is all there is. At least ${MIN_ADJUSTMENT_REASON} characters.`}
           />
 
           {account !== null && amountCents !== undefined ? (
@@ -155,7 +151,7 @@ export default function Adjust() {
               label="Adjust"
               onPress={() => setConfirming(true)}
               tone="danger"
-              disabled={!ready}
+              disabled={!model.ready}
             />
           )}
 

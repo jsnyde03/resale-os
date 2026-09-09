@@ -5,9 +5,10 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } fro
 import { formatCents } from '../../src/core/money.js';
 import { EXPENSE_CATEGORIES, type ExpenseCategory } from '../../src/core/capital/commands.js';
 import { holdsCapital } from '../../src/core/capital/state.js';
-import { useFund } from '../src/fund/FundProvider.js';
+import { refusalText, useFund } from '../src/fund/FundProvider.js';
 import { Button, C, Card, H1, Muted, Row } from '../src/ui/theme.js';
-import { Field, centsOrNothing } from '../src/ui/fields.js';
+import { Field } from '../src/ui/fields.js';
+import { spendModel } from '../../src/ui/forms.js';
 import { ItemPicker } from '../src/ui/ItemPicker.js';
 
 /**
@@ -66,40 +67,40 @@ export default function Spend() {
   const [againstItem, setAgainstItem] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
 
-  const amountCents = centsOrNothing(amount);
   const held = useMemo(
     () => Object.values(state.items).filter((i) => holdsCapital(i.state)),
     [state.items],
   );
 
+  // ⛔ The branching between an expense and a payout is in `spendModel`, which
+  // is pure and tested. Getting it wrong here would mean recording a deductible
+  // cost as an owner draw, or the reverse, and both look right on the screen.
+  const model = spendModel({
+    kind,
+    amount,
+    category,
+    // ⚠️ Only when the operator said so. An expense attached to the wrong item
+    // quietly moves the cost between item profit and operating profit, and both
+    // reports go on being plausible.
+    itemId: againstItem ? itemId : null,
+  });
+  const amountCents = model.amountCents;
+
   function record() {
-    if (amountCents === undefined) return;
+    const command = model.command(new Date().toISOString());
+    if (!command) return;
     setRefusal(null);
-    const occurredAt = new Date().toISOString();
-    const outcome =
-      kind === 'PAYOUT'
-        ? commit({ type: 'OWNER_PAYOUT', amountCents, occurredAt })
-        : commit({
-            type: 'BUSINESS_EXPENSE',
-            amountCents,
-            category: category ?? 'OTHER',
-            // ⚠️ Only when the operator said so. An expense attached to the
-            // wrong item quietly moves the cost between item profit and
-            // operating profit, and both reports go on being plausible.
-            ...(againstItem && itemId ? { itemId } : {}),
-            occurredAt,
-          });
+    const outcome = commit(command);
     if (outcome.ok) {
       router.replace('/');
       return;
     }
-    setRefusal(outcome.hint ? `${outcome.refusal}\n${outcome.hint}` : outcome.refusal);
+    setRefusal(refusalText(outcome));
   }
 
-  const ready =
-    amountCents !== undefined &&
-    (kind === 'PAYOUT' || category !== null) &&
-    (!againstItem || itemId !== null);
+  // The screen adds one rule the model has no business knowing: if you opened
+  // the item picker, you have to pick something.
+  const ready = model.ready && (!againstItem || itemId !== null);
 
   return (
     <KeyboardAvoidingView

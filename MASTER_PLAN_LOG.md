@@ -2531,3 +2531,52 @@ do it instead.
 engine deliberately raises and **rethrows everything else**. Every screen
 renders the same card and the same sentence: *nothing was recorded*. A bug
 dressed up as "the fund said no" is a bug nobody reports.
+
+## 2026-09-09 (5.6.6) — screen coverage, and a lint that had never seen the phone
+
+Jason chose **both**: the contract now, a rendering library only if a wiring bug
+actually reaches the device.
+
+### What the before-scan found, before any of it was built
+
+⛔ **`check-import-direction.mjs` sweeps an enumerated list of directories for
+money arithmetic, and `mobile/` had never been in it.** Adding it turned the
+gate red immediately: `sell.tsx` divided cents by 100 three times in one
+function, which is the exact thing `toDollarsInput` exists to prevent and which
+`views.ts` says screens must never do.
+
+⚡ **No plant was needed. The violations were already there** — the gate's first
+run was its own proof it can fail.
+
+**This is the third time on this project a hand-written list of places to look
+has been short**, and the second in two days. A new corpus does not announce
+itself to an enumerated scope. `src/ui/**` was then missing from the iOS lane's
+`paths:` filter for as long as it existed, which is the same defect in a
+different file.
+
+### The two halves
+
+**`src/ui/forms.ts`** — the write screens minus the pixels. Pure: strings in, a
+command or a refusal out. Twenty Vitest cases assert what a half-typed number
+is, that blank costs are zero rather than unknown, that a fee *suggestion* never
+reaches the command, that an expense with no category is not ready (the engine
+would take `OTHER`, and a year of `OTHER` is a Schedule C nobody can file), and
+that switching to a payout drops the category and the item rather than smuggling
+them along.
+
+**`src/db/screen-scenario.ts`** — the third contract, alongside the driver and
+the store. A day's work driven through those same models against a real ledger:
+buy, refused override, accepted override, sell, expense, refused payout, adjust,
+then reconcile. Eight cases, run by Vitest on `node:sqlite` and by the app on
+Apple's SQLite in the same lane the other two use. The runner was generalised
+out of `runEngineScenario` rather than copied.
+
+⚠️ **Neither is a rendering test, and the log should say so.** They cannot see
+whether the price box is wired to `price`. Everything after that point is
+covered; the binding is not. → **B60**, half closed.
+
+### Planted, and the plants crossed the boundary
+
+Making `sellModel` record the *expected* hold instead of the derived one reds a
+Vitest case **and** a screen-scenario case. Making every spend a payout reds
+three and two. That is the property worth having: one defect, both runners.

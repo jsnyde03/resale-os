@@ -447,7 +447,18 @@ export interface ScenarioResult {
 
 /** Run every case, each on a fresh database from `open`. */
 export function runEngineScenario(open: () => Db): ScenarioResult[] {
-  return ENGINE_SCENARIO.map(({ name, run }) => {
+  return runScenario(ENGINE_SCENARIO, open);
+}
+
+/**
+ * The runner, over any set of cases.
+ *
+ * Split out when a third contract arrived (`screen-scenario.ts`) — the runner
+ * was never specific to these cases, and a second copy of it would be a second
+ * place for "a close failure must not mask the case's own result" to be true.
+ */
+export function runScenario(cases: readonly ScenarioCase[], open: () => Db): ScenarioResult[] {
+  return cases.map(({ name, run }) => {
     const db = open();
     try {
       run(db, open);

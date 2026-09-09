@@ -9,7 +9,7 @@ import {
 } from '../../src/core/capital/quote.js';
 import { formatCents } from '../../src/core/money.js';
 import { itemIdFrom } from '../../src/core/ids.js';
-import { useFund } from '../src/fund/FundProvider.js';
+import { refusalText, useFund } from '../src/fund/FundProvider.js';
 import { Button, C, Card, H1, Muted, Row } from '../src/ui/theme.js';
 import { Field, centsOrNothing, countOrNothing } from '../src/ui/fields.js';
 
@@ -85,7 +85,7 @@ export default function Buy() {
       router.replace('/');
       return;
     }
-    setRefusal(outcome.hint ? `${outcome.refusal}\n${outcome.hint}` : outcome.refusal);
+    setRefusal(refusalText(outcome));
   }
 
   const passed = priced?.assessment.passed ?? false;
