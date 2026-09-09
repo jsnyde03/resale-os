@@ -83,6 +83,49 @@ jobs:
       - name: Contract and scenario against node:sqlite (baseline)
         run: npx vitest run tests/driver-node.test.ts tests/engine-scenario-node.test.ts tests/migrations-bundle.test.ts tests/hash.test.ts
 
+      # ⛔ PIN HERMES, because the podspec's fallback is silent and moving.
+      #
+      # `hermes_source_type()` asks whether a prebuilt release tarball EXISTS on
+      # Maven Central, and if the request fails it falls through to
+      # BUILD_FROM_GITHUB_MAIN — the tip of a branch. That is not a build
+      # failure; it is a different input, chosen by a network round trip.
+      #
+      # Measured 2026-09-09, forty minutes apart, same commit:
+      #   run 1  "Using release tarball from URL: …/250829098.0.10/…"  → built
+      #   run 2  "Using the latest commit from 250829098.0.0-stable"   → 4,000
+      #          lines of C++ ending in `no type named 'TypedArray' in
+      #          namespace 'facebook::jsi'` — branch tip ahead of RN 0.85.3
+      # The artifact was still LISTED in the Maven directory while a direct GET
+      # returned 404. A CDN hiccup silently changed what the app was built from.
+      #
+      # So: fetch it here, with retries, and hand the podspec a local file —
+      # `LOCAL_PREBUILT_TARBALL` outranks every other source type. A download
+      # that genuinely fails now stops the job instead of quietly compiling
+      # something else.
+      - name: Pin the Hermes binary
+        working-directory: mobile
+        run: |
+          set -euo pipefail
+          PROPS=node_modules/react-native/sdks/hermes-engine/version.properties
+          # RCT_HERMES_V1_ENABLED is unset, so the podspec takes the V1 name.
+          V=$(grep '^HERMES_V1_VERSION_NAME=' "$PROPS" | cut -d= -f2)
+          URL="https://repo1.maven.org/maven2/com/facebook/hermes/hermes-ios/$V/hermes-ios-$V-hermes-ios-release.tar.gz"
+          echo "hermes $V"
+          echo "$URL"
+          for i in 1 2 3 4 5; do
+            if curl -fsSL --retry 3 --retry-delay 2 -o hermes-ios.tar.gz "$URL"; then break; fi
+            echo "attempt $i failed; retrying"
+            sleep $(( i * 10 ))
+          done
+          if [ ! -s hermes-ios.tar.gz ]; then
+            echo "::error::Could not fetch the prebuilt Hermes $V after 5 attempts."
+            echo "Building from the branch tip instead is how this lane produced a"
+            echo "jsi mismatch on 2026-09-09, so it stops here rather than guessing."
+            exit 1
+          fi
+          ls -l hermes-ios.tar.gz
+          echo "HERMES_ENGINE_TARBALL_PATH=$PWD/hermes-ios.tar.gz" >> "$GITHUB_ENV"
+
       - name: Generate the native project
         working-directory: mobile
         env:
@@ -95,6 +138,22 @@ jobs:
       - name: pod install
         working-directory: mobile/ios
         run: pod install
+
+      # ⚡ The control on the pin above. A prebuilt tarball extracts a
+      # `destroot` containing the framework; a source build has nothing there
+      # until it has compiled for six minutes. If this is missing, the podspec
+      # took the fallback and the pin did not hold — say so now, in one line,
+      # rather than at the far end of a C++ log.
+      - name: Hermes came from the tarball, not from a branch
+        working-directory: mobile
+        run: |
+          FRAMEWORK=ios/Pods/hermes-engine/destroot/Library/Frameworks/ios/hermesvm.framework
+          grep -E 'hermes-engine' ios/Podfile.lock | head -5 || true
+          if [ ! -d "$FRAMEWORK" ]; then
+            echo "::error::Hermes is being built from source — the prebuilt pin did not hold."
+            exit 1
+          fi
+          echo "prebuilt: $FRAMEWORK"
 
       - name: Build for the simulator
         working-directory: mobile

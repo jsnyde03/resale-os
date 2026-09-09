@@ -371,6 +371,23 @@ export class FundStore {
   // --- state --------------------------------------------------------------
 
   /**
+   * Throw away the cached state, so the next `state()` is a real read.
+   *
+   * ⛔ Needed because the cache is only invalidated by writes made through
+   * THIS instance, and two things legitimately write to the file some other
+   * way: `importLedger`, which replays through a store of its own, and a
+   * restore from backup, which replaces the file underneath.
+   *
+   * ⚠️ Without it the phone showed an empty fund immediately after importing
+   * 55 events — the ledger was correct on disk and the screen was reading a
+   * cache from before it. On the desktop this could not happen: every CLI
+   * command was a fresh process.
+   */
+  invalidate(): void {
+    this.#cached = undefined;
+  }
+
+  /**
    * Fast path. Balances come from summing the postings; items come from the
    * items table. Those are two independently maintained representations, and
    * `assertAllInvariants` cross-checks them on every single load — so a drift

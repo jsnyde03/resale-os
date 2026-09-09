@@ -349,6 +349,27 @@ export const ENGINE_SCENARIO: readonly ScenarioCase[] = [
     },
   },
   {
+    // ⛔ The phone is the first place TWO stores can hold one ledger open —
+    // `importLedger` replays through a store of its own, and the app's store
+    // is still on screen. The cache is invalidated by this instance's writes
+    // and by nothing else.
+    name: 'a second store writes, and the first cannot see it until told',
+    run: (db, openScratch) => {
+      const store = freshStore(db);
+      store.commit({ type: 'CONTRIBUTION', amountCents: 50_000, occurredAt: T0 });
+      eq(store.state().balances.LIQUID, 50_000, 'liquid, cached');
+
+      // A different instance over the SAME database — what an import is.
+      const other = new FundStore(db, () => '2026-09-09T13:00:00.000Z');
+      other.commit({ type: 'CONTRIBUTION', amountCents: 10_000, occurredAt: T0 });
+
+      eq(store.state().balances.LIQUID, 50_000, 'the stale cache is still the old answer');
+      store.invalidate();
+      eq(store.state().balances.LIQUID, 60_000, 'after invalidate, the real balance');
+      eq(reconcile(store), { ok: true, differences: [] }, 'reconcile after a second writer');
+    },
+  },
+  {
     // D4: an override is allowed and may never be silent. This is here rather
     // than only in Vitest because it added a COLUMN — and a column is exactly
     // the kind of thing a different SQLite can read back differently.

@@ -85,15 +85,21 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       refused without a reason, stored in `items` (migration 006), shown by
       `items`, and in the cross-platform scenario so the phone proves it too.
       ⚡ Planted five ways, all red. → closes **B9**.
-- [ ] **5.6** ⚡ **ACTIVE BUILD.** The write screens the desktop CLI owned: buy,
-      sell, expense, payout, adjust. Gate 4 never built these because recording
-      money was the CLI's job.
+- [ ] **5.6** ⚡ **ACTIVE BUILD.** The write screens the desktop CLI owned.
+      ⚠️ **Switch-in correction 2026-09-09: there is no app to put them in.**
+      `mobile/app/` holds a proof harness and the contract runner; no device
+      database, no `FundStore`, no navigation — so 5.6.0 was inserted.
+  - [ ] **5.6.0** The shell: open the real on-device ledger, migrate it, hold
+        ONE store in context, and an import path — without which 5.5 cannot
+        finish and every screen below runs against an empty fund.
   - [ ] **5.6.1** The buy screen — scored, assessed, and D4's override path.
   - [ ] **5.6.2** Sell.
   - [ ] **5.6.3** Expense and payout.
   - [ ] **5.6.4** Adjust, and the refusal surface: a rejected command must read
         like a refusal on a phone, not a red box.
   - [ ] **5.6.5** On-device verification of the five, via the iOS Actions lane.
+        ⛔ **The lane is RED** — the app installs, launches and dies before
+        writing a verdict. Diagnostics added 2026-09-09; cause unknown.
 - [ ] **5.7** The read screens, ported from Gate 4's six.
 - [ ] **5.8** Backups from the phone. Currently OneDrive-from-the-PC; the PC is
       gone.
@@ -309,6 +315,9 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
 - **B28** Revisit categories (books as a margin play, per-category risk inputs)
   when the bankroll supports the hold tolerance. → Growth mode.
 - ~~**B25**~~ ✅ closed in **4.8**.
+- **B57** The app has no icon — a white square on the home screen. Cosmetic,
+  and only visible because a CI screenshot caught it. → before any TestFlight
+  build (**5.9**).
 - **B56** ⚠️ **The pre-publish scrub covered `src/` and `data/` and MISSED the
   planning docs.** `MASTER_PLAN`, the log, `CLAUDE.md` and `FINANCIAL_SPEC` were
   public for a day carrying filing status, income, county and a

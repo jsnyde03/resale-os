@@ -2333,3 +2333,78 @@ on the internet.
 ⏳ **Needs Jason:** delete `resale-os-prescrub-2` and `resale-os-prescrub-private`.
 Both are private and both still hold the data; the CLI token has no `delete_repo`
 scope, so it is a click in Settings.
+
+## 2026-09-09 (5.6.0) — the shell, and a lane that built two different apps
+
+### The switch-in audit found 5.6 standing on nothing
+
+The plan said "the write screens the desktop CLI owned." `mobile/app/` held
+three files: a layout, a proof harness that builds a fund in memory, and the
+contract runner. **No device database, no `FundStore`, no navigation.** A buy
+screen had nowhere to write. → **5.6.0** inserted.
+
+Second finding, same scan: **5.5 has been waiting on "get the JSON onto the
+phone" and there is no way to.** Without an import the phone can never hold the
+real fund and every write screen below would be operating on an empty one. That
+is Category 1, so it folded into the shell rather than the backlog.
+
+### What the shell is
+
+`FundProvider` holds **exactly one** `FundStore`. Not a style preference: the
+store caches `state()` and invalidates on its own writes, so a second instance
+over the same file would hold a cache nothing invalidates and a screen would
+show a balance that was true before the other instance spent it. The desktop
+never had this problem because every CLI command was a process.
+
+⚡ **A refusal is a value, not an exception.** `commit()` returns
+`{ok:false, refusal}` for the five errors the engine deliberately raises and
+**rethrows everything else** — a bug dressed up as "the fund said no" is a bug
+nobody reports. The CLI learned the same lesson when an unhandled `EngineError`
+printed a stack trace at the operator; the phone's version of that mistake is a
+red screen, which reads as "the app broke" rather than "the rules refused".
+
+⛔ **The provider is skipped under `EXPO_PUBLIC_RUN_CONTRACT=1`.** Otherwise the
+app shell — migrations, seeding, a store — sits upstream of the thing the
+contract lane tests, and a shell bug would surface as "no result file", which is
+that lane's phrase for "the app never ran". Those are different failures.
+
+### `FundStore.invalidate()`, found by writing the import
+
+`importLedger` replays through a store of **its own**, so the app's store is
+left holding the cache it had before — an empty fund. The import would have
+reported success onto a screen still showing $0.00. Added `invalidate()`, and a
+case in the cross-platform scenario: a second store commits, the first still
+answers with the stale number, then agrees after being told. Planted by making
+`invalidate()` a no-op — red.
+
+### ⚡ The iOS lane was building two different applications
+
+The lane went red, and the useful part is *why*. Two runs, forty minutes apart,
+**the same commit**:
+
+| | |
+|---|---|
+| run 1 | `[Hermes] Using release tarball from URL: …/250829098.0.10/…` → built, then the app died at runtime |
+| run 2 | `[Hermes] Using the latest commit from 250829098.0.0-stable` → 4,000 lines of C++ ending in `no type named 'TypedArray' in namespace 'facebook::jsi'` |
+
+`hermes_source_type()` asks whether a prebuilt tarball **exists** on Maven
+Central and, if that request fails, falls through to `BUILD_FROM_GITHUB_MAIN` —
+the tip of a branch, which by then was ahead of RN 0.85.3's jsi. Verified by
+hand: the artifact is still **listed** in the Maven directory while a direct GET
+returns 404. A CDN hiccup silently changed what the app was compiled from.
+
+⛔ **This is the fallback-that-hides-an-input-change pattern, and it is the
+third time this project has been bitten by a control whose failure looks like a
+result.** It did not error. It produced a different app.
+
+Fixed by fetching the tarball in its own step, with retries, and handing the
+podspec a local file — `LOCAL_PREBUILT_TARBALL` outranks every other source
+type. A download that genuinely fails now **stops the job** instead of quietly
+compiling something else. And a control on the pin: after `pod install`, assert
+`destroot/…/hermesvm.framework` exists, which a prebuilt tarball has
+immediately and a source build only has after six minutes of compiling.
+
+⚠️ **Run 1's runtime death is still unexplained** and predates every line of the
+shell. The lane now captures the app's console, any crash report written to the
+host, and the process's own lines from the simulator log — none of which existed
+when it happened.

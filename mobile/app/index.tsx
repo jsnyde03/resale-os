@@ -1,96 +1,121 @@
 import { Link } from 'expo-router';
-import Contract from './contract';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
-// ⛔ The whole point of 5.2: the engine is imported UNCHANGED, straight from
-// the repo's `src/`. Not copied, not adapted, not re-exported through a shim.
-// If any of these needed an edit to load here, the purity claim from Gate 1 was
-// wrong and we want to know now rather than after the UI is built.
-import { initialFundState } from '../../src/core/capital/state.js';
-import { applyCommand } from '../../src/core/capital/engine.js';
-import { computeMetrics } from '../../src/core/capital/metrics.js';
-import { DEFAULT_POLICY } from '../../src/core/capital/policy.js';
 import { formatCents } from '../../src/core/money.js';
-import { parseOpportunity } from '../../src/domain/opportunity.js';
-import { evaluateOpportunity } from '../../src/scoring/evaluate.js';
+import { assessProfitFloor } from '../../src/core/capital/reachability.js';
+import { feeModel } from '../../src/core/fees.js';
+import Contract from './contract';
+import { useFund } from '../src/fund/FundProvider.js';
+import { Button, C, Card, H1, Muted, Row } from '../src/ui/theme.js';
 
-const T0 = '2026-09-09T12:00:00.000Z';
+/**
+ * The position. What the CLI's `status` printed, on the device that holds the
+ * ledger.
+ *
+ * ⛔ **Nothing here is a snapshot.** Jason's constraint on the whole gate was
+ * *"the app should be smart enough to exactly know my current bankroll"* — so
+ * every number below is derived from the ledger on this phone, at this instant,
+ * with no network and nothing carried over from a desktop.
+ */
+function Position() {
+  const { metrics: m, state, isEmpty } = useFund();
 
-/** A real evaluation, run on the device, with no server and no network. */
-function proof() {
-  let state = initialFundState(DEFAULT_POLICY);
-  state = applyCommand(state, { type: 'CONTRIBUTION', amountCents: 50_000, occurredAt: T0 }).state;
+  if (isEmpty) {
+    return (
+      <View style={{ gap: 16 }}>
+        <H1>No ledger on this phone</H1>
+        <Muted>
+          The database was created and migrated, and it holds no events. Import a fund to start —
+          the import replays every command and refuses anything whose hash it cannot reproduce.
+        </Muted>
+        <Link href="/import" asChild>
+          <Button label="Import a fund" onPress={() => {}} tone="primary" />
+        </Link>
+      </View>
+    );
+  }
 
-  const metrics = computeMetrics(state);
-  const evaluation = evaluateOpportunity(
-    parseOpportunity({
-      opportunityId: 'proof',
-      name: 'Lego set',
-      category: 'TOYS',
-      source: 'MANUAL',
-      sourceUrl: null,
-      askingPriceCents: 1_200,
-      inboundShippingCents: 0,
-      salesTaxCents: 0,
-      acquisitionTravelCents: 0,
-      expectedGrossCents: 6_000,
-      marketplace: 'EBAY',
-      postageCents: null,
-      soldLast90Days: 50,
-      activeListings: 8,
-      operatorDaysEstimate: null,
-      compPricesCents: [5_800, 6_100, 6_000],
-      compMedianAgeDays: 45,
-      hassleBps: 2_000,
-    }),
-    state,
+  // Two facts that only matter when they bite, so they are shown only then.
+  const reach = assessProfitFloor(m.navCents, m.modePolicy, feeModel(undefined));
+  const setAsideOff = m.navCents < state.policy.allocation.setAsideMinNavCents;
+
+  return (
+    <View style={{ gap: 16 }}>
+      <View>
+        <H1>{formatCents(m.navCents)}</H1>
+        <Muted>
+          {m.mode} · {formatCents(m.maxCapitalPerItemCents)} max per item ·{' '}
+          {m.modePolicy.maxHoldDays}d ceiling
+        </Muted>
+      </View>
+
+      <Card>
+        <Row label="Deployable now" value={formatCents(m.deployableCapitalCents)} tone="good" />
+        <Row label="liquid cash" value={formatCents(m.liquidCents)} indent tone="dim" />
+        <Row
+          label="inventory at cost"
+          value={formatCents(m.inventoryAtCostCents)}
+          indent
+          tone="dim"
+        />
+        <Row label="less earmarks" value={formatCents(-m.earmarkedCents)} indent tone="dim" />
+      </Card>
+
+      <Card>
+        <Row label="Tax reserve" value={formatCents(m.taxReserveCents)} />
+        <Row label="Operating reserve" value={formatCents(m.operatingReserveCents)} />
+        <Row label="Owner payable" value={formatCents(m.ownerPayableCents)} />
+        <Row label="Liquid floor" value={formatCents(m.minLiquidFloorCents)} tone="dim" />
+      </Card>
+
+      {setAsideOff ? (
+        <Muted>
+          Set-aside is OFF until {formatCents(state.policy.allocation.setAsideMinNavCents)} of NAV —
+          profit compounds instead of paying the owner. Tax still accrues.
+        </Muted>
+      ) : null}
+
+      {!reach.reachable ? (
+        <Card style={{ borderWidth: 1, borderColor: C.warn }}>
+          <Row
+            label="Profit floor is unreachable"
+            value={formatCents(reach.minProfitCents)}
+            tone="warn"
+          />
+          <Muted>
+            A {formatCents(reach.maxPerItemCents)} item must sell for{' '}
+            {formatCents(reach.grossNeededCents)} gross to clear it —{' '}
+            {(reach.requiredMultipleBps / 10_000).toFixed(1)}× on every flip. Either fund it to
+            about {formatCents(reach.impliedBankrollCents)}, or lower the floor.
+          </Muted>
+        </Card>
+      ) : null}
+
+      <Card>
+        <Row label="Active items" value={String(m.activeItemCount)} />
+        <Row label="Events recorded" value={String(state.eventCount)} tone="dim" />
+      </Card>
+    </View>
   );
-
-  return { metrics, evaluation };
 }
 
 export default function Index() {
   // ⚠️ CI builds with EXPO_PUBLIC_RUN_CONTRACT=1 so the driver contract runs on
   // launch and writes its verdict. A run that needed a tap would need a UI
-  // driver, and the point of this lane is to need as little as possible.
+  // driver, and the point of that lane is to need as little as possible.
+  //
+  // ⛔ This check must stay ABOVE any `useFund()`, and `_layout` does not mount
+  // the provider in that mode — the contract lane must not depend on the shell
+  // it exists to be independent of.
   if (process.env.EXPO_PUBLIC_RUN_CONTRACT === '1') return <Contract />;
 
-  const { metrics, evaluation } = proof();
-  const rows: [string, string][] = [
-    ['NAV', formatCents(metrics.navCents)],
-    ['Deployable', formatCents(metrics.deployableCapitalCents)],
-    ['Mode', metrics.mode],
-    ['Max per item', formatCents(metrics.maxCapitalPerItemCents)],
-    ['—', ''],
-    ['Max price', formatCents(evaluation.price.maxPriceCents)],
-    ['Bound by', evaluation.price.boundBy],
-    ['Expected profit', formatCents(evaluation.economics.expectedProfitCents)],
-    ['Days to sale', `${evaluation.economics.velocity.expectedDaysToSale}d`],
-    ['Buy / risk', `${evaluation.result.buyScore} / ${evaluation.result.riskScore}`],
-    ['Verdict', evaluation.result.recommendation],
-  ];
-
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#0a0a0a' }}>
-      <View style={{ padding: 24, paddingTop: 72 }}>
-        <Text style={{ color: '#fafafa', fontSize: 20, fontWeight: '600', marginBottom: 4 }}>
-          Engine running on device
-        </Text>
-        <Text style={{ color: '#737373', fontSize: 13, marginBottom: 12 }}>
-          src/core, src/scoring and src/domain, imported unchanged.
-        </Text>
-        <Link href="/contract" style={{ color: '#a3a3a3', marginBottom: 16 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: C.bg }}>
+      <View style={{ padding: 20, paddingTop: 76, paddingBottom: 48, gap: 16 }}>
+        <Position />
+        <Link href="/contract" style={{ color: C.faint, paddingTop: 8 }}>
           run the driver contract →
         </Link>
-        {rows.map(([label, value], i) => (
-          <View
-            key={`${label}-${i}`}
-            style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 }}
-          >
-            <Text style={{ color: '#a3a3a3' }}>{label}</Text>
-            <Text style={{ color: '#fafafa', fontVariant: ['tabular-nums'] }}>{value}</Text>
-          </View>
-        ))}
       </View>
     </ScrollView>
   );
