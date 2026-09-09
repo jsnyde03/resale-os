@@ -143,7 +143,14 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
         drag is the operator's. ⛔ **A one-tap share needs `expo-sharing`, a
         native module — deferred until a build can validate it, because no iOS
         build can start today.** → **B61**.
-- [ ] **5.8** ⚡ **ACTIVE BUILD.** The read screens, ported from Gate 4's six.
+- [ ] **5.8** ⚡ **ACTIVE BUILD.** The read screens. ⚠️ **Switch-in correction:
+      not "ported" — `src/server/views.ts` is 338 lines of tested read model
+      the phone can REUSE**, and it was one import from dragging the desktop
+      SQLite driver into the bundle. Fixed, and `lint:phone` now walks the
+      whole graph so it cannot recur.
+  - [ ] **5.8.0** Reuse `views.ts` from the phone: a mobile-side reader that
+        satisfies `LedgerReader`, so the screens consume the same view objects
+        the Gate 4 dashboard did.
   - [ ] **5.8.1** Items: what the fund is holding, what each cost, how long it
         has been held, and D4's override where it applies.
   - [ ] **5.8.2** The ledger view — every event, and the event ids that
@@ -373,6 +380,11 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
 - **B28** Revisit categories (books as a margin play, per-category risk inputs)
   when the bankroll supports the hold tolerance. → Growth mode.
 - ~~**B25**~~ ✅ closed in **4.8**.
+- **B62** ⚠️ **5.10 plans to retire `src/server`, and `views.ts` must NOT go
+  with it** — the phone now depends on it. Move it to `src/ui/` (beside the
+  form models) when the retirement happens, rather than deleting a read model
+  the app is built on. Filed at 5.8's switch-in, before the retirement can get
+  it wrong. → 5.10.
 - **B61** One-tap "send this backup somewhere else" via `expo-sharing`. Today
   the copies land in the app's Documents and reach iCloud only if the operator
   opens Files and drags one — a chore, and therefore a backup that will not

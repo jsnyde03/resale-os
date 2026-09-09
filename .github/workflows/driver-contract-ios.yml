@@ -83,6 +83,10 @@ jobs:
         run: |
           npm install --legacy-peer-deps
           npm run typecheck
+          # ⛔ Before anything is built: nothing the phone imports may REACH a
+          # node builtin, however many hops away. `views.ts` was one import from
+          # dragging the desktop SQLite driver into the bundle.
+          npm run lint:phone
           cd mobile && npx tsc --noEmit
 
       # The contract also runs against node:sqlite here, so a failure on the

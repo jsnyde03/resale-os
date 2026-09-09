@@ -88,6 +88,8 @@ workflows:
       - name: The desktop gate
         # A TestFlight build of code that fails its own tests is worse than no
         # build: it is a wrong answer that has been distributed. Cheap here.
+        # `check` includes `lint:phone`: nothing the app imports may REACH a node
+        # builtin, however many hops away.
         script: |
           npm run check
 

@@ -25,7 +25,13 @@ import { accuracyReport, accuracyVerdict } from '../core/capital/accuracy.js';
 import { feeModel } from '../core/fees.js';
 import { profitReport, expenseBreakdown, expenseReversalDrift } from '../db/reporting.js';
 import { reconcile } from '../db/replay.js';
-import { backupStaleness } from '../db/backup.js';
+// ⛔ From `backup-types.js`, NOT `backup.js`. The re-export in `backup.js` is
+// convenient and it drags `node:fs`, `node:path` and — through `driver.ts` —
+// `node:sqlite` into anything that touches it. This read model is bundled by
+// the phone, so that one character of convenience would have cost the whole
+// desktop SQLite driver. Caught by `scripts/check-phone-bundle.mjs`, which
+// walks the graph rather than the first hop.
+import { backupStaleness } from '../db/backup-types.js';
 import { incrementalReserve } from '../core/tax/annual.js';
 import { taxTableWarnings, DEFAULT_TAX_TABLES } from '../core/tax/tables.js';
 import { formatCents } from '../core/money.js';
