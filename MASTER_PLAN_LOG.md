@@ -2952,3 +2952,64 @@ wall up in August 2026 — the direction of travel is tightening. So: the manual
 comps path stays wired, and the fund keeps accumulating **its own** price
 history from every sale it records. A dependency that can vanish must not be the
 only way the fund can value anything.
+
+## 2026-09-09 — the watchlist that unlocks, and the line on drop bots
+
+### Gate 6.5: an out-of-reach opportunity is not a rejected one
+
+Jason, on the Xbox 25th anniversary drop: *"It's out of my bankroll now but these
+types of opps should be known about too."* Then, correcting my first reading:
+*"Not even to get 500 by then. I mean that when I DO get 500 as a bankroll it
+should be picked up."*
+
+⛔ **I had proposed a savings goal. He wanted a re-evaluation trigger**, which is
+a much better idea and a far cheaper one.
+
+Two things found by checking rather than assuming:
+
+- **`WATCHING` is already an opportunity status.** The domain has always had a
+  place for "tracked but not acted on"; nothing re-evaluates them as the
+  bankroll moves.
+- **The per-item cap is a PERCENTAGE of NAV** — `maxCapitalPerItemBps` is 40% in
+  BOOTSTRAP, 20% in GROWTH — so the ceiling rises on its own, and *"when does
+  this become buyable"* is **computable, not a guess**. `maxAffordableLandedCost`
+  already inverts exactly that, folding in deployable capital, the liquid floor,
+  category exposure and total deployment.
+
+⚡ **Which corrects the example itself:** a $500 console does not need a $500
+bankroll. At 20% per item in GROWTH it needs roughly **$2,500 of NAV** — the
+kind of number the operator should never have to work out by hand.
+
+**The shape:** a refused opportunity goes to `WATCHING` with the gate that
+stopped it and its unlock NAV; a NAV change resurfaces anything newly cleared.
+
+⚡ **The side effect may matter more than the feature.** It makes growth legible.
+"$50 to $100" is an abstraction; *"at $250 these four things become buyable"* is
+a reason to compound, stated in the fund's own terms.
+
+⚠️ **And the thing not to smooth over:** a future drop has no comps, so its
+expected resale is a forecast, not a measurement. Held as exactly that — a
+watchlist of optimistic guesses would quietly become a list of reasons to
+overspend. The accuracy report is what eventually says whether the instinct is
+calibrated.
+
+### D13: the line on drop bots
+
+Jason: *"bots is a real issue... I'd like for this app to eventually be able to
+be competitive in online drops."*
+
+Split in two, because the halves have different answers:
+
+| | |
+|---|---|
+| **Knowing first** | IN. Stock state, restocks, drop timing, plus a readiness layer — saved profiles, the unlock NAV already computed, one tap to the page with the decision already made. Fights nobody's defences and is most of the edge. |
+| **Buying automatically** | OUT. It violates retailer terms, and the penalty is order cancellations, account bans and flagged payment methods. **For a fund that is a capital event** — the accounts and payment rails the whole operation runs on, risked to win one console. |
+
+⛔ Explicitly excluded: CAPTCHA solving, fingerprint spoofing, proxy rotation,
+multiple accounts. Written down so it is not quietly relitigated later.
+
+⚡ **The strategy agrees with the boundary**, which is the part worth
+remembering: online drops are where the competition is scripts. **In-store
+allocation is where it is people — and Jason is in and out of stores all day for
+Spark.** That edge cannot be out-automated, and it is the one the drop watchlist
+should serve.
