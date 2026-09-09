@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Resale OS",
+    "slug": "resale-os",
+    "scheme": "resaleos",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": { "supportsTablet": false, "bundleIdentifier": "com.jasonsnyder.resaleos" },
+    "plugins": ["expo-router"]
+  }
+}

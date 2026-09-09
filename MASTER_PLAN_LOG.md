@@ -1,0 +1,2312 @@
+# Resale OS — Plan Log
+
+Why every decision was made. Chronological. The plan is the queue; this is the
+record. Read the entry for anything you are about to change.
+
+---
+
+## 2026-09-08 — Project created; Gate 1 built and green
+
+### What exists
+
+A private, single-operator resale capital system. Deterministic financial core,
+SQLite persistence, a CLI, and 120 tests.
+
+```
+docs/ARCHITECTURE.md          stack, module map, the 7 non-negotiable rules
+docs/FINANCIAL_SPEC.md        accounts, events, postings, invariants, policy defaults
+docs/SCORING_SPEC.md          Buy Score, Risk Score, confidence, max price, market scores
+docs/SCHEMA.md                every table, including the ones reserved for Gates 2/5/6
+docs/ASSUMPTIONS_AND_RISKS.md what would falsify each assumption, and what it costs
+src/core/                     PURE. money, ledger, capital engine, constraints
+src/db/                       driver, migrations, store, replay, hash chain
+src/cli/                      the operator interface until Gate 4
+tests/                        120 tests, financial logic weighted heaviest
+```
+
+### Gate 1 exit criteria — all met
+
+- `$75` bankroll in, every event type recorded, balances explainable to the cent.
+- The accounting identity holds after every event; a violation throws before a
+  row is written and the database is left untouched.
+- Two independent derivations of fund state agree (postings-sum vs full replay).
+- `npm run check` — typecheck plus 120 tests — is green.
+
+### Decisions made, and why
+
+**D-01. Stack: Node 22 + `node:sqlite` + hand-written SQL, no ORM.**
+`better-sqlite3` needs a native build, which is exactly the class of thing that
+eats an evening on Windows. `node:sqlite` ships with the runtime. An ORM buys
+little across ~15 tables and costs a dependency; all SQL sits behind a 5-method
+`Db` interface, so the Postgres port is a driver swap. *Reversible.*
+
+**D-02. Vitest pinned to `^3.2.4`, not 5.**
+Vitest 5 bundles with rolldown, whose native binding did not install on this
+machine (`Cannot find module '@rolldown/binding-wasm32-wasi'`, and a clean
+reinstall did not fix it). Vitest 3 is esbuild-based and works. Revisit when
+rolldown's Windows story settles. *Reversible.*
+
+**D-03. One sign convention: debit-positive for every account.**
+Postings store `+` for a debit and `−` for a credit regardless of account class.
+Consequences: an account balance is `SUM(amount_cents)`; the whole table always
+sums to `0`; and the accounting identity becomes a one-line check instead of
+per-class bookkeeping. `presentedBalance()` flips the sign for display, in one
+place.
+
+**D-04. Reinvested profit gets no account.**
+It is the residual left in `RETAINED_EARNINGS` after tax, owner and operating
+reserve are taken out, and the cash backing it is already unencumbered in
+`LIQUID`. A `REINVESTMENT` account would double-count it. The split is still
+reported explicitly on every sale, so the operator sees all four numbers.
+
+**D-05. Tax is taken before owner and reinvestment.**
+Otherwise a distribution comes out of pre-tax money and the reserve is short at
+year end. The rate is a configurable *estimate* (default 25%) and the spec says
+so out loud — this system does not pretend to compute a tax liability.
+
+**D-06. The owner is paid from the first profitable transaction.**
+`validatePolicy()` throws if `ownerBps <= 0`. There is deliberately no
+configuration in which the fund retains 100% of profit, because that was an
+explicit product requirement and a config default is not a guarantee. Tested
+down to a 3-cent profit.
+
+**D-07. NAV, not cash, drives bankroll mode.**
+A fund with $60 of its $75 deployed has not become poorer, and demoting it
+mid-flip would change the rules under an in-flight decision.
+
+**D-08. Mode transitions are hysteretic (promote at $500, demote below $450).**
+Without the band, a fund oscillating around $500 rewrites its own hold limits on
+every sale. The cost is that mode depends on the *path* NAV took, so the store
+derives it by replaying the NAV series rather than caching a column — there is
+no cached mode that could drift from the ledger.
+
+**D-09. Charge-off and personal-keep are the same posting, distinguished by
+reason.** Economically the fund lost the capital either way. Modelling
+personal-keep as an in-kind owner distribution created a phantom asset and an
+`OWNER_PAYABLE` that could go negative. The reason code is stored, so a separate
+in-kind report is additive later. A charged-off item keeps `listing_live`, which
+is what makes passive recovery possible; recovery books the entire net as profit
+because there is no principal left to return.
+
+**D-10. The engine records what happened; constraints gate decisions.**
+`applyCommand` enforces only invariants (you cannot spend money you do not
+have). Policy gates live in `constraints.ts` and are advisory to a *purchase
+decision*. A ledger that refuses to record a purchase the operator already made
+in a parking lot is worse than useless. The CLI runs the gates first and needs
+`--force` to record a failing purchase.
+⚠️ **Gap:** a `--force` purchase is recorded but not *flagged* as an override.
+That is backlog **B9**, blocked on decision **D4**.
+
+**D-11. Every constraint gate is evaluated; evaluation never short-circuits.**
+The operator sees all the reasons at once instead of fixing one and discovering
+the next. The smoke test shows it: a $45, 45-day bag on a $75 fund returns
+`HOLD_TOO_LONG`, `LONG_HOLD_ALLOCATION_EXCEEDED` and `MAX_PER_ITEM_EXCEEDED`
+together.
+
+**D-12. `normalizeZero()` on every sign flip.**
+Negating a zero balance produces `-0`, which is not `0` under `Object.is` and
+made nine assertions lie about correct code. It is never a meaningful money
+value, so every negation in the codebase routes through one helper.
+
+**D-13. Buy Score is capped, not merely weighted.**
+⚠️ **The reasoning recorded here was wrong, and a test caught it on 2026-09-08 —
+see D-28.** With `S_speed = 0` the weighted maximum is 80, so the weights alone
+do satisfy the literal "91 is impossible" requirement. The caps earn their place
+for a stronger reason: 80 clears the 65 minimum, so weights alone would
+*recommend* a 30-day hold. Original text follows. So the weighted
+score is bounded by `velocityCap = 100 * (0.30 + 0.70 * S_speed)` and
+`confidenceCap = 100 * (0.55 + 0.45 * confidence)`. At 30 days in Bootstrap
+`S_speed = 0`, so the ceiling is 30. A 90+ score therefore *requires*
+`confidence >= 0.78` and a hold of ~11 days or less. Specified in
+`docs/SCORING_SPEC.md` §2.2; implemented in Gate 2.
+
+**D-14. A control-byte gate on source (`npm run lint:bytes`).**
+A literal NUL byte got written into a string in `src/db/hash.ts`. It compiled,
+all 104 tests passed, and the only symptom was git reclassifying the file as
+binary — which means it produced no diffs and review could never have caught it.
+The separator is now a printable `'|'` and `scripts/check-source-bytes.mjs`
+fails the build on any control byte. It was **planted** (a NUL reintroduced into
+`replay.ts`) to confirm it reds, and the restore was verified to confirm it
+greens again. Turning the class into a gate beats remembering the instance.
+
+---
+
+## 2026-09-08 (later) — D1 and D3 answered; the tax reserve is now derived
+
+### D-15. The tax reserve is **self-employment tax**, computed, not guessed
+
+Jason: *"Tax reserve should be the amount taken out for self employment."*
+
+The flat 25% was replaced by `src/core/capital/tax.ts`, which computes the
+reserve from the actual formula:
+
+```
+seBase = 92.35% of profit
+seTax  = 15.3% of seBase        (12.4% Social Security + 2.9% Medicare)
+       = 14.13% of profit, effective
+```
+
+`AllocationPolicy.taxReserveBps` became `AllocationPolicy.tax: TaxPolicy`, whose
+four fields are the SE base, the SE rate, an income-tax rate, and whether to take
+the half-SE deduction. `validatePolicy` throws a message naming this entry if it
+meets an old-shape policy, so a stale `config` row fails loudly at load rather
+than silently reserving nothing.
+
+**Why decompose rather than change one number to 1413.** A single blended rate
+cannot be checked by anyone, and it hides *which* tax is covered. Split into
+named components, the reserve is explainable on every sale — the CLI prints the
+SE line, and the income-tax line whenever it is non-zero.
+
+⚠️ **What this deliberately leaves uncovered, and it is the biggest open money
+risk in the project:** `incomeTaxBps = 0`. Income tax is owed on the same profit
+and is not being reserved for. Setting it to 1200 brings the total to **25.28%**
+— almost exactly where the old flat guess sat, which is a decent sign the 25%
+was not crazy, only unexplainable. Filed as **B16**, to be reopened before year
+end with real numbers rather than a guess.
+
+**Not modelled, each erring toward over-reserving:** the $400 annual SE
+threshold (reserving from the first dollar is conservative; the reserve is
+released if not owed), and the Social Security wage-base cap (**B15** — needs YTD
+earnings including W-2 wages, and is not a real case at this scale). The half-SE
+deduction is rounded **down** so its rounding error also over-reserves.
+
+**Planted, not assumed.** Dropping the SE rate to 12.4% (Social Security only)
+turns 14 tests red across 4 files; restoring it returns all 120 to green. One
+test asserts the rate is specifically the *sum* of the two halves, so an edit
+that drops Medicare fails rather than merely shifting a number.
+
+The policy version went `2026-09-08.1` -> `2026-09-08.2`. An allocation is only
+meaningful next to the rules that produced it.
+
+### D-16. D3 answered: the real bankroll is $50, starting now
+
+Jason, same sitting: *"Real starting bankroll is 50 dollars and I want to start
+asap."*
+
+At $50 in BOOTSTRAP the constraints resolve to: **$20 max per item**, $5 liquid
+floor, $42.50 deployable, $30 category ceiling, $8 minimum profit, 21-day hold
+ceiling.
+
+⚠️ **That $8 floor on a $20 item is the binding constraint, and it is tight.**
+After eBay fees (~13.25% + $0.30) and postage, a $20 item needs roughly **$33–35
+gross** to clear it — a 65–75% markup on every flip. The gates will reject a lot.
+That is correct behaviour rather than a bug, but it makes **D5** (which
+categories to actually source) urgent rather than a Gate 5 concern: sourcing
+starts now and the system has no opinion yet about where to look.
+
+Risk **R2** in `docs/ASSUMPTIONS_AND_RISKS.md` was rewritten around the real
+number, and **R4** with it: a $30 category ceiling means two $16 pins breach it.
+
+`data/resale.db` was created and funded with the real $50.
+
+## 2026-09-08 (button-up) — making the start-here docs match the code
+
+An audit rather than an assumption, and it found four pieces of drift plus a
+real defect.
+
+### Doc drift, all corrected
+
+- **`docs/SCHEMA.md` knew nothing about migrations `002` or `003`.** It restated
+  every column, so it went stale within a day of the migrations landing. ⚡
+  **Rewritten to stop restating SQL**: the migrations are the schema, and the
+  document now explains the *conventions and the decisions* — the
+  debit-positive convention, why `capitalized` exists, why nullable means
+  "nobody produced this number", why `authorizations` has no writer. A doc that
+  duplicates code will always drift; one that explains it does not.
+- **`docs/ARCHITECTURE.md`'s module map** listed `core/money/` as a directory
+  (it is a file), omitted `core/tax/`, `fees.ts`, `velocity.ts` and
+  `db/repositories/`, and still marked `scoring/` as "[Gate 2]".
+- **`FINANCIAL_SPEC` §6** was missing `minSellThroughBps`.
+- **`CLAUDE.md`** still said *"Gate 1 CLOSED. Gate 2 ACTIVE."*
+
+Verified as matching and left alone: the CLI help against the actual command
+list (19 each), and the twelve risk weights against `SCORING_SPEC` §3.
+
+### A real defect, found by cleaning up after myself
+
+Two smoke-test expenses ($1.00 and $0.50 of SUPPLIES) had been recorded against
+the **live** ledger while verifying auto-backup. Reversing them surfaced two
+things:
+
+1. ⛔ **There was no `adjust` command.** `ADJUSTMENT` existed in the engine —
+   the sanctioned, append-only way to correct a mistake — with no operator path
+   to it. The only way to fix a slip was to edit the database by hand, which is
+   precisely what the hash chain exists to detect. **Added.**
+2. ⚠️ **An `ADJUSTMENT` does not reverse the analytic `expenses` row.** After the
+   reversal the ledger correctly returned to $50.00 while `profit --expenses`
+   still reported $1.50 of SUPPLIES. **Two sources of truth for expenses, and
+   only one self-corrects.** Filed as **B33**, with the warning written into
+   `reporting.ts` itself so the dashboard cannot report either number in
+   ignorance.
+
+The reversal is deliberately visible in the ledger rather than tidied away —
+`evt_000004` says what it reverses and why. That is the design working: both the
+error and the correction remain.
+
+## 2026-09-08 (end of session) — B31: backups that actually happen
+
+### D-29. The destination was the easy half
+
+Jason: *"What is your rec for backups?"* — then *"sounds good."*
+
+**Where:** a OneDrive folder outside the repo. The ledger is **132 KB**
+and will be single-digit MB after years; this was never a storage problem. It is
+a "does a second copy exist off this disk" problem, and OneDrive is already
+installed, already paid for, and already syncing.
+
+**When mattered more than where.** The failure mode was never a bad destination —
+it was a `backup` command that exists and never gets run by a solo operator doing
+this in evenings. So it runs **automatically after every command that moves
+money**. At 132 KB a verified copy costs milliseconds, and the entire class of
+"I forgot" disappears. No scheduler, nothing to remember.
+
+**Three design decisions worth keeping:**
+
+1. ⚡ **Verify then promote, never promote then verify.** The copy lands on a
+   `.tmp` name and is renamed over the target only after it opens, walks its
+   hash chain and passes every invariant. Writing straight to the destination
+   would let a corrupt source destroy a good previous backup *before anyone knew
+   it was corrupt*. A test writes catastrophe over the live file and asserts
+   yesterday's copy survives.
+2. **`autoBackup` never throws.** The command already succeeded and the money
+   already moved; refusing to acknowledge that because a sync folder was offline
+   would be worse. It warns loudly, records the error, and `status` reports
+   **events behind** — staleness measured in the unit that matters for a ledger.
+3. **Backup settings read tolerantly; policy does not.** A malformed backup
+   config degrades to defaults, because backup is a safety net and must never be
+   the reason a command fails. A malformed policy still stops the world.
+
+`latest` is refreshed every time so a restore is never more than one command
+stale; one dated file per day gives point-in-time recovery, pruned past 90 days.
+**Pruning never empties the directory** — a retention rule that can is a delete
+script wearing a backup's clothes.
+
+**A display wart caught by running it:** `status` printed inside a mutating
+command reported the backup state from *before* that command's backup ran —
+technically true and actively misleading. The line now appears only on a
+standalone `status`, and the automatic backup announces itself in place.
+
+⚠️ **Open: B32.** The OneDrive folder was empty apart from `desktop.ini`, so the
+destination is *configured* but its sync has never been observed from here. A
+backup to a folder that never leaves the disk is exactly the failure this was
+built to prevent, and it needs confirming by hand.
+
+## 2026-09-08 (end of session) — Gate 3 closed, and a phase-level look back
+
+### Gate 3 — what shipped
+
+| | |
+|---|---|
+| migration `003` | items gain `expected_net_proceeds_cents`, `expected_profit_cents`, `actual_net_proceeds_cents` |
+| `buy --from-opp=X` | re-evaluates against the fund **as it is now**, carries the prediction onto the item, and computes expected profit against what was actually **paid** rather than the asking price |
+| `accuracy.ts` | the instrument for risk R1 — expected vs actual days and proceeds, with a verdict that refuses to read a trend from fewer than five sales |
+| `reporting.ts` | item profit vs operating profit vs owner-distributable, and an expense breakdown that excludes capitalised costs |
+| `backup.ts` | copies the ledger and **verifies the copy opens, walks its hash chain and passes every invariant** — deleting it if not |
+| `check-import-direction.mjs` | **B2**, planted and verified |
+
+⚡ **The three profit numbers, on a real flip:**
+
+```
+item profit               $12.48
+  less business expenses  -$8.99
+operating profit           $3.49
+  less tax reserve        -$3.12
+owner distributable        $0.37
+```
+
+$12.48 of item profit is **37 cents** the owner may take. One packaging order and
+the tax reserve absorbed the rest. That is the whole argument for keeping the
+three apart, in one screen.
+
+**A prediction gap fixed:** `expectedResaleCents` was a GROSS price while the
+outcome was NET, so accuracy would have been comparing different things. Items
+now store the expectation in the same terms as the outcome — and **null when
+there is no prediction**, because treating a missing expectation as zero would
+manufacture a huge fake error and poison the average.
+
+**Two real bugs found while building it:**
+
+- A file-handle leak in `backup.ts`. `openDb` runs PRAGMAs in its constructor, so
+  a source that is not a database throws before there is a handle to close, and
+  `node:sqlite` leaks the OS handle — on Windows the file then cannot be deleted.
+  Fixed by checking the 16-byte SQLite magic header **before** opening anything.
+- **B13**: an unknown `itemId` on a business expense surfaced as a raw SQLite
+  foreign-key error from three layers down. Now an `EngineError` at the boundary.
+
+---
+
+## Phase after-scan — Gates 1 to 3 viewed together
+
+Three patterns only visible across the whole phase.
+
+### P1. Four variants of one bug: stored config drifting from code
+
+`policy adopt-defaults` and `tax profile set` both **read and validated the
+broken thing before replacing it**, so the repair could not run against what it
+existed to repair. The tax tables needed a year-scoped acceptance so a decision
+would not silently carry into the next year. And `validatePolicy` checked a
+**hand-written list**, so a new field slipped through as `undefined`, reached a
+gate as `NaN`, and printed *"vs a NaN% minimum"* — failing closed by luck.
+
+Each is fixed. **The pattern is not.** The root is identical every time: a stored
+value and a code definition that can disagree, with nothing forcing a comparison.
+Filed as **B30** — one versioned-config helper with a validator driven off the
+default object would close the class rather than the instances.
+
+⚠️ **I fixed the instance and not the class once already this session, and it
+recurred within the hour.**
+
+### P2. Three confident claims, all false, all falsified only by computing them
+
+1. *"80% of the weight sits outside speed, so strong economics could carry a slow
+   item into the 90s."* The weighted maximum is 80.
+2. *"A higher earner reserves more tax."* They reserve **less** — their W-2 wages
+   already consumed the Social Security wage base.
+3. *"$32 gross is $32 of proceeds."* It is $22.01, and that one would have
+   approved unprofitable purchases with real money.
+
+All three were written down confidently, survived review, and were caught by a
+test or a probe. **Measure before asserting** is in CLAUDE.md, and this phase is
+the evidence for why.
+
+### P3. The shell corrupted source three times
+
+A literal NUL byte in `hash.ts`, a `
+` becoming a real newline inside a string
+literal, and every backslash eaten out of a regex. `npm run lint:bytes` catches
+the first class; the other two only failed loudly because TypeScript rejected
+them. **Prefer Write/Edit over shell heredocs for anything containing escapes.**
+
+### Coverage checked across the phase
+
+`npm run check` now runs four gates: source bytes, import direction, typecheck,
+and 282 tests. Every plant this session was verified to red **and** the restore
+verified to green.
+
+## 2026-09-08 (later still) — Gate 2 closed
+
+### D-28. A test corrected the reason the Buy Score caps exist
+
+The spec justified the two caps like this: *"80% of the weight sits outside
+speed, so strong economics could carry a slow item into the 90s."*
+
+**That is false, and a test found it.** With `S_speed = 0` the weighted maximum
+is `100 x 0.80 = 80`. The weights alone already make 91 impossible on a 30-day
+hold, so the literal requirement never needed a cap at all.
+
+⚡ **What the caps actually buy is bigger than the requirement.** 80 clears the
+65 minimum, so on weights alone a 30-day hold in Bootstrap would be
+**RECOMMENDED**. The velocity cap takes it to 30 — below the floor — and turns a
+buy into a pass. Two tests now assert both halves: that 91 is impossible, and
+that the raw 80 would have passed while the capped 30 does not.
+
+The wrong reasoning was in `buy-score.ts`, `SCORING_SPEC.md` §2.2 and log D-13.
+All three are corrected in place, with D-13 marked rather than rewritten.
+
+**The lesson is the familiar one.** The claim was plausible, written down
+confidently, and survived a spec review and an implementation. Only computing it
+falsified it.
+
+### Gate 2 — what shipped
+
+`src/scoring/` and `src/domain/opportunity.ts`, 263 tests green.
+
+| | |
+|---|---|
+| `confidence.ts` | comp count, dispersion and recency; four weighted signals. `demandConfidence` is `velocity.confidenceBps` — corrected from the spec's "did it come from sold data" |
+| `buy-score.ts` | six sub-scores, two hard caps, the binding cap reported |
+| `risk-score.ts` | twelve factors, weights asserted to sum to 100 **at module load** — a mis-weighted risk model must never run at all |
+| `max-price.ts` | five-way inverse, reporting which limit binds. Goes through the fee model, so gross is never mistaken for net |
+| `recommend.ts` | BUY/WATCH/PASS/REJECT with generated reasons; a failed gate is fatal regardless of score |
+| `evaluate.ts` | one entry point, so the feed and the screen can never disagree |
+| `opportunity.ts` | zod at the boundary; refuses input where the hold time has no source |
+| migration `002` | opportunities + authorizations. `APPROVED`/`ARMED` already in the CHECK |
+| `repositories/opportunities.ts` | ranked feed, filters, and the rejection histogram |
+
+**Corrections made to the pre-authored decomposition at switch-in**, per the
+verify-before-acting rule — all four premises had gone stale in a day:
+
+- 2.1's fee model and velocity had already shipped (D-17, D-26).
+- 2.2's `demandConfidence` definition was superseded by `velocity.ts`.
+- 2.4's `categoryRiskDefaults` was **dropped**: D5 deferred categories, so risk
+  inputs are per-opportunity with conservative defaults (→ **B28**).
+- 2.7's schema in `SCHEMA.md` predated comps and had no columns for them.
+
+**What the feed looks like on the live fund:**
+
+```
+id            buy  risk  conf  days  profit    max pay   rec
+cart-02       82   31    70%   3     $12.27    $12.27    BUY
+cart-01       77   41    72%   8     $13.08    $20.00    BUY
+thin-01       51   59    53%   9     -$0.67    $5.33     REJECT
+slow-01       30   47    35%   315   $16.95    $20.00    REJECT
+```
+
+⚡ **`slow-01` has the highest profit in the list and is rejected.** That is the
+"profit never overrides capital safety" rule visible in output rather than
+asserted in a doc, and a test asserts it end to end.
+
+`opp rejections` reports which gate is actually binding — the instrument risk R2
+asked for, arriving two gates earlier than planned because the data was already
+there.
+
+### D-26. D5 answered: gate on sell-through, not on a category list
+
+Jason, on the category question: *"I'm not sure for D5. Give me your rec."* Then,
+on my proposal to measure category fit over 60 days: *"60 days is too long of a
+lead time at first."* Then: *"sounds good. We can focus on categories when the
+bankroll supports it."*
+
+⚡ **He was right and it changed the answer.** My first recommendation was books
+as the primary vertical — cheapest unit, most at-bats, a rural county under-picked
+for them. But books turn in 30-90 days, and a $50 fund cannot wait that long to
+find out whether any of this works. The at-bats argument survives; the category
+does not.
+
+**What replaced it:** the thing that predicts days-to-sale is observable *before*
+buying, at zero lead time — how many sold recently against how many are listed.
+
+```
+expectedDays = 90 * (activeListings + 1) / soldLast90Days
+```
+
+The `+ 1` is your own listing joining the queue. `src/core/velocity.ts`.
+
+**Three consequences, all improvements on what I first proposed:**
+
+1. **`expectedDaysToSale` is no longer typed in.** It was a guess, and R1 says
+   estimate quality — not math quality — decides whether this makes money.
+2. **A hand-typed hold carries 30% confidence**, fixed, deliberately below every
+   mode's `minConfidenceBps`. A guess cannot clear the gate alone, which closes
+   the obvious way around the evidence requirement.
+3. **`expectedDaysP90 = 2.303 x mean`**, because waiting for one buyer out of a
+   Poisson stream is exponential — the p90 is not the mean plus a nudge.
+
+**`SELL_THROUGH_TOO_LOW` added**, and it is honestly a backstop: a derived hold
+already implies a sell-through, so it rarely binds on comp-based estimates. Its
+real job is catching an optimistic hand-typed hold. It **abstains** when there
+are no comps rather than failing an unknown.
+
+`headroom` now names the number to look for in the field: *"to sell inside 10
+days against 5 active listings you need at least 54 sold in 90 days (26 to clear
+the 21-day ceiling)."*
+
+**Categories deferred until the bankroll supports them** — the architecture stays
+category-neutral, which is what the original brief asked for. Books become a
+Growth-mode play, when there is hold tolerance for a margin bet. **B28.**
+
+### D-27. A validator that could fall behind, and did
+
+Adding `minSellThroughBps` to `ModePolicy` broke the live fund in the worst
+possible way: `validatePolicy` checked a **hand-written list** of fields, so a
+stored policy older than the new field passed validation, `undefined` flowed into
+the gate's limit, and the CLI printed *"sell-through 94% vs a **NaN%** minimum"*
+— refusing a purchase that should have passed.
+
+It failed **closed by luck**. `94 >= NaN` is false; the comparison could as
+easily have been written the other way and failed open, approving everything.
+
+`validatePolicy` is now **exhaustive by construction**: it iterates
+`Object.keys(DEFAULT_BOOTSTRAP_POLICY)` and requires every one to be present and
+finite, so adding a field to `ModePolicy` makes it required automatically and the
+validator cannot fall behind the type again. A test drops **each** field in turn
+and asserts every one throws.
+
+⚠️ **This is the fourth variant of "stored config drifts from code" in two days**
+— after `policy adopt-defaults`, `tax profile set`, and the tax-tables year. The
+first three were repair paths depending on the broken thing; this one was a check
+that silently did not check. Same root: **a stored value and a code definition
+that can disagree, with nothing forcing them to be compared.**
+
+### D-25. The local rate, and why it has to say where it came from
+
+Jason named his county; the rate went into `data/resale.db` and nowhere else.
+
+It is one of the cheaper ones — not the 3.20% top rate
+assumed on 2026-09-08. Combined with the 4.75% state marginal the rate is
+**740 bps**, down from 795. The earlier assumption was over-reserving by 55 bps,
+which is $5.11 per $1,000 of profit.
+
+⚠️ **Both rates were recalled, not looked up.** There is no source to check
+against from here. They need verifying against the Maryland Comptroller's
+published local rate table before they are trusted — the same standing as the
+federal tables, and said in the same place.
+
+**Which is why a bare rate is no longer allowed.** `TaxProfile.stateRateBasis`
+is now **required whenever `stateIncomeTaxBps > 0`**, and `validateTaxProfile`
+throws without it. `740` in a config row is unexplainable in six months and a
+wrong one is invisible; the number now carries its own derivation and its own
+confidence. Zero needs no basis, because zero explains itself.
+
+Recorded, in the database: the state marginal, the county rate, and *"rates
+recalled 2026-09-08, NOT checked against the Comptroller's table"*.
+
+**Where the reserve lands now** (an illustrative filer and county):
+
+| | |
+|---|---|
+| $13.08 flip (year under $400) | **$3.27** — federal $2.30 + state $0.97 |
+| $1,000 of profit | **$373.63** — 37.36%: SE $141.29 + federal $163.57 + state $68.77 |
+
+**The stale-profile guard fired for the third time**, and worked: adding the
+required field made the stored profile unreadable, `taxProfileOrDefault()`
+degraded it to unconfigured, and `tax profile set` replaced it without needing
+to read it first. The class stayed fixed. **B24 closed.**
+
+### D-24. Owner acceptance of the tax tables, kept separate from verification
+
+Jason: *"Accept defaults as adequate."*
+
+The temptation was to flip `verified: true` and stop the nagging. That would
+have destroyed the only fact worth keeping: **nobody has checked these numbers
+against an IRS release.**
+
+So there are now two records instead of one. `verified` still means *checked*,
+and is still false. A `TaxTablesAcceptance` — stored in `config`, not in the code
+tables — means *the owner judged them adequate for a reserve*. Accepting quiets
+the two warnings down to one informational line, and that line still ends
+**"Not IRS-verified."**
+
+**The acceptance expires.** It is scoped to a `(tablesYear, transactionYear)`
+pair, so accepting 2025 tables for 2026 does nothing for 2027; the warnings come
+back at the year boundary, which is exactly when someone should look again. Two
+tests cover that, and one asserts acceptance changes no number the reserve
+depends on — it is bookkeeping about trust, not an input to the maths.
+
+A malformed acceptance record degrades to *no acceptance*, restoring the
+warnings rather than silencing them. Failing loud is the safe direction for
+anything whose job is to tell you something is unchecked.
+
+Recorded: **2025 tables, adequate for 2026, the owner, 2026-09-08** — "revisit
+with 2026 figures". **D8 closed** on those terms.
+
+New command: `tax tables [show|accept]`.
+
+### D-23. The cliff owes more than the sale that crosses it, and the reserve was dropping the difference
+
+Found by a test that would not go green, and it was the test that was right.
+
+The reserve was `annualTax(after) - annualTax(before)`, capped at the sale's own
+profit. At the $400 self-employment cliff that cap bites: crossing on **$18.43**
+of profit makes **$61.20** of SE tax owed at once, so $42.84 was capped away and
+never reserved. The fund would have been permanently short by that amount, and
+nothing would have said so.
+
+The reserve is now a **catch-up against the year**:
+
+```
+owedSoFar = businessTaxForYear(ytdIncome + thisProfit)
+reserve   = clamp(owedSoFar - alreadyReservedThisYear, 0, thisProfit)
+```
+
+The shortfall is carried rather than dropped, and `carriedForwardCents` reports
+what is still outstanding — the CLI prints it on the sale.
+
+**Measured, not asserted.** Across 30 flips: the gap opens at $40.80 on the
+crossing flip, shrinks monotonically, and reaches exactly **$0.00** four flips
+later. The test checks all three properties, not just the endpoint.
+
+### D-22b. `tax show` was reporting the owner's whole tax bill
+
+Caught by running it. It printed `annualTax(ytdIncome)`, which includes tax on
+the operator's salary — so an empty fund reported a five-figure shortfall. It now
+reports `businessTaxForYear()`, the tax attributable to the business alone. On
+three real flips: $39.24 of income, $10.03 owed, $10.03 reserved, no shortfall.
+
+### D-21. Maryland, and a state base that was quietly wrong
+
+Jason: *"MD and everything else seems fine."*
+
+Maryland is **4.75% state plus a county tax of 2.25–3.20%**, so the rate went in
+at **795 bps** (4.75 + 3.20, the top county rate — over-reserving is the safe
+direction, and **B24** tracks pinning down the actual county).
+
+⚠️ **Setting it surfaced a real under-reserve.** The state rate was being applied
+to *federal taxable income*, which has the Section 199A QBI deduction subtracted.
+Most states — Maryland included — start from federal **adjusted gross** income
+and do not allow QBI. So the state base is now `taxable + qbiDeduction` unless
+`stateAllowsQbiDeduction` says otherwise.
+
+Worth **$14.77 per $1,000** of profit at Maryland's rate. Small per flip, and it
+compounds across a year of them. A test asserts the exact difference.
+
+`stateIncomeTaxBps` is documented as a **combined state + local marginal** rate,
+because in Maryland, Ohio, Pennsylvania, Indiana and New York City the income is
+exposed to both. The full state bracket walk is not modelled (**B25**) — at this
+size the marginal rate does not move.
+
+**Where the reserve now lands, on an illustrative profile:**
+
+| | |
+|---|---|
+| $13.08 flip (year under $400) | **$3.34** — 25.54%: federal $2.30 + state $1.04, no SE tax |
+| $1,000 of profit | **$378.74** — 37.87%: SE $141.29 + federal $163.57 + state $73.88 |
+
+### D-22. The repair path broke the same way twice
+
+`tax profile set` threw before it could set anything, because adding the required
+`stateAllowsQbiDeduction` field made the stored profile invalid — and the command
+read-and-validated it first.
+
+**This is the identical bug I fixed for `policy adopt-defaults` three commits
+ago.** I fixed the instance and not the class, and it recurred within the hour.
+
+Now: `taxProfileOrDefault()` degrades a broken stored profile to *unconfigured*
+(which makes income tax abstain — the safe direction) instead of throwing;
+`state()` uses it, so a stale profile cannot take the whole fund down; and a
+`TaxProfileError` at the top level prints the fix rather than a stack.
+
+Three tests gate the class, not the instance. The rule is in `CLAUDE.md`: **a
+repair path must not depend on the broken thing**, and adding a required field to
+any stored config makes every existing row invalid, including for the repair.
+
+### D-20. The tax reserve is now incremental annual tax, not a rate
+
+Jason: *"I want the tax reserve to be correct."*
+
+**The structural problem with everything before this:** tax is annual and
+non-linear, and the reserve was a percentage of a single sale. The $400
+self-employment threshold is a cliff, the Social Security wage base is a
+ceiling, and income-tax brackets are steps. A flat rate is wrong on both sides
+of every one of them.
+
+So the reserve became the difference a sale makes to the year:
+
+```
+reserve = annualTax(ytdBusinessIncome + thisProfit) - annualTax(ytdBusinessIncome)
+```
+
+Correct across every cliff, ceiling and step by construction, self-correcting as
+the year fills in, and needing no special cases. `src/core/tax/annual.ts` is the
+model; `src/core/capital/tax.ts` became a thin adapter.
+
+**What is now modelled** that was not: the $400 SE threshold · the Social
+Security wage base, net of W-2 wages · Medicare and the 0.9% surtax ·
+progressive federal brackets by filing status · the standard/itemised deduction ·
+the Section 199A QBI deduction · a flat state rate · the half-SE deduction, in
+the right place.
+
+**Two things this made visible, both correct and both surprising:**
+
+1. **Below $400 of net SE earnings the reserve is zero.** The old model reserved
+   14.13% on tax that is not owed. The sale that crosses the line then carries
+   the whole cliff: at $400 of prior income a $100 profit reserves **$70.65**.
+   That is left visible rather than smoothed, because smoothing under-reserves.
+2. ⚡ **A high W-2 earner reserves LESS, not more.** At $200k of wages the Social
+   Security base is already consumed, so the 12.4% half does not apply to
+   business income at all — while the income-tax bracket is far higher. The two
+   move in opposite directions and the net is lower. **I asserted the opposite
+   in a test, and the model was right.** The test now asserts the mechanism.
+
+**Income tax abstains rather than guesses.** It needs filing status, other
+household income and a state rate — facts about the owner that no ledger can
+derive. Until a `TaxProfile` is set, `incomeTaxEstimated` is false and every
+consumer surfaces that. A confident wrong number is worse than an honest gap.
+
+**Year-to-date is derived twice, never cached.** `FundState` gained `taxYear`,
+`ytdNetBusinessIncomeCents` and `ytdTaxReservedCents`, which reset when a command
+lands in a new calendar year. The store derives them in one ordered pass over the
+ledger; `replay()` derives them by re-running the engine; `reconcile()` now
+compares all three. The reserve is built on that number, so it gets the same
+two-derivation control as the balances.
+
+⚠️ **The tax tables are unverified.** `src/core/tax/tables.ts` carries 2025
+federal figures with `verified: false`, and `taxTableWarnings()` reports both
+that and any year mismatch on every `tax show`. They are data in one file
+specifically so they are checkable and correctable.
+
+⚠️ **A charge-off is not deducted from business income** — for a cash-basis
+reseller the cost of unsold goods is not deductible until disposal, and
+over-reserving is the safe direction.
+
+**B21 is closed by this** (the reserve no longer over-reserves below $400) and
+**B15 is closed** (the wage base is modelled).
+
+New commands: `tax show` (the year, the reserve, and any shortfall between them),
+`tax profile show|set`, and `tax pay` (was `tax --amount=`).
+
+### D-18. Below $100 of bankroll, no profit is set aside
+
+Jason: *"Let's not have a profit floor below 100. It's not enough to be
+meaningful."* — clarified to: *"I meant to not set aside profit when the
+bankroll is below 100."*
+
+⚠️ **I read that wrong the first time** and raised `minExpectedProfitCents` — the
+per-flip profit minimum — to $100, which is a different number entirely and
+collided head-on with the $50 bankroll. That change is reverted; the floor is
+back to $8 / $15. The lesson is in `CLAUDE.md`: "profit floor" was ambiguous
+between *per-flip profit* and *bankroll below which profit is retained*, and I
+should have asked rather than picked the reading that produced a bigger change.
+
+The actual decision: `allocation.setAsideMinNavCents = 10000`. Below $100 of NAV
+the owner distribution and the operating reserve are both **skipped**, and the
+entire after-tax profit compounds. A 20% cut of a $25 profit is $5, and at a $50
+bankroll taking it out is the difference between compounding and crawling.
+
+**The tax reserve still accrues below the threshold**, because tax is an
+obligation rather than a distribution. That is a judgement call, not an
+instruction — arguably it should be suspended too, since below $400 of annual net
+SE earnings no SE tax is owed. Under-reserving is the dangerous direction and an
+unneeded reserve is simply released later, so it accrues. Flagged as **B21**.
+
+**The threshold is tested against NAV *after* the sale is recognised**, so the
+flip that crosses $100 is the first one to pay out. Tested at $99.99 and $101.00.
+
+⚠️ **This revises the original brief**, which said the owner receives profit from
+every profitable transaction from the beginning. What survives is the part that
+mattered — *"do not design an early phase where 100% of profit is
+**permanently** retained"* — and `validatePolicy` now enforces it: the threshold
+must sit below the GROWTH line, so the warm-up cannot become a phase. A test
+asserts a $500 threshold is rejected.
+
+**Planted:** setting the threshold to 0 turns 5 tests red; restoring it returns
+all 154 to green. One test runs four flips under both settings and asserts the
+warm-up fund ends larger — the claim is measured, not asserted.
+
+### D-18b. The reachability module survived the misreading, and is worth keeping
+
+Built to diagnose the collision my misreading created, it earns its place
+anyway: a profit floor and a per-item cap multiply into a constraint neither one
+states, and nothing else in the system would notice. Its tests now pass floors
+explicitly rather than depending on a default, so they do not move when policy
+does.
+`src/core/capital/reachability.ts` reports the required multiple and answers the
+inverse — the bankroll a floor implies:
+
+```
+landed   = (floor + fixedCosts) / (multiple * (1 - feeRate) - 1)
+bankroll = landed / maxCapitalPerItemBps
+```
+
+**A $100 floor implies ~$165 of bankroll at a 3x flip, or ~$359.70 at 2x.** It
+returns `null` when `multiple * (1 - feeRate) <= 1`, because below the fee rate
+every item loses ground on its own and no amount of scale rescues it — a
+reassuring large number there would have been a lie.
+
+At the shipped $8 floor a $50 fund needs a 1.95x, which is reachable — so
+nothing is blocked. `status` prints the warning only when a floor has stopped
+fitting its bankroll. The tests **check** the claim instead of asserting it: they
+buy at the implied landed cost, sell at the multiple, and confirm the profit
+really clears the floor, at four different multiples.
+
+### D-19. Policy lives in the database, and the live fund did not get the change
+
+Caught by looking at the artifact instead of trusting the code: after setting the
+floor to $100 and seeing 139 tests pass, `status` on the real fund still said
+**$8**. `store.policy()` reads the `config` table, and `ensureSeeded()` only
+writes defaults when the row is absent — so every policy edit in code is inert
+for a fund that already exists.
+
+This would have been a silent, expensive divergence: the tests and the running
+business disagreeing about the rules, with nothing pointing at it.
+
+Added `policy show` (which warns when the stored version differs from the code's
+version), `policy adopt-defaults`, and `policy set --min-profit= / --income-tax-bps=`
+which routes through `validatePolicy` so a bad edit throws rather than lands.
+The live fund was migrated `2026-09-08.2` -> `2026-09-08.3`.
+
+The version string on `Policy` stopped being decoration the moment it was the
+only thing that could detect this.
+
+### D-17. Gross is not net, and the CLI was treating them as the same thing
+
+Found by probing a realistic first purchase against the live $50 fund before
+handing it over. `buy --price=15 --resale=32` **passed every gate**. It should
+not have: `--resale` was being read as net proceeds, so the assessment saw
+$17.00 of profit where the real figure is $7.01 — below the $8 floor.
+
+At bootstrap prices the gap between gross and net is about a third of the sale,
+so this was not a rounding concern; it was the difference between a gate that
+works and a gate that waves purchases through.
+
+`src/core/fees.ts` now models it: 13.25% of the total sale (buyer-paid shipping
+included, because eBay charges on that too) plus $0.40 per order, plus postage
+and packaging. `estimateNetProceeds()` runs before any gate sees a profit
+figure, and the CLI prints the derivation so the number is never a black box.
+`grossNeededForNet()` is the inverse, and it answers the question the operator
+actually has standing in a shop.
+
+Unknown marketplaces default to the **eBay** model rather than to zero fees —
+defaulting to "free" is the dangerous direction.
+
+The same purchase now fails with `PROFIT_BELOW_MIN` and `DOWNSIDE_TOO_LARGE`,
+and `headroom` reports the actionable number: *a $20 item has to sell for
+$38.91 gross to clear the $8 minimum.* That is a **95% markup on every flip**,
+which is the honest shape of a $50 bankroll on eBay and is exactly the pressure
+risk R2 describes.
+
+This was Gate 2's sub-step 2.1 arriving early. It was folded in rather than
+deferred because the fund went live the same sitting, and a tool that approves
+unprofitable purchases is worse than no tool.
+
+### The control that would catch a lossy writer
+
+`FundStore.state()` sums the postings table and reads the items table.
+`replay()` ignores both and re-runs every stored command through the engine from
+an empty fund. `reconcile()` compares them. These are two genuinely different
+code paths, not a round trip through one encoder — a writer that silently
+dropped a field would show up as a balance difference.
+
+**It was planted, not assumed.** `tests/persistence.test.ts` corrupts a stored
+sale payload (zeroing `marketplaceFeeCents`) and asserts `reconcile()` reports
+the mismatch. The hash chain is planted twice more: an edited event row, and a
+tampered posting amount. All three are caught, and the clean case verifies OK
+first so the plants are not passing vacuously.
+
+### Verified by hand as well as by suite
+
+A real $75 run through the CLI: contribute $75 → the $45/45-day bag rejected with
+three named reasons → a $12 pin bought (6-day hold) → sold at $32 gross less
+$9.57 of fees and postage → profit $10.43, split $2.61 tax / $1.57 owner / $0.78
+operating / $5.47 reinvested → NAV $80.47, `verify` reports hash chain OK and
+replay OK.
+
+The owner was paid on the first flip. That is the requirement, demonstrated
+rather than asserted.
+
+### Surfaced during implementation, filed rather than built
+
+Went to the backlog in the same edit: the override-flag gap (**B9**), the ledger
+verifier script (**B1**), the import-direction lint (**B2**), the rejection-code
+histogram (**B3**), and the `node:sqlite` experimental-warning noise (**B12**).
+None of them met the queue-admission bar; all of them would have been lost.
+
+---
+
+## Gate exit criteria
+
+| Gate | Exit |
+|---|---|
+| **1** ✅ | A $75 fund records every event type; balances explainable to the cent; identity holds after every event; two independent derivations agree; suite green. |
+| **2** | A hand-entered opportunity yields Buy Score, Risk Score, confidence, max price and a recommendation with reasons — and the suite proves a slow item cannot score high in Bootstrap. |
+| **3** | Full inventory lifecycle including markdown, capital recovery, charge-off and passive recovery; business + transaction expenses; reserves and distributions; item profit vs operating profit vs owner-distributable profit all reconcile. |
+| **4** | The dashboard runs on a phone, shows every Phase-1 metric, and the config UI can change policy without a deploy. Rejection-code histogram included. |
+| **5** | Manual/CSV ingestion works end to end; eBay adapter behind a credential check; the ranked feed shows only what deserves attention, with filters. |
+| **6** | Scarcity / demand / momentum / market-opportunity scores with confidence; radar buckets; watch-only markets surface an unlock readiness figure without the operator enabling anything by hand. |
+
+---
+
+## 2026-09-08 (Gate 4 opens) — 4.1: B33, and a control that could not fail
+
+### Switch-in: the plan was a hypothesis, and three premises had moved
+
+Gate 4 was decomposed before any of it existed. Verified against the code first:
+
+- **B33 was a hard blocker, and `reporting.ts` said so in its own comment** —
+  *"Do not report either number on the dashboard until that is resolved."* Both
+  the metrics screen and the profit screen render numbers that come through
+  `profitReport()`. B33 was promoted from the backlog to sub-step **4.1**, ahead
+  of the scaffold.
+- **D4 is mis-marked "needed before Gate 4."** Nothing in 4.1–4.10 touches a
+  constraint override; it is something you do when *acting* on a recommendation,
+  which is Gate 5. Flagged, not edited — it is Jason's row.
+- **The decomposition had no screen with a user standing anywhere.** 4.3–4.7 all
+  render the past. The reason to want this on a phone is standing in a thrift
+  aisle holding something, and `evaluate` + `max-price` + `constraints` already
+  answer that as pure functions. Jason agreed to fold it in as **4.4**.
+
+`A4` in 4.9 checked out — it means `ASSUMPTIONS_AND_RISKS.md`'s A4 (one operator,
+local gate), not `ARCHITECTURE.md`'s A4 (postings balance). Two docs, same label;
+the plan now says which.
+
+### D-30. B33: the reversal has to declare what it reverses
+
+Business expenses are recorded twice — in the ledger, and in the analytic
+`expenses` table that operating profit and the category breakdown read from. An
+`ADJUSTMENT` moved only the ledger. Found by hand at button-up: the ledger came
+back to $50.00 while `profit --expenses` still reported $1.50 of SUPPLIES.
+
+Two options were on the table. **Deriving operating profit from postings** would
+have fixed the top line and left the breakdown wrong, because an adjustment
+carries no category. **Linking the reversal to what it reverses** fixes both, and
+the `expenses` table already had an `event_id` column to build on. Jason picked
+the link.
+
+- `AdjustmentCommand.reversesEventId` — optional. It requires `account: 'LIQUID'`
+  and a positive amount, because undoing an expense has exactly one shape: cash
+  comes back. Any other account or sign is a different correction wearing a
+  reversal's label.
+- Migration `004` adds `expenses.reverses_event_id`. Nothing is deleted or
+  edited: the reversal is a **negative row**, so both the mistake and the
+  correction stay visible, exactly like the ledger it mirrors.
+- The store refuses to reverse more than is outstanding, and outstanding is
+  `SUM(amount_cents)` over the original row plus every compensating one — so
+  partial reversals compose and over-reversal cannot invent income.
+- Existence and type checks live in the **store**, not the engine. `FundState`
+  carries balances and items, not an event registry, so a pure reducer has no
+  way to know whether an event id is real. They run before `applyCommand`, so a
+  bad reversal never reaches a write.
+- **The reversal restores the year's net business income.** The expense deducted
+  it; leaving it deducted means the tax reserve keeps reserving against money
+  that was never spent. This had to be mirrored in both the engine and the
+  store's independent derivation.
+
+`expenseReversalDrift()` is the control, and `verify` now prints a third line
+alongside the hash chain and the replay. Its two sides are genuinely different:
+the ledger side reads `LIQUID` postings and ADJUSTMENT payloads, the table side
+reads `expenses`, and neither is computed from the other.
+
+⚠️ **It cannot see a reversal that does not declare itself** — an undeclared
+adjustment is indistinguishable from an ordinary cash correction, which is the
+whole reason the declaration exists. That is why the live residue is a decision
+(**D9**) and not a bug.
+
+### D-31. `reconcile` was comparing the engine to itself
+
+Planting found this, and nothing else would have.
+
+`commit()` caches the **engine's** next state — a sound optimisation, since
+re-deriving from the whole ledger after every write is O(events) per command.
+`reconcile()` read `state()`. So after any commit, the "postings scan" side of
+the comparison *was the engine's own output*, and the control that exists to
+catch a lossy write path could not catch one.
+
+**Measured, not argued:** a $123.45 corruption planted in `#deriveTemporal`
+passed all 48 tests that touch it — `reconcile`'s own dropped-field plant
+included. That plant only ever worked because it corrupts the *replay* side,
+where a warm cache does not hide it.
+
+Fix: `FundStore.derivedState()` is the cache-bypassing load, and `reconcile()`
+reads it and never `state()`. Every other `state()` caller is an ordinary read
+or a fresh process, so nothing else was affected.
+
+This is the fifth instance of the failure class this project keeps meeting: **a
+check whose two sides come from one source cannot fail, and reading it never
+reveals that — only planting does.**
+
+### On the plant that was wrong
+
+The first version of the new test inserted a single unbalanced posting, and the
+test failed with `INV_IDENTITY` instead of a reconciliation difference. The
+*plant* was wrong, not the check — an unbalanced pair is caught by a different
+control before the comparison is ever reached. The plant is now balanced
+(`LIQUID +12345`, `RETAINED_EARNINGS -12345`), which is the corruption shape that
+actually survives to the thing under test.
+
+### Verification
+
+Every new control was planted against, verified red, restored, verified green:
+
+| plant | what went red |
+|---|---|
+| drop the compensating expense row | 6 tests |
+| engine skips the business-income restore | the tax-base test |
+| `reconcile` back on the write cache | the cold-derivation test |
+| balanced corruption in the postings table | the drift + reconcile controls |
+| corrupt the expenses table directly | the drift control, both directions |
+
+`npm run check`: four gates, **308 tests** (was 294).
+
+### What did not get fixed, and why
+
+The live book still reports -$1.50 of operating profit. `evt_000004` returned
+the cash before the mechanism existed, so it declares nothing, and a second cash
+adjustment would double-count the $1.50. Clearing the analytic record alone needs
+a correction with no cash effect — a real capability the system does not have.
+It is **D9**, because it is Jason's ledger.
+
+---
+
+## 2026-09-08 (D9) — a correction that moves no money
+
+### D-32. The books and the money can be wrong independently
+
+D9 asked how to clear $1.50 of smoke-test SUPPLIES from the live book. The cash
+had already come back through `evt_000004`, recorded before `reversesEventId`
+existed, so it declares nothing. A second cash adjustment would double-count it,
+and hand-editing the `expenses` table is the thing the hash chain exists to make
+impossible.
+
+The gap was real and general, not a one-off: **there was no way to correct the
+analytic record when the ledger was already right.** A miscategorised expense
+(SUPPLIES that was really POSTAGE) has exactly the same shape and will recur.
+
+`EXPENSE_CORRECTION` is that event. It writes **no postings** — nothing happened
+to the money — and comes in exactly two shapes:
+
+- **reclassify** (`reclassifyTo`) — one negative row in the old category, one
+  positive in the new. The total is untouched; only the breakdown moves.
+- **settle** (`settledByEventId`) — one negative row, naming the event that
+  already returned the cash. The expense leaves the record and the year's net
+  business income is restored.
+
+Requiring *exactly one* of them is the load-bearing rule. A correction with
+neither would silently drop an expense the ledger still says was paid — which is
+B33's drift, walked straight back in through its own repair path.
+
+**Settling is checked hardest, because nothing in the ledger will contradict it
+afterwards.** The named event must actually have returned cash; it cannot be the
+expense itself; and `#claimedAgainst` refuses to let two settlements spend the
+same returned dollar. Without that last one, $6.00 of expense could vanish
+against $3.00 of returned cash.
+
+### D-33. Widening a CHECK constraint, on a live ledger
+
+A new event type meant `ledger_events.type`'s CHECK had to change, and SQLite
+cannot alter one in place — the table must be rebuilt. Rebuilding a table that
+`ledger_postings` and `expenses` both reference needs foreign keys off, and
+`PRAGMA foreign_keys` is ignored inside a transaction.
+
+**Probed on a throwaway copy of the live database before writing anything.**
+`PRAGMA defer_foreign_keys` — the option that would have needed no runner change
+— does **not** survive the `DROP TABLE`; it fails with a foreign key violation.
+Only `foreign_keys = OFF` outside the transaction works.
+
+So `migrate()` gained a `-- self-managed` marker: such a file runs outside the
+runner's transaction and owns its own. It is recorded only after its transaction
+commits, which is why it is written to be **safe to re-run** — a crash in that
+gap is recovered by running it again, and a test asserts exactly that.
+
+⚠️ **The reuse of ADJUSTMENT was considered and rejected.** Mapping
+`EXPENSE_CORRECTION` onto the existing type (as `SET_ITEM_STATE` maps to
+`ITEM_STATE_CHANGE`) needed no migration at all. But the CHECK exists precisely
+to stop an unknown type landing, and routing around it would leave the control
+guarding a list that no longer describes reality — while `ledger` printed
+"ADJUSTMENT" for something that adjusts nothing. Gates 5–7 add more event types;
+better to build the capability once, now, against a four-event book with a
+verified backup.
+
+### The control from 4.1 caught the very next bug
+
+The engine restored business income on a settlement and the store's independent
+derivation did not. `reconcile()` failed with
+`ytd business income: stored -150 vs replayed 0` — which it could only do
+because 4.1 had just stopped it reading the write cache. One item earlier, that
+same mistake would have passed silently.
+
+### Verification
+
+Planted, red, restored, green — 324 tests:
+
+| plant | what went red |
+|---|---|
+| drop the settlement double-claim guard | the same-dollar-twice test |
+| store derivation forgets corrections | the settle test, via `reconcile` |
+| drift control forgets settlements | 2 settle tests |
+| migration loses its `-- self-managed` marker | all 3 migration tests |
+
+⚠️ **The marker plant did not apply on the first attempt** — the string appears
+twice in the file (the marker and a mention in its own comment), and the guard
+caught it. The three passes that run reported were meaningless. Diagnosing the
+plant before trusting the result is the rule that saved it.
+
+Migration 005 has its own test that runs 001–004, writes real events, *then*
+migrates — because every other test migrates a fresh database all at once, so
+the only scenario that matters had no coverage. It asserts the hash chain is
+byte-identical afterwards, the foreign keys are clean, and reconcile still passes.
+
+### The live book
+
+Backed up, migrated, corrected, verified. `evt_000005` and `evt_000006` settle
+$1.00 and $0.50 against `evt_000004`.
+
+```
+business expenses  $0.00      (was -$1.50)
+operating profit   $0.00      (was -$1.50)
+YTD business income $0.00     (was -$1.50)
+hash chain OK · replay OK · expenses OK
+```
+
+Three wrong numbers, not one — the tax base was drifting too, and only checking
+`tax show` during the before-scan surfaced it.
+
+### After-scan
+
+Folded in, because both are operator-facing and Gate 4 is about exactly that:
+
+- **A refused command printed a raw stack trace.** Pre-existing and not specific
+  to corrections — every `EngineError` did it, including a payout exceeding
+  payable. A refusal is a normal outcome and now reads as one; an
+  `InvariantViolation` is separated out, because that one *is* a bug and says so.
+- **A no-posting event printed as a bare line** in `ledger`, with no way to see
+  what it did. It now renders its payload.
+
+Filed, not built: **B36** (the CLI has no tests at all — the stack-trace bug
+shipped because nothing opens it, and Gate 4 adds a second interface over the
+same functions) and **B37** (`#claimedAgainst` is a linear scan).
+
+---
+
+## 2026-09-08 (4.2) — the dashboard scaffold, and one seam
+
+### D-34. The "read-only API" is function calls, not HTTP
+
+4.2 was written as "the read-only API over the existing pure functions." Built
+as an HTTP API that would have meant serialising view objects, re-parsing them
+in the browser, and standing up an unauthenticated surface over a live financial
+ledger *before* the auth gate (4.9) exists.
+
+App Router server components call `src/server/views.ts` **directly**. No fetch
+hop, no second representation, nothing listening that should not be. HTTP routes
+go in only where a client component genuinely needs one, which is 4.4's sourcing
+screen and nothing before it.
+
+### D-35. The seam, and the lint that makes it real
+
+`src/server/views.ts` assembles plain objects out of what `src/core` already
+computed. It does no arithmetic on money — even formatting goes through
+`formatCents`, because a hand-rolled formatter is how `-$0.00` appears on a
+dashboard and nowhere else.
+
+Saying "no new financial logic" in a comment is worth very little. `npm run
+lint:imports` now enforces it: **`src/app` may not import `src/db`, `src/cli`,
+or `node:sqlite`.** A screen that wants a number gets it from the view layer or
+it does not get it.
+
+It caught its author within a minute — I put the store-opening helper in
+`src/app/store.ts`, and the lint refused it. It belongs in `src/server`, where
+the database is allowed. Planted both directions afterwards (a `src/db` import
+and a `node:sqlite` import in a `.tsx`), and both fail.
+
+⚠️ The walker only looked at `.ts`. The app is `.tsx`, so the whole new layer
+would have been invisible to every rule in the file — a lint that passes because
+it read nothing.
+
+### D-36. Two tsconfigs, because one would have to lie
+
+The root config is node-only on purpose: no DOM, no JSX, because `src/core` and
+`src/db` must never compile against a browser lib. Next needs both.
+
+`tsconfig.web.json` is the web half, and **`npm run typecheck` runs both** — a
+half that is not typechecked reports green while it rots. Verified by planting a
+type error in `page.tsx` and watching the web pass go red; an empty `include`
+would have printed exactly the same silence as a clean run.
+
+⛔ **Next rewrote the root tsconfig on the first build** — adding `jsx`,
+`allowJs` and its own plugin, undoing the split. `typescript.tsconfigPath` points
+it at the web config instead. It also appends a block to `CLAUDE.md` on every
+`next dev`; `agentRules: false` stops it. A build tool does not get to write to
+this project's start-here document.
+
+### D-37. Turbopack cannot resolve this repo
+
+Measured, after the build failed: Turbopack does **not** honour
+`extensionAlias`, so it cannot resolve the repo's `./x.js`-for-`x.ts` imports
+and 500s on every page. webpack does. Both `dev` and `build` pass `--webpack`.
+
+The alternative was rewriting the extension off every import across the
+financial core to suit a dashboard — a lot of churn in files that have nothing
+to do with the dashboard, in exchange for a faster bundler. Backlog **B38**.
+
+### D-38. B36: the CLI had never been opened by a test
+
+Twelve hundred lines routing every command, zero coverage. That is *why* the
+raw-stack-trace bug shipped in the previous item.
+
+`tests/cli.test.ts` spawns the real process against a throwaway ledger, because
+exit codes and what reaches stderr only exist at the process boundary. Eight
+cases, including the regression: a refused command must say `refused:`, exit 1,
+and print no stack. Planted by removing the `EngineError` handler — two tests go
+red.
+
+⚠️ **The per-test timeout was applied wrong at first.** A regex put it *outside*
+the call — `}), CLI_TIMEOUT)` parses as a comma expression, so `it()` still ran
+with the 5-second default and the change did nothing. Caught by setting the
+constant to `1` and confirming the tests actually time out. A mechanical edit
+that looks applied and is not is the recurring shape of this class.
+
+### The environment cost an hour
+
+This machine cannot download a large npm tarball in one shot: anything over
+~20 MB dies partway, and **npm retries by restarting rather than resuming**.
+`next` (41 MB) and `@next/swc-win32-x64-msvc` (34 MB) both failed repeatedly.
+
+The payload does arrive — it is the TLS teardown that breaks. Measured that
+`--http1.1` and `--tlsv1.2` truncate too, at different offsets each time, so it
+is not a protocol setting. The workaround, written up in CLAUDE.md: resume-loop
+with `curl -C -` until `gzip -t` passes, then `npm cache add` the file so the
+content-addressed cache satisfies the integrity check. Same class as the
+rolldown binding that pins Vitest to 3.x — **two independent native packages
+now**, so assume the next big dependency needs it.
+
+### Verified
+
+`npm run check`: four gates, both halves, **341 tests** (was 324). The page was
+fetched from a real dev server and cross-checked against `status`: NAV $50.00,
+deployable $42.50, BOOTSTRAP, set-aside off until $100 — identical. Dev server
+identified by PID and terminated; port 3737 confirmed clear.
+
+---
+
+## 2026-09-08 (4.3) — the primary screen, and the thing I cannot check
+
+### D-39. The dashboard was on the LAN with no auth
+
+`next dev` binds `0.0.0.0`. The startup banner had been printing
+`Network: http://192.168.4.49:3737` since 4.2 and I read past it twice.
+
+So the fund's complete financial position — NAV, reserves, tax base, every
+category exposure — was served to anything on the network, and the auth gate is
+**4.9**, six items away. `dev` and `start` now pass `--hostname 127.0.0.1`.
+
+⚠️ This has a consequence for sequencing. The reason to build a phone dashboard
+is to read it *on a phone*, which needs LAN access, which needs auth. **4.9 may
+need to move ahead of 4.4**, because the sourcing screen is the one that is
+useless on a laptop. Not moved yet — that is Jason's call on the queue.
+
+### D-40. The screen's decisions are data, because the screen is not testable
+
+There is no browser here, and the thing that actually matters about this screen
+— whether it is legible one-handed at arm's length in a shop — is a human
+judgement regardless.
+
+So the *decisions* moved out of the component into `src/server/screens.ts`:
+which rows, in what order, which warnings fire, and how loud. Those are ordinary
+functions with ordinary tests. `page.tsx` is now typography and nothing else; it
+makes no judgement a test could be wrong about.
+
+What that buys, concretely, is the ability to assert things like *an
+unverifiable ledger is the only thing allowed to be an alarm* and *the exposure
+table is omitted entirely when empty, because an empty table is noise on a
+phone*. Planted three ways — swapping the lead section, demoting the integrity
+alarm, forcing the exposure table on — and each fails.
+
+⛔ **What it does not buy: styling.** If a row is unreadable, nothing here would
+know. That is **B39**, and it is honest rather than solved.
+
+### D-41. Deployable leads, not NAV
+
+The operator is standing in a shop holding an object. The question is *what can
+I spend on this*, not *what is the fund worth*. NAV first would be accurate and
+useless, so the first section is "Can spend now" — deployable, max per item, max
+hold, min profit — and the bankroll breakdown sits beneath it as context.
+
+The rows 4.2's proof page had dropped are back: liquid floor, the earmark
+breakdown (tax reserve, operating reserve, owner payable, labelled *Spoken for*
+because "inside NAV but not yours" is the thing that needs saying), active-item
+count, and category exposure against its cap.
+
+### Two fixtures that were wrong before the code was
+
+Both surfaced by tests failing, and in both cases the test was wrong:
+
+- A $500 fixture is **GROWTH**, not BOOTSTRAP. The assertion hardcoded a mode
+  the fixture did not have.
+- **A $50 fund with an $8 floor is reachable** — 1.4x a flip. The first version
+  of that test asserted a warning that correctly is not there. Constructing a
+  genuinely unreachable fund needs a $100 floor, which is the collision this
+  fund actually hit on 2026-09-08. Both cases are now tested: quiet at the live
+  configuration, notice when the floor really is out of reach.
+
+⚠️ And the fixture that built the unreachable policy **type-checked while doing
+nothing**: `Policy` nests mode settings under `modes`, and `{...DEFAULT_POLICY,
+bootstrap: {...}}` adds a bogus top-level key. Spread syntax suppresses
+excess-property checking, so `tsc` was silent. Only the test still failing
+revealed it.
+
+### Verified
+
+`npm run check`: **356 tests** (was 341), four gates, both halves. Fetched from
+a real dev server: the order is right, the numbers match `status`, the middot
+separators are clean UTF-8 rather than mojibake, and the banners are correctly
+absent on a healthy fund. Server terminated by PID; port confirmed clear.
+
+⏳ **Not verified: how it looks.** Jason has the phone.
+
+---
+
+## 2026-09-08 (4.4) — the gate, and 47 cents I put in the ledger by accident
+
+### The incident, first, because it is the most useful thing here
+
+I planted `store.commit()` in `page.tsx` to prove the new `LedgerReader` type
+rejected it. `tsc` rejected it, loudly, exactly as designed.
+
+**A forgotten dev server on port 3000 was watching the filesystem.** It
+recompiled the page and ran the commit **47 times against the live ledger in
+eighteen seconds** — 47 × $0.01 `CONTRIBUTION` events with `occurredAt: 'x'`.
+It surfaced because a positive control showed NAV as $50.47 instead of $50.00,
+and an unexplained $0.47 in a real ledger is not something to move past.
+
+Reversed with two `ADJUSTMENT`s — a `CONTRIBUTION` touches `LIQUID` and
+`CONTRIBUTED_CAPITAL`, and an adjustment only ever pairs against retained
+earnings, so one could not do it. Back to NAV $50.00, `LIQUID` $50.00,
+`CONTRIBUTED_CAPITAL` −$50.00, `RETAINED_EARNINGS` $0.00, chain and replay OK.
+**The 47 events and their reversal are in the ledger permanently**, which is
+what append-only means and is the correct outcome.
+
+Three things came out of it, and the third is a real control:
+
+1. ⚠️ **Check every dev port, not the one you started.** I killed 3737 and
+   never looked at 3000. That server had been alive since an earlier item.
+2. ⚠️ **Never plant a side effect in a file a running server can execute.**
+   Plant type errors, verify with `tsc`, restore — and start nothing until
+   after.
+3. ⛔ **A type is a compile-time promise only.** `withStore` now hands screens
+   an object that *physically has no* `commit`, `setPolicy` or `db.run` on it.
+   The same mistake now gets a `TypeError` rather than 47 events in a real
+   financial record. Planted (handing back the full store) and it reds.
+
+### D-42. The gate is on the data, not on the routes
+
+The first version put auth in `middleware.ts`. Two things killed that.
+
+`node:crypto` does not exist in the Edge runtime, so the module would not
+build — and more importantly, **Next's own documentation says proxy "should not
+be used as a full session management or authorization solution"** and
+recommends the real check in the data layer.
+
+That is the better design here anyway. A routing check is default-open in the
+worst way: it protects the paths someone remembered to match, so every new
+screen is a chance to forget. `withStore()` is the *only* door to the ledger, so
+putting `requireSession()` there means a new screen is gated the moment it reads
+anything, without its author knowing the gate exists. `src/proxy.ts` survives
+only to redirect an expired session to a login form — appearance, not trust, and
+it does no crypto at all.
+
+⛔ **No loopback exemption, anywhere.** A tunnel terminates on this machine and
+forwards to 127.0.0.1, so "skip auth for localhost" is in fact "skip auth for
+everyone who came through the tunnel". Every request is checked whatever it
+claims about its origin.
+
+### D-43. No password means unreachable, not open
+
+`scripts/check-binding.mjs` runs before `dev`/`start`/`serve` and refuses to
+bind anything but loopback when `RESALE_PASSWORD` is unset, and refuses a
+password under 12 characters. The failure being prevented is the ordinary one:
+start a server to look at something, forget, leave a financial position on the
+network. Exercised in all four states.
+
+### D-44. A4 answered: Tailscale
+
+Presented three transports. Jason chose the private mesh over a public
+Cloudflare URL: the phone and PC join a tailnet, **no public endpoint exists at
+all**, and the password becomes defence in depth rather than the only thing
+between the internet and the fund. Works on cellular, which LAN-only does not —
+and the aisle is the entire point.
+
+⚠️ **Decided, not deployed.** Tailscale is not installed on either device;
+that is **B42** and it needs a human. Until then the dashboard is
+localhost-only. The session cookie sets `secure: false` because Tailscale serves
+plain HTTP inside the mesh (**B43** if that ever changes).
+
+### Verified
+
+`npm run check`: **376 tests** (was 356), four gates, both halves. End to end
+against a running server: unauthenticated `/` → 307 to `/login` with **zero**
+money figures in the response; a forged cookie → 307 (the proxy passes it
+through on presence alone, so this is the data-layer gate catching it, which is
+the whole design); `/login` → 200; and a **valid minted session → 200 with the
+real dashboard**, because a gate that blocks everything is indistinguishable
+from a broken app.
+
+One test was wrong before the code was: it used the reader after `withStore`
+closed the ledger. Fixing it moved the assertions inside the callback, which
+incidentally proves the store really does close.
+
+---
+
+## 2026-09-08 (4.5) — the aisle screen, and haggle vs walk away
+
+### The before-scan found the work was already done
+
+Every number this screen needs already existed. `evaluateOpportunity` returns
+economics, confidence, buy and risk scores, the gate results, the recommendation
+— and `price.boundBy`, whose own comment reads *"which limit actually binds — the
+one to argue with."* So 4.5 was a presentation and input problem, exactly as the
+plan claimed, and `src/server/sourcing.ts` computes nothing.
+
+⛔ **No hold-time field on the form.** `expectedDaysToSale` is derived from comps
+(`90 * (active + 1) / sold90`) and a typed estimate is capped at 30% confidence,
+below every mode floor. A field for it would be a field that quietly cannot
+clear a gate.
+
+### D-45. Looking at it found what testing it could not
+
+Nineteen tests passed and the model was right. Then I opened the running screen
+and scored a real candidate: a $12 Lego, $60 resale, 40 sold against 10 listed —
+**$34.30 expected profit at 286% ROI** — and it said *Walk away · Ceiling set by
+the per-item cap.*
+
+The verdict was correct. A 25-day hold exceeds BOOTSTRAP's 21-day ceiling, which
+cascades into the long-hold allocation and drags the buy score to 30. But **the
+explanation was about the wrong thing entirely.** The price ceiling is only the
+right explanation when price is the problem, and here price was fine.
+
+No model test would have caught it, because the model was not wrong.
+
+### D-46. So ask the evaluator instead of guessing
+
+The fix needed a real answer to "would this be a buy if it were cheap enough?",
+and inferring that from which gates failed is a heuristic that breaks the first
+time a gate cares about price indirectly.
+
+`priceFixable` **re-runs the evaluator with the asking price set to the
+ceiling.** If that comes back BUY, price is the whole problem and the screen
+says *Too expensive — pay no more than $X*. If it still fails, the item is bad
+at any price and the screen says *Walk away* and leads with the failing gate.
+
+That distinction is most of the screen's value. One answer sends you to haggle;
+the other sends you to put the thing down. Getting them confused wastes a
+conversation with a seller over an item that was never going to work.
+
+Verified on the live fund, three candidates:
+
+| candidate | verdict | reason shown |
+|---|---|---|
+| $12 Lego, 25d hold | Walk away | expected 25d hold vs 21d ceiling in BOOTSTRAP |
+| $30 fast-moving pin | Too expensive — pay no more than $20.00 | the per-item cap |
+| nothing sold in 90 days | Walk away | expected 3650d hold vs 21d ceiling |
+
+### The gate came for free
+
+`/sourcing` returned `307 → /login?next=%2Fsourcing` without a line of auth in
+it. That is 4.4's design paying off immediately: the check is on `withStore`,
+the only door to the ledger, so a new screen is gated the moment it reads
+anything and its author never has to know the gate exists.
+
+### A plant that was wrong before the code was
+
+The first float-cents plant — `Math.round(Number(x) * 100)` — passed all
+seventeen tests, and **the plant was not a defect**: `Number('12.99') * 100` is
+exactly 1299, so rounding is correct for well-formed input. The assertion was
+the weak part. I enumerated the values where truncation actually diverges
+(`0.29`, `0.57`, `1.13`, `2.01`, and 187 others under $200), put four of them in
+the test, and re-planted `Math.floor` — which now reds with `expected 28 to be
+29`.
+
+⚠️ Worth keeping: an assertion built on a value that does not distinguish the
+implementations is decoration. Diagnosing the plant before the check is what
+found it.
+
+### Verified
+
+`npm run check`: **395 tests** (was 376), four gates, both halves. Three plants —
+first-error-only validation, `overPriced` forced false, and `priceFixable`
+inferred instead of measured — each red. All dev ports confirmed clear
+afterwards, and the live ledger still verifies at $50.00.
+
+---
+
+## 2026-09-08 (4.6) — the tax tables were already done, in another app
+
+### Jason: *"2026 tax work was already completed extensively by the set aside app"*
+
+He was right, and resale-os was the one behind. The set-aside app is
+**GigWorkTracker**, and `services/tax-engine` carries `taxYears/2026.ts` and
+`stateTaxConfigs/mdLocalTax2026.ts` — sourced, not recalled:
+
+- **IRS Rev. Proc. 2025-32** — 2026 brackets and standard deduction, including
+  the One Big Beautiful Bill Act amendments
+- **SSA 2026 COLA fact sheet** — Social Security wage base
+- **Maryland statute** — 10 state brackets, 2%–6.5%
+- **DLS / Comptroller "Local Tax Rates" + "Withholding Tax Facts, January 2026"**
+  — the county piggyback rates
+
+Measured against what resale-os was running:
+
+| | resale-os (2025, unverified) | GigWorkTracker (2026, sourced) |
+|---|---|---|
+| SS wage base | $176,100 | **$184,500** |
+| Standard deduction, single | $15,000 | **$16,100** |
+| 10% bracket top | $11,925 | **$12,400** |
+| 12% bracket top | $48,475 | **$50,400** |
+| The operator's county | recalled | **confirmed** |
+
+⚡ **The county rate agrees.** The number recalled from memory on 2026-09-08 was right,
+and it is now confirmed against the official table — half of **B26** closed.
+The other half, the flat 4.75% state rate, is better answered by **B25**
+(Maryland's real brackets, which GigWorkTracker also has) than by a lookup.
+
+### D-47. Copy the figures, not the engine
+
+Three options went to Jason; he took the middle one. Depending on
+`@gig-tax-tracker/tax-engine` would give one source of truth, but the two apps
+model tax **differently** — GigWorkTracker estimates a full annual liability,
+resale-os computes an *incremental* reserve per sale — and coupling them means
+one release cadence, a publish step that does not exist, and a `core/` that
+stops being dependency-free. Leaving it alone was the third option and the
+weakest: over-reserving is safe, but `verified: false` would have stood.
+
+### D-48. The literal was GENERATED, and then machine-verified
+
+⛔ **Transcribing tax brackets by hand is how a typo becomes wrong money**, and a
+mistyped bracket reads exactly like a correct one. So a script read
+GigWorkTracker's config and emitted the resale-os literal — statuses renamed,
+dollars to integer cents, rates to basis points, `max` to `upToCents`.
+
+Then a second script compared the committed literal back against the source:
+**65 figures, exact.** And the verifier was itself planted — a one-cent change
+to the single standard deduction — and caught it. A checker that has never
+failed is not a checker.
+
+⚠️ **Second-hand verification is still verification, but only if it says so.**
+`verifiedBy` names the IRS and SSA sources *and* the fact that the figures came
+via GigWorkTracker's checked copy. Somebody read the Rev. Proc.; it was not this
+project, and a reader deserves to know which.
+
+### The impact is provenance, not money — measured, not assumed
+
+`incrementalReserve` on the live profile
+returns **identical figures under both tables up to $32,000 of annual business
+profit**. At $40,000 they differ by $69. Below that his marginal bracket is 22%
+either way, his W-2 is far under both wage bases, and the standard-deduction
+change does not move him.
+
+So this bought correctness and provenance, and changes no number the fund will
+see for a long time. Worth saying plainly rather than implying the reserve was
+wrong.
+
+### Six tests failed, and all six were tests encoding 2025
+
+Not regressions — assertions that had quietly become about the wrong thing:
+
+- Two hardcoded 2025 figures as *fixtures*: W-2 wages of $17,600,000 chosen to
+  leave "$100 of base" (true only while the base was $176,100), and a bracket
+  edge of $1,192,500. Both now **derived from the table**, so they stay true in
+  January.
+- Four asserted behaviour about *unverified* tables using the default. Pointed
+  at `TAX_TABLES_2025` explicitly, which is still unverified and is kept for
+  replaying older events — because leaving them on the default would have meant
+  they still passed while testing nothing.
+- One of mine, from 4.2: `expect(v.warnings.length).toBeGreaterThan(0)`, true
+  only because the tables were unverified. It now asserts the silence.
+
+⚠️ **D8's acceptance and its warning fell away on their own.** Nothing had to be
+un-done: the acceptance is scoped to `(tablesYear 2025, transactionYear 2026)`
+and simply stopped matching. `tax show` no longer prints "Not IRS-verified".
+
+### Verified
+
+`npm run check`: **399 tests** (was 395), four gates, both halves. Live ledger
+verifies, backed up, still $50.00.
+
+---
+
+## 2026-09-08 (4.7) — the feed, and not recomputing the past
+
+### The before-scan found two things
+
+**The ranking already existed.** `OpportunityRepository.list()` orders by buy
+score down, risk up, days-to-sale up, and supports every filter `opp list` does.
+The feed needed none of that written again.
+
+⚠️ **But `LedgerReader` could not reach opportunities at all.** 4.4 deliberately
+left `opportunities()` off the reader, because the repository can `save()` and
+`setStatus()`. So the read-only guarantee, working exactly as intended, blocked
+a legitimate read.
+
+The fix keeps the guarantee: an `OpportunityReader` taking `ReadOnlyDb`, with
+the queries themselves extracted to module-level functions that **both** classes
+delegate to — one implementation of "which opportunities, in what order",
+reachable two ways with different powers.
+
+⚡ Also noticed: **`rejectionHistogram()` is already written**, which makes
+**4.9** mostly a screen. Filed as **B49**.
+
+### D-49. A stored verdict belongs to the policy that produced it
+
+The tempting shortcut is to re-run today's scoring over the stored rows so the
+feed is always "current". That would be wrong, and quietly: it would show a
+score that was never the reason for any decision, and the operator would have no
+way to tell.
+
+So `feedView` **reports what was stored and never recomputes it.** When a row's
+`policy_version` no longer matches the code's, it is marked **stale**, keeps its
+original numbers, and says which policy produced them. Re-scoring stays a CLI
+action, because it is a decision.
+
+⚠️ **An unscored row is not stale.** `policy_version === null` means nobody ever
+scored it — a different fact with a different fix, and conflating them would
+send someone to re-score nothing. One of the three plants targets exactly that.
+
+### D-50. Two kinds of empty
+
+"Nothing has been scored yet" and "your filter matched nothing" are different
+problems: one is fixed by going and scoring something, the other by changing the
+filter. A single "no results" hides which, so the view reports `empty` and
+`filteredToNothing` separately and the screen says the right sentence.
+
+### Verified
+
+`npm run check`: **408 tests** (was 399), four gates. Three plants — collapsing
+the two empties, forcing `stale: false`, and counting an unscored row as stale —
+each red.
+
+Exercised against a running server on a throwaway ledger with three real
+candidates: ranked pin 69 / lego 66 / vase 27, `?rec=BUY` filtered to two, and
+`?min=200` produced the *filtered-to-nothing* sentence rather than the
+*nothing-scored* one. `/feed` was gated by 4.4 without a line of auth in it.
+
+Dev ports confirmed clear; the demo ledger deleted; the live fund untouched
+at $50.00.
+
+### Placement, at Jason's request
+
+**B25** joined the queue as **4.8** — Maryland's 10 statutory brackets instead
+of the flat 4.75%, now the same generate-and-machine-verify job 4.6 proved.
+Placed there because that machinery is fresh, not because it is urgent.
+
+**B47 and B48 are the same obligation** and became a new **Recurring** section
+rather than queue items. ⚠️ A recurring duty with a checkbox gets ticked once
+and then never fires again — the January tax-table review has to survive being
+"done". Three stale cross-references elsewhere in the plan were repaired at the
+same time, since renumbering is exactly what rots them.
+
+---
+
+## 2026-09-08 (4.8) — Maryland's real brackets
+
+### D-51. The flat rate was not wrong, it was incomplete
+
+Worth stating precisely, because "we were using a flat rate" sounds worse than
+it was. resale-os reserves **incrementally**: `annualTax(ytd + profit) -
+annualTax(ytd)`. An increment is taxed at the *marginal* rate, and
+`stateIncomeTaxBps` was set to exactly that — the state marginal plus the county.
+Inside one bracket the two answers are identical, and a test asserts it.
+
+It only goes wrong when the increment **crosses a bracket edge**. Maryland steps
+4.75% → 5% at $100,000 for a single filer, and a flat rate cannot know that.
+
+### D-52. Additive, so nothing stored breaks
+
+`TaxProfile` gained an **optional** `stateJurisdiction`. Present → that state's
+brackets plus its county rate. Absent → exactly the old flat path.
+
+⚠️ This project has already shipped the opposite twice: a new required field on
+a stored config makes every existing row invalid, *including for the command
+that would repair it*. Optional avoids that entirely.
+
+⛔ **An unmodelled jurisdiction falls back to the flat rate, never to zero.**
+Anne Arundel and Frederick are graduated rather than flat and are deliberately
+absent from the table — a flat approximation of a graduated rate is the exact
+error this item removed, so they are missing rather than wrong (**B51**). A
+plant that returned `0` for them reds.
+
+The bracket walk itself is now shared: `bracketTax()` is one implementation that
+federal and state both call, because two copies of "walk the steps" would drift.
+
+### Live
+
+Measured before changing anything: **identical up to $20,000** of annual
+business profit, diverging by **$40.18 at $40,000**. Switched the live profile to
+the bracket-walk method, and corrected `stateRateBasis`, which still said the rates
+were "recalled, NOT checked" — they are now confirmed. `tax profile show` gained
+a **method** line, because the flat rate otherwise reads as the answer when it
+is only the fallback.
+
+414 tests, four gates. Ledger verifies; backed up.
+
+---
+
+## 2026-09-08 (4.9) — which gate is binding, and what to do about it
+
+### D-53. The code is not the answer; the cause is
+
+First version put the histogram on the feed and led with the top code. Rendered
+against a $50-shaped fund with five rejected candidates, it said:
+
+> **Mostly the buy score — 12% of 41 rejections**
+
+Two things wrong, and only visible by looking at it. **12% is not "mostly"** —
+one rejected item trips several gates at once, so codes fragment and no single
+one dominates. And `BUY_SCORE_TOO_LOW` is a **composite**: it is downstream of
+the others and tops the list while telling the operator nothing they can act on.
+
+So the view groups rejections by **cause**, and there are exactly three because
+there are exactly three responses:
+
+| cause | what to do |
+|---|---|
+| the fund is too small | nothing — capital limits loosen as it compounds |
+| the rules are tight for this bankroll | a deliberate policy change, after checking reachability |
+| the items are not good enough | source differently |
+
+The same demo now reads **"Mostly the fund is too small — 39% of 41
+rejections"**, which is exactly what risk **R2** predicts and the honest answer
+for a $50 fund. The top single gate is still shown, demoted to a footnote.
+
+### Exhaustive by comparison, not by a list
+
+⛔ The explanation map is asserted against the engine's own `CONSTRAINT_CODES`
+rather than a hand-kept tally, so a new constraint shows up as a failing test
+instead of as "an unrecognised gate" on screen. Planted by deleting one entry;
+it reds. This project has already been bitten once by a hand-written field list
+(`minSellThroughBps` reaching a gate as `NaN`).
+
+### Twice now: kill the dev server BEFORE starting one
+
+The re-check came back empty because the previous server still held the port —
+`EADDRINUSE`, and by the time I looked, its timeout had expired so nothing was
+listening at all. The 47-cent incident was the same lesson from the other side.
+**Kill before starting, not only after.**
+
+421 tests, four gates. Demo ledger deleted; ports confirmed clear.
+
+---
+
+## 2026-09-08 (4.10) — how good the guesses were
+
+### D-54. A screen must not be more confident than its engine
+
+`accuracyVerdict()` already refuses to read a trend below five scored sales —
+it returns *"only 3 scored sales — too few to read a trend"*. A screen that
+drew a confident curve beside that sentence would be a **second, more
+optimistic answer to the same question**, and the optimistic one is the one a
+person acts on.
+
+So `AccuracyView` carries `readable`, set from the engine's own threshold, and
+the screen renders the figures only when it is true. Below five it says what is
+missing instead: how many sold with no prediction to compare against, which is
+a gap rather than a failure. Planted by making it readable at any `n`; the
+four-sale test reds.
+
+On the live fund it reads *"no sales yet — nothing has sold with a prediction
+against it yet"*, which is the truth and is more useful than a page of zeroes.
+
+### The three profit figures, kept apart
+
+Item profit, operating profit and owner-distributable are shown with the
+subtraction between them spelled out, because conflating them is how a business
+spends its tax money on boxes. The expense breakdown marks capitalised costs and
+says they are already inside an item's book value — the live fund shows
+`SUPPLIES $0.00 · 4`, which is D9's corrections netting out exactly as intended.
+
+424 tests, four gates. Ports clear.
+
+---
+
+## 2026-09-08 (4.11) — rules editable without a shell, money still not
+
+### D-55. A second narrow door, not a wider one
+
+Gate 4's exit line said *"policy can be changed without a shell"* — written
+before 4.4 made the web surface read-only by type. Building 4.11 meant opening
+something back up, and the before-scan found the distinction that made it a
+clean decision rather than a compromise: **there are three tiers of write, and
+they are not equally dangerous.**
+
+| tier | writes | blast radius |
+|---|---|---|
+| 1 — the ledger | `commit()` | real money, hash-chained |
+| 2 — config | policy, tax profile | the *rules*, validated and versioned |
+| 3 — the deal book | `opp save`, `setStatus` | scored candidates, no money |
+
+Jason took **tier 2 only**. So `ConfigWriter` is a *separate* interface with
+five methods, reached through its own `withConfigStore()` — deliberately not
+"`LedgerReader` plus writes", because that shape invites one more capability
+each time something needs it.
+
+⛔ Narrowed at runtime as well as in the types, the same way `readerFor` is, and
+for the same reason: **a dev server executes code that does not typecheck**, and
+that lesson cost 47 events in a real ledger. A test asserts the config door has
+no `commit`, no `db`, no `events` — and plants the leak by handing back the full
+store.
+
+The worst a bad edit can now do is set wrong rules going forward. That is
+validated on the way in, versioned so divergence is detectable, and repairable
+with `policy adopt-defaults`.
+
+### D-56. B30, and why a longer list would not have fixed it
+
+Four variants of one bug in two days: a stored config predating a field the code
+requires, arriving as `undefined`, leaving a calculation as `NaN`.
+`minSellThroughBps` printed *"vs a NaN% minimum"* and failed closed by luck.
+
+`validatePolicy` had already been fixed the right way — its loop runs over
+`Object.keys(DEFAULT_BOOTSTRAP_POLICY)`, so a new field is required
+automatically. **`validateTaxProfile` had not**: it was a hand-written sequence
+of checks, correct until the next field is added and then silently wrong.
+
+`src/core/config-shape.ts` is now the one completeness check, and both configs
+use it. ⚠️ Optionality falls out for free — a key absent from the defaults is
+not required, which is exactly right for `stateJurisdiction`. And `null` counts
+as present, because `stateRateBasis` and `itemizedDeductionCents` both use it to
+mean "deliberately not set"; rejecting null would have broken every valid
+profile.
+
+The error names the repair command, because a message that states the problem
+without the fix just sends someone hunting.
+
+### Verified
+
+435 tests, four gates. `/settings` renders and edits against a throwaway ledger;
+a refused edit leaves the stored rules untouched, asserted directly. Ports clear;
+live fund verifies, policy version unchanged at `2026-09-08.5`.
+
+---
+
+## 2026-09-08 — GATE 4 CLOSED, and the phase after-scan
+
+### Exit criteria, checked rather than assumed
+
+> *every number the CLI reports is readable on a phone, a candidate can be
+> scored from the aisle, and policy can be changed without a shell.*
+
+Enumerated the CLI's twenty commands against the six screens. Everything is
+covered except three, and the gap was real:
+
+- **`items` had no screen at all** — and inventory is the most operationally
+  useful of the three, because the question is not "what do I own" but "what is
+  going stale". Built `/inventory` as part of this scan rather than filing it,
+  since the exit line claimed it.
+- **`ledger` and `headroom`** were judged out deliberately: the event log is an
+  audit view that belongs on a laptop, and headroom is the sourcing screen's
+  ceiling under another name. Recorded as **B52** so the judgement is visible
+  rather than looking like an omission.
+
+Then ran all five screens against a seeded fund, authenticated and not: every
+one renders real data at 200 and returns **307 to /login** unauthenticated.
+
+### The cross-item defect a per-item scan could not have caught
+
+⛔ **`views.ts` says "the screens never divide by 100". 4.11 did it three times.**
+
+The rule was stated in 4.2 and broken in 4.11 — nine days of items apart, by the
+same author, with no mechanism in between. That is what a rule with no
+enforcement is worth, and no per-item scan would have found it, because within
+4.11 the code looked reasonable.
+
+Two fixes, one for the instance and one for the class:
+
+- `toDollarsInput()` in core — the inverse of `parseDollars`, giving the plain
+  `1234.56` a form field needs. `formatCents` produces `$1,234.56`, which cannot
+  be typed back, and *that* is why the workaround was reached for.
+- **`npm run lint:imports` now fails on cents arithmetic in `src/app` or
+  `src/server`.** Planted and verified.
+
+### A gate that would have caught its own author, if it had run
+
+Building that lint, a Python `\b` (backspace, not a word boundary) put **four
+literal 0x08 bytes into the regex**, which then matched nothing. The plant did
+not fire, and diagnosing the plant before the check is what found it.
+
+⚡ **`npm run lint:bytes` caught it the moment it ran** — `check-import-direction.mjs:58
+contains control byte 0x08`. The gate written after the NUL-in-`hash.ts`
+incident did exactly its job on a completely different invisible byte. It had
+simply not run yet, because I had been running `lint:imports` alone.
+
+⚠️ The lesson is the small one: **run the whole `check`, not the one gate you are
+working on.** A gate you skip is a gate you do not have.
+
+### Patterns that held across the phase
+
+- **Decisions as data.** `screens.ts`, `sourcing.ts`, `feed.ts`, `binding.ts`,
+  `inventory.ts` — every screen's judgements live in a tested module and the
+  `.tsx` is typography. It is what made "which gate is binding" and "haggle vs
+  walk away" assertable without a browser.
+- **Looking at the artifact found what tests could not**, twice: the sourcing
+  screen explaining a hold-time rejection with a price ceiling (4.5), and the
+  histogram announcing "mostly the buy score — 12%" (4.9). Both times the model
+  was right and the *presentation* was wrong, which no model test can see.
+- **Every new door was narrowed at runtime, not just in the types** — after a
+  dev server executed a plant that should not have compiled and wrote 47 events
+  to the live ledger.
+
+### Gate 4, in numbers
+
+Six screens, one auth gate, **445 tests** (from 294 at the start of the gate),
+four check gates, and every new control planted. The live fund verifies, is
+backed up, and stands at $50.00 — unchanged by any of it except the 47 cents I
+put in and took back out.
+
+### Replenishing: Gate 5
+
+The queue never goes idle, so Gate 5 is promoted and decomposed. ⚠️ Its first
+sub-step is a **decision** rather than a build — how opportunities arrive
+(official eBay API, saved-search export, or faster-manual) depends on API terms
+and key acquisition, which are Jason's calls. **B42** (install Tailscale) is
+still the other thing only a human can do, and until it happens none of Gate 4
+is reachable from an actual aisle.
+
+---
+
+## 2026-09-09 (5.2) — the engine runs on a phone, unchanged
+
+### The claim, and the strongest test available for it
+
+Gate 1 asserted `src/core/**` is pure — no I/O, no clock, no framework — and the
+whole phone port is a bet on that being true rather than aspirational. 5.2
+existed to settle it at step two instead of step ten.
+
+`mobile/` is Expo 56 / React Native 0.85, matching GigWorkTracker. `app/index.tsx`
+imports the engine **straight from `../src`** — not copied, not adapted, not
+shimmed — and runs a real evaluation: fund a state with $50, score a candidate,
+show max price, bound-by, expected profit, verdict.
+
+`expo export --platform ios` produced **1,213 modules in a 3.2 MB Hermes
+bundle**, and:
+
+```
+git status --short src/core src/scoring src/domain
+(nothing)
+```
+
+⚠️ **"It bundled" is not the claim.** A bundle that quietly excluded the engine
+would also bundle. So the compiled bytecode was searched for markers that exist
+nowhere else — `INV_IDENTITY` (ledger invariants), `PAYOUT_EXCEEDS_PAYABLE`
+(the engine), `SELL_THROUGH_TOO_LOW` (constraints), `socialSecurityWageBaseCents`
+(the tax tables). All present.
+
+**4,878 lines and 445 tests of financial logic now run on a phone with no
+changes.** That is the Gate 1 purity discipline paying for itself in one step.
+
+### Metro needed exactly what Turbopack needed
+
+The repo writes `import ... from './x.js'` for TypeScript sources. Metro does
+not resolve that, the same way Turbopack did not (**B38**). A ten-line
+`resolveRequest` in `metro.config.js` teaches it — the same trade taken at Gate
+4: teach the bundler rather than rewrite the extension off every import in a
+financial core.
+
+### The install was most of the work
+
+⛔ **Three separate failures, none of them the code:**
+
+1. **`npm error Cannot read properties of null (reading 'edgesOut')`** — an npm
+   arborist bug that masked a real error. `--legacy-peer-deps` gets past it, and
+   the real error underneath was a version I had guessed (`expo-sqlite@~56.0.8`
+   does not exist; `56.0.6` does).
+2. **The large-tarball problem, three more times** — `react-native`,
+   `expo-modules-core` (28 MB) and `expo-sqlite` (33 MB), each needing two
+   resume passes. It is now a committed script,
+   **`scripts/seed-npm-cache.sh`**, because retyping the recipe a fourth time
+   was silly.
+3. **`--legacy-peer-deps` silently skipped expo-router's peers**, so the first
+   bundle failed on `expo-linking`. That is the cost of the workaround for (1),
+   and worth knowing: peers are not installed, they are just not *checked*.
+
+⚠️ **Vitest was dropped from `mobile/`.** Version 4 pulls `@rolldown/binding`,
+which this machine is documented as unable to install (log D-02). The engine's
+tests run from the repo root on Vitest 3, which is where they already live.
+
+### Verified
+
+Root `npm run check` still exits 0 — 463 tests, four gates, nothing in `src/`
+disturbed. The bundle is gitignored; `mobile/` is committed.
+
+---
+
+## 2026-09-09 (5.3) — the driver is written; proving it needs hardware
+
+### D-57. expo-sqlite has a synchronous API, and that decides the whole port
+
+The single most consequential thing found here. `Db` is synchronous, and so is
+`FundStore`, `applyCommand`, and every caller. If `expo-sqlite` were async-only,
+the port would have meant making the entire engine async — a rewrite of the
+thing the port exists to preserve.
+
+It is not. `openDatabaseSync`, `execSync`, `runSync`, `getAllSync`,
+`getFirstSync`, `closeSync` all exist and map one-to-one onto the interface. The
+port stays **one file**, exactly as `ASSUMPTIONS_AND_RISKS` A1 predicted in
+Gate 1.
+
+Two deliberate choices inside it:
+
+- **`getFirstSync` returns `null` for "no row"; the contract requires
+  `undefined`.** Those must not blur, because `null` is a legitimate stored
+  VALUE elsewhere in this codebase — `stateRateBasis` uses it to mean
+  "deliberately not set".
+- **Transactions do NOT use `withTransactionSync`.** That would be a second
+  implementation of the re-entrancy rules. The same BEGIN/SAVEPOINT ladder as
+  the Node driver is used instead, so both behave identically under nesting —
+  which the contract asserts.
+
+### D-58. The contract had to become data before it could be a control
+
+The suite written at 5.1 imported `describe/it/expect` from Vitest, which does
+not exist on a device. A copy for the phone would have produced two suites that
+agree with themselves and prove nothing about each other — the exact failure
+this project has hit four times.
+
+So the cases moved to `src/db/driver-contract.ts` as **data**: an array of
+`{name, run(db)}` with a tiny assertion helper and no test-framework import.
+Two thin runners execute them — `tests/driver-node.test.ts` under Vitest, and
+`mobile/app/contract.tsx` on a device. One contract, two implementations.
+
+⚠️ **A design flaw surfaced while doing it**: `Db` and `SqlParam` lived in
+`driver.ts`, next to the `node:sqlite` implementation, so a React Native
+typecheck could not compile the interface without pulling in Node. An interface
+only one platform can compile is not an interface. They moved to
+`src/db/db-types.ts`; `driver.ts` re-exports them so nothing else changed.
+
+### ⛔ What is NOT proven, and why
+
+The driver typechecks and bundles for iOS with its runner. **It has not been
+executed against expo-sqlite**, and both available paths are closed:
+
+- **Web is a dead end, and measured rather than assumed.** The web build works
+  after registering `.wasm` as an asset and serving with COOP/COEP so
+  `SharedArrayBuffer` exists — and then dies with **"Sync operation timeout"**.
+  expo-sqlite's web backend is wa-sqlite, whose synchronous API goes through a
+  worker and `Atomics.wait`. Native sync is a direct JSI call with no worker, so
+  this is specific to web, which is not a target anyway.
+- **The Android emulator wants 4 GB of free RAM; 1.9 GB is available.** Checked
+  first that this was not my own mess — zero stray node processes — so it is
+  ordinary application memory, not something to go killing.
+
+**5.3 stays open.** It needs a run on Jason's device, or an emulator run when
+the machine is quiet. Everything is in place for either: boot, open the app,
+tap *run the driver contract*, and the screen reports pass/fail per case —
+which is also logged as `DRIVER_CONTRACT_RESULT ...` so `adb logcat` can read it
+without a screenshot.
+
+⚠️ **Not claiming the port works until that runs.** Sixteen cases passing under
+`node:sqlite` say the contract is sound; they say nothing about expo-sqlite.
+
+---
+
+## 2026-09-09 (5.3 proven) — 16/16 on Apple's SQLite
+
+### The port's only real gamble is retired
+
+`expo-sqlite` passes the **same sixteen cases** `node:sqlite` passes, executed on
+a real iOS simulator. Not a copy of the cases — the same array, imported from
+`src/db/driver-contract.ts` by both runners.
+
+That means re-entrant SAVEPOINTs, rollback leaving no partial write, integer
+cents that do not drift at 0.29 or 1.13, NULL staying distinct from the empty
+string, CHECK and foreign-key enforcement, and accurate `changes` counts all
+behave identically on the phone. Everything after this is work rather than risk.
+
+### D-59. The lane was planted, because a green CI job proves nothing on its own
+
+Reverted immediately afterwards, but the run is in the history: `get()` was made
+to leak `expo-sqlite`'s `null` instead of normalising it to `undefined` — the
+**exact platform divergence the driver exists to remove**. CI went red:
+
+```
+CAUGHT: returns undefined rather than throwing when nothing matches
+        :: missing get: expected undefined, got null
+```
+
+15/16, `allPass=false`, job failed. The lane catches a real difference between
+the two SQLites, which is the only thing it was built to do.
+
+### Three rounds, and none of the failures were the code
+
+1. **The workflow did not register.** Pushed with the repo, and Actions listed
+   zero workflows; a subsequent touch commit registered it. The YAML was valid
+   the whole time.
+2. **Exit 65 inside a Pods script phase.** `tail -40` had already discarded the
+   script's own output, so the log named the phase and not the reason — a wasted
+   round trip, and exactly what debt-app-v1's action avoids by `tee`ing the full
+   log. Now kept and uploaded.
+3. ⛔ **`macos-15` cannot build Expo 56.** With the full log:
+   *"package 'apple' is using Swift tools version 6.2.0 but the installed
+   version is 6.1.0"*. Swift 6.2 ships with Xcode 26. `runs-on: macos-26` fixed
+   it, and the lane now prints its Xcode and Swift versions first — the mismatch
+   cost a round trip precisely because nothing said which toolchain was in play.
+
+### The repository went public, and what that took
+
+Jason asked for CI, then for the repo to be public. ⛔ **It carried his real tax
+situation** — filing status, income and county, beside his name, in four docs and
+a test. None of it is needed: the engine takes a `TaxProfile` as input.
+
+Scrubbed to an illustrative profile, and two tests recomputed rather than
+re-baselined. Then the harder half: **history**. `filter-branch` rewrote all 35
+commits, verified clean.
+
+⚠️ **A force-push was not enough, and this was measured rather than assumed.**
+After force-pushing, the pre-scrub commit was still fetchable:
+
+```
+gh api repos/.../contents/tests/tax.test.ts?ref=ebbdc47  → 2 occurrences
+```
+
+A force-push removes the ref, not the objects, and pushed SHAs appear in the
+public events API. Deleting the repo needed a `delete_repo` scope the token did
+not have — so the old repo was **renamed** (which only needs `repo`), and a
+fresh one created for the clean history. The pre-scrub SHA returns *"No commit
+found"* in the public repo, and the tree has zero occurrences.
+
+⚠️ **`jsnyde03/resale-os-prescrub-private` still exists, private, and still
+contains the data.** Deleting it is Jason's, and it is not urgent.
+
+---
+
+## 2026-09-09 (5.4) — the store runs on a phone
+
+**24/24 on a real iOS simulator**: the 16 driver cases plus 8 engine scenarios —
+migrations applying and being idempotent, a full buy-and-sell, a rejected
+command leaving the database untouched, `reconcile()` agreeing, the hash chain
+catching a hand edit, an expense reversal keeping ledger and analytic table
+together, and the YTD tax base surviving storage.
+
+### D-60. Four couplings, all the same shape
+
+Importing `FundStore` dragged the desktop in behind it. Each was the same flaw
+and took the same cut — **separate what a phone can compile from an
+implementation only a desktop can**:
+
+| module | pure half | why it was coupled |
+|---|---|---|
+| `backup.ts` | `backup-types.ts` | settings and staleness are arithmetic; copying files is not |
+| `migrate.ts` | `migrate-core.ts` | APPLYING a list is platform-free; reading a DIRECTORY is not |
+| `driver.ts` | `db-types.ts` | `toParam` is normalisation, not SQLite |
+| `FundStore.open` | `open-store.ts` | opening a database was the one genuinely platform-specific thing the store did |
+
+⛔ **Migrations are now bundled as source**, because a phone has no filesystem to
+read `.sql` from. A generated file rots, so `tests/migrations-bundle.test.ts`
+compares it to the directory byte for byte — the failure mode it guards is
+silent and expensive: desktop runs a new migration, phone does not, the schemas
+diverge, every test stays green.
+
+### D-61. The hash chain used `node:crypto`
+
+The one that could have sunk the port. React Native has no `node:crypto`, and
+the alternatives were a hand-rolled SHA-256 or an async digest — the latter
+would make `commit()` async all the way up, because the chain is computed inside
+the write transaction.
+
+`@noble/hashes` is audited, pure JavaScript and **synchronous**, so one
+implementation serves both platforms and there is no divergence to cross-check.
+
+⚠️ **It had to be byte-identical.** The live ledger's stored hashes were computed
+by OpenSSL; anything different and the fund would report its own ledger as
+tampered with. `tests/hash.test.ts` compares the two across a thousand
+deterministic inputs plus the shapes actually hashed, and pins a golden value —
+because the first comparison shares `canonicalize` with the implementation and
+so cannot catch a change to *what* is hashed, only to *how*. The live chain
+still verifies.
+
+### ⚠️ Scope corrected: not "445 tests on device"
+
+Fourteen of the twenty-seven test files never open a database. They exercise
+byte-identical pure code with no platform surface, and running them on a phone
+would be theatre. What a different SQLite can break is the store — so the
+scenario exercises the store, and says so.
+
+### Three CI rounds, and what each cost
+
+1. **CRLF vs LF.** The bundle is generated on Windows (git checks out CRLF); the
+   runner checks out LF. The gate could never pass on both. Both sides normalise
+   now — SQLite does not care about line endings, but a gate that only passes on
+   one platform is worse than none. **Third CRLF bite of the day.**
+2. ⛔ **Backslash escapes do not survive being written through a shell heredoc
+   into source.** It mangled the same regex twice here, exactly as it turned a
+   `\b` into a literal backspace earlier. Both normalisers now use
+   `String.fromCharCode`, which has nothing to escape. **Use the Edit tool for
+   anything containing an escape.**
+3. **A stale run watched as if it were new.** The workflow's `paths` filter
+   listed only the driver and the contract, so the migration fix never triggered
+   a run — and I polled the previous result believing it was current. The filter
+   now covers everything the device run depends on.
+
+## 2026-09-09 (5.5.1) — D4: an override is allowed, and may never be silent
+
+Jason's answer: **allowed, but it must say so.**
+
+### The decision was already shipping, wrongly
+
+`cli buy --force` existed before the decision did. It printed *"recording it as
+it happened"* and then committed an **ordinary PURCHASE** — no marker, no
+reason, nothing. The moment the terminal scrolled, an overruled buy and a clean
+one were the same row. That was live on the real fund.
+
+So D4 was not "should this exist"; it was "the thing that exists is wrong in
+exactly one way." One line under either answer, as predicted.
+
+### What it is
+
+A `PURCHASE` may carry `overrodeGates: string[]` and `overrideReason: string`.
+The engine refuses the purchase if gates were overridden with no reason
+(`OVERRIDE_NEEDS_REASON`), and does **not** judge whether the override was
+right — `constraints.ts` assesses a *decision*, the engine records what
+*happened*. `--force` now requires `--reason`.
+
+⚠️ **Absent ≠ empty.** No override and "overrode an empty set of gates" are
+different facts, and an empty array must not be made to owe a reason. NULL in
+the column, absent on the record, asserted both ways.
+
+⛔ **Not a separate event type (B9's original shape).** An override is a
+property OF the purchase. A second event could be written, deleted or replayed
+independently of the buy it describes, and the two would eventually disagree.
+
+**Recorded is not enough — it has to be visible.** `items` prints the gates and
+the reason under the item. An override nobody can see later is a silent
+override with extra steps.
+
+### The item table gained a column, so the phone had to prove it too
+
+Migration `006_purchase_override.sql`, and a case in `src/db/engine-scenario.ts`
+— a column is exactly the kind of thing a different SQLite reads back
+differently, and that contract is what runs on the simulator.
+
+### ⚡ What planting found, and it was not the feature
+
+Five plants: the engine's reason check, the engine's write to the item record,
+the store's INSERT, the store's read, and the CLI's `--reason` requirement.
+Four reded immediately. **The INSERT plant passed the entire suite.**
+
+Two separate faults behind that:
+
+1. **The test read `store.state()`, which is the cache.** After a commit the
+   cache holds the engine's own answer, so the "round-trips through the items
+   table" test never touched the table. A round trip through one encoder,
+   wearing the costume of a persistence test. → **B54**, and it wants a lint.
+2. **`reconcile()` compared three hand-picked item fields** — book value, state,
+   realized profit. Every other field, including the new column, was
+   unreconciled. `store.ts` carries a comment about being bitten by exactly this
+   (a hand-written field list let `minSellThroughBps` through) and the same
+   shape was sitting in `replay.ts`. It now takes the **union of both records'
+   keys**, which is correct by construction and covers every field added later.
+
+With both fixed, the INSERT plant reds three tests.
+
+### And the suite hid its own failure
+
+Migration 006 broke `migration-rebuild.test.ts`, which asserted stage 2 runs
+exactly `[REBUILD]`. But the failed assertion skipped `store.close()`, so the
+temp-directory cleanup threw `EBUSY` — and **the EBUSY was the only error
+reported.** The stale assertion was invisible behind a filesystem error. The
+handle now closes in its own `finally`, and the expectation is derived from the
+migrations directory rather than listed. Planted: a deliberate failure now
+reports as the assertion it is. → **B55**.
+
+**494 tests green**, `npm run check` clean.
+
+## 2026-09-09 — the scrub missed the planning docs, and the repo was public
+
+Found while opening `MASTER_PLAN.md` to record D4. The pre-publish scrub took a
+**directory list** — `src/`, `data/`, `.env.local` — and the operator's tax
+profile does not live only in code.
+
+Public on `origin/master` for a day:
+
+| file | what |
+|---|---|
+| `MASTER_PLAN.md` | D7 in full: filing status, other income, W-2 wages, county, combined rate |
+| `MASTER_PLAN_LOG.md` | the same, plus `C:/Users/<name>/OneDrive/...` and the county named in five entries |
+| `CLAUDE.md` | the profile in the status block, and the backup path |
+| `docs/FINANCIAL_SPEC.md` | the live combined rate with its county derivation |
+
+Name (from git authorship, unavoidable and fine) **plus** county **plus**
+filing status **plus** income, in one place. Individually dull; together a
+record.
+
+### What was changed
+
+Every statement that the profile belongs to a real person is gone. What
+survives is the *reasoning* — that a bare rate needs a derivation, that recalled
+rates are not looked-up rates — with the figures described rather than printed.
+
+⛔ **The test fixtures were the subtle half.** `tests/tax.test.ts` built `FLAT`
+and `BRACKETED` on the operator's actual county and combined rate, with a
+`stateRateBasis` string that read exactly like his stored config. Moved to a
+different county (Talbot, 2.40%, combined 7.15%).
+
+⚠️ **This entry does not name the old county either.** Writing down what was
+removed, in the file that was scrubbed, un-removes it.
+
+⚡ **And that swap was itself a control.** Every expectation in that block is a
+derived expression — `applyBps(100_000, 200) + applyBps(100_000, 300) + …` —
+so changing the county changed the inputs and **61 tests still passed**. Had
+those numbers been copied from output, the swap would have reded the file. The
+illustrative `MARYLAND` block was left alone precisely because its expectations
+*are* opaque cents, and rewriting them to match new output would have replaced
+a test with a tautology.
+
+`src/core/tax/state.ts` keeps every county including that one. It is the
+published statute table, it is correct, and it names nobody.
+
+### The rule, in `CLAUDE.md` where a session will hit it
+
+The operator's profile is an **input**. `TaxProfile` is a parameter for this
+exact reason, and it lives in a gitignored database. A doc that writes the
+figures down for convenience publishes them. ⚠️ **And force-pushing does not
+take it back — GitHub keeps the objects, fetchable by SHA.** Measured twice on
+this project, which is why the fix is a fresh repo rather than a rewrite.
+
+→ **B56.** Next publish gets a whole-tree sweep, not a directory list.

@@ -1,0 +1,35 @@
+{
+  "//": "The web half. The root tsconfig is node-only \u2014 no DOM, no JSX \u2014 and it stays that way, because src/core and src/db must never compile against a browser lib. Both configs run under `npm run check`; a half that is not typechecked reports green while it rots.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "jsx": "preserve",
+    "types": [
+      "node",
+      "react",
+      "react-dom"
+    ],
+    "allowJs": true,
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "src/proxy.ts",
+    "src/app/**/*.ts",
+    "src/app/**/*.tsx",
+    "src/server/**/*.ts",
+    "next-env.d.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

@@ -1,0 +1,23 @@
+node_modules/
+dist/
+.next/
+out/
+coverage/
+*.log
+.env
+.env.local
+data/*.db
+data/backups/
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+.DS_Store
+
+# Next.js. next-env.d.ts and the tsbuildinfo are generated on every build.
+next-env.d.ts
+*.tsbuildinfo
+
+# Expo app
+mobile/node_modules/
+mobile/.expo/
+mobile/.expo-export-check/

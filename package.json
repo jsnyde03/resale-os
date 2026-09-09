@@ -1,0 +1,41 @@
+{
+  "name": "resale-os",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Private resale intelligence and capital management system.",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.web.json",
+    "check": "npm run lint:bytes && npm run lint:imports && npm run typecheck && npm run test",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "cli": "tsx src/cli/index.ts",
+    "lint:bytes": "node scripts/check-source-bytes.mjs",
+    "lint:imports": "node scripts/check-import-direction.mjs",
+    "dev": "node scripts/check-binding.mjs --hostname 127.0.0.1 && next dev --webpack --hostname 127.0.0.1",
+    "build": "next build --webpack",
+    "start": "node scripts/check-binding.mjs --hostname 127.0.0.1 && next start --hostname 127.0.0.1",
+    "serve": "node scripts/check-binding.mjs --hostname 0.0.0.0 && next start --hostname 0.0.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.4.0",
+    "next": "^16.3.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zod": "^4.5.4"
+  }
+}
