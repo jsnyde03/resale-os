@@ -2493,3 +2493,41 @@ working, not an obstacle.
 was no longer unique, `typecheck` passed because the plant is valid TypeScript,
 and only re-running the suite caught that the fix was still missing. Restoring
 is an edit like any other and needs verifying like one.
+
+## 2026-09-09 (5.6.3, 5.6.4) — money out, and the escape hatch
+
+**One screen for expenses and payouts, because they answer the same question —
+"where is this going?" — and they are emphatically not the same event.** An
+expense reduces profit and the tax reserve with it. A payout draws down a
+liability the fund already recognised when the profit was split, and changes NAV
+not at all. Conflating them is how a sole trader ends up paying tax on money
+they spent on postage, so the screen keeps them visibly apart.
+
+An expense can be attached to an item, and only when the operator says so:
+attaching it moves the cost from operating profit to that item's profit, and
+**both reports stay plausible either way**, which is what makes a wrong
+attachment expensive to find later.
+
+### Adjust is deliberately awkward
+
+Every other screen records something that happened. This one records that the
+ledger was wrong, and an append-only ledger has no undo — a correction to a
+correction is another adjustment and both stay on the record. So: an
+eight-character reason, the balance shown before and after, and **two taps**.
+The first is a decision, the second is a confirmation, and the gap between them
+is where a mis-tap dies.
+
+⛔ **It does not offer expense reversal, on purpose.** A business expense lives
+in two places — the ledger and the analytic `expenses` table — and a bare
+adjustment moves only the first, after which operating profit and the category
+breakdown quietly disagree (the defect B33 was filed for). The correct path
+needs `reversesEventId`, which needs the event id, which needs the ledger view
+in 5.7. A half-version here would corrupt a report, so the screen says where to
+do it instead.
+
+### The refusal surface was built at 5.6.0 and is the same everywhere
+
+`FundProvider.commit` returns `{ok:false, refusal}` for the five errors the
+engine deliberately raises and **rethrows everything else**. Every screen
+renders the same card and the same sentence: *nothing was recorded*. A bug
+dressed up as "the fund said no" is a bug nobody reports.

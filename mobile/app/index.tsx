@@ -95,14 +95,21 @@ function Position() {
         <Row label="Events recorded" value={String(state.eventCount)} tone="dim" />
       </Card>
 
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        <View style={{ flex: 1 }}>
-          <Button label="Buy" onPress={() => router.push('/buy')} tone="primary" />
+      <View style={{ gap: 10 }}>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flex: 1 }}>
+            <Button label="Buy" onPress={() => router.push('/buy')} tone="primary" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button label="Sell" onPress={() => router.push('/sell')} />
+          </View>
         </View>
-        <View style={{ flex: 1 }}>
-          <Button label="Sell" onPress={() => router.push('/sell')} />
-        </View>
+        <Button label="Money out" onPress={() => router.push('/spend')} />
       </View>
+
+      <Link href="/adjust" style={{ color: C.faint, paddingTop: 4 }}>
+        the books are wrong →
+      </Link>
     </View>
   );
 }

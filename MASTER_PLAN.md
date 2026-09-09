@@ -101,9 +101,16 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
         corrected against the payout, and the hold time **derived** from the two
         timestamps rather than typed — which is what puts a sale into the
         accuracy report at all. CLI matched.
-  - [ ] **5.6.3** Expense and payout.
-  - [ ] **5.6.4** Adjust, and the refusal surface: a rejected command must read
-        like a refusal on a phone, not a red box.
+  - [x] **5.6.3** ✅ **Done 2026-09-09.** One "money out" screen for both, kept
+        visibly distinct: an expense reduces profit and the tax reserve, a
+        payout draws down a liability and changes NAV not at all.
+  - [x] **5.6.4** ✅ **Done 2026-09-09.** Adjust, behind two taps and an
+        eight-character reason. ⛔ It deliberately does NOT offer expense
+        reversal — that needs `reversesEventId` or the analytic table drifts
+        from the ledger, and the event id needs the ledger view (5.7). The
+        refusal surface is in `FundProvider`: refusals are values, every screen
+        renders them the same way, and only the five errors the engine
+        deliberately raises are treated as one.
   - [ ] **5.6.5** On-device verification of the five, via the iOS Actions lane.
         ⛔ **BLOCKED, externally.** `repo.reactnative.dev` serves the Hermes
         listing while every GET 404s, so no iOS build can start. Pinned +
