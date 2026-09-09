@@ -2310,3 +2310,26 @@ take it back — GitHub keeps the objects, fetchable by SHA.** Measured twice on
 this project, which is why the fix is a fresh repo rather than a rewrite.
 
 → **B56.** Next publish gets a whole-tree sweep, not a directory list.
+
+### The republish, and how it was verified
+
+Squashed rather than rewritten. There is no `git filter-repo` on this machine,
+and a `--replace-text` list only catches the phrasings you think of — the docs
+said the same fact four different ways across forty-eight commits. A single
+orphan commit is *checkable*, which a rewrite is not.
+
+- old repo renamed to `resale-os-prescrub-2` and set **private**
+- fresh public `jsnyde03/resale-os`, one commit, pushed
+- the forty-eight-commit history is retained **locally** on `pre-scrub-history`
+  and is not published
+
+⚡ **Verified from an independent clone, not from this working copy** — every
+object in the published history walked with `cat-file`, grepping for the county,
+the income and the user path. One hit: `src/core/tax/state.ts`, which is the
+published county rate table and names nobody. A sweep of the tree you just wrote
+proves what you meant to write; a sweep of a fresh clone proves what is actually
+on the internet.
+
+⏳ **Needs Jason:** delete `resale-os-prescrub-2` and `resale-os-prescrub-private`.
+Both are private and both still hold the data; the CLI token has no `delete_repo`
+scope, so it is a click in Settings.

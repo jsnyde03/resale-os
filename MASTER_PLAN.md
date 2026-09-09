@@ -315,6 +315,8 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   `C:/Users/<name>/` path. Scrubbed 2026-09-09, and `CLAUDE.md` now carries the
   rule. ⚠️ **The old objects stay fetchable by SHA** — hence the fresh repo.
   Anything published from here gets a whole-tree sweep, not a directory list.
+  ⏳ **Needs Jason: delete `resale-os-prescrub-2` and `resale-os-prescrub-private`**
+  — both private, both still holding the data, and the CLI token cannot delete.
 - **B54** ⚠️ **`store.state()` answers from a cache, and a test that reads it
   is testing the engine against itself.** Cost a real hour in 5.5.1: a
   round-trip test passed with the new column dropped on the write path. Every
