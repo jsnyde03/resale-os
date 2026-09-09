@@ -140,13 +140,15 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
         that can be lost is not a backup.
   - [ ] **5.7.5** Restore, proven — the half nobody tests until they need it.
 - [ ] **5.8** The read screens, ported from Gate 4's six.
-- [ ] **5.9** ✅ **Decided 2026-09-09: TestFlight, and automate the expiry
-      away.** App Store review invites a 4.2 rejection for a private
-      single-operator tool, and development signing needs a Mac there isn't
-      one of. Build the upload lane, then a scheduled rebuild every 80 days so
-      the 90-day expiry is a notification rather than a chore.
-      ⏳ **Needs Jason:** App Store Connect API key + signing certs as repo
-      secrets — nothing else can be done from here.
+- [~] **5.9** ✅ **Decided 2026-09-09: TestFlight via CODEMAGIC** (Jason —
+      "look at the debt app for how one used it before"). `codemagic.yaml`
+      written, adapted from `debt-app-v1`'s proven Expo-56 lane and carrying
+      the Hermes pin and the build-the-right-commit banner.
+      ⏳ **Needs Jason:** add the repo in Codemagic and point it at the
+      `AppleConnect` variable group. Nothing else can be done from here, and
+      the FIRST run is the validation pass. The 80-day scheduled rebuild is a
+      second workflow, added only after this one passes — scheduling it now
+      would schedule a recurring failure.
 - [ ] **5.10** Retire `src/cli`, `src/server`, `src/app` — 3,715 lines — once
       the phone covers them. ⛔ Not before.
 - [ ] **5.11** Tests, and the phase after-scan.

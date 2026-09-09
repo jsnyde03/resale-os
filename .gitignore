@@ -21,3 +21,6 @@ next-env.d.ts
 mobile/node_modules/
 mobile/.expo/
 mobile/.expo-export-check/
+# The Hermes binary the CI lanes pin. `mobile/.gitignore` already covers the
+# generated `ios/` and `android/` projects; this one is fetched beside them.
+mobile/hermes-ios.tar.gz

@@ -1,0 +1,238 @@
+# resale-os — Codemagic, iOS TestFlight
+#
+# Adapted from debt-app-v1/codemagic.yaml (`debt-planner-rn`), which is itself
+# adapted from Hearthlight's `ios-testflight` — the same Expo 56 / RN 0.85 /
+# CocoaPods stack, already proven on a live TestFlight build.
+#
+# ⛔ MANUAL ONLY. No `triggering:` block, so this never auto-spends minutes.
+# Start it from the Codemagic UI. The unsigned simulator lane in
+# `.github/workflows/driver-contract-ios.yml` is a different job — it verifies
+# the driver, store and screen contracts against Apple's SQLite and publishes
+# nothing. This one distributes.
+#
+# ⚠️ CI config that CANNOT be verified locally (no macOS here) — the FIRST run
+# is the validation pass; expect one round of tuning. The likeliest tweak is the
+# generated project/scheme NAME. Expo derives it from `mobile/app.json`
+# `expo.name` ("Resale OS" → expected "ResaleOS"), and the GitHub Actions lane
+# has already produced `Release-iphonesimulator/ResaleOS.app`, so ResaleOS is
+# the informed guess rather than a hopeful one. If prebuild names it
+# differently, update the three paths below.
+
+workflows:
+  resale-os-testflight:
+    name: resale-os — iOS TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+    cache:
+      cache_paths:
+        - $HOME/.npm
+        - $HOME/Library/Caches/CocoaPods
+        - $HOME/Library/Developer/Xcode/DerivedData
+        # ⚡ The Hermes tarball, cached by nothing but its path — see the pin
+        # step below for why this matters more than it looks.
+        - $CM_BUILD_DIR/mobile/hermes-ios.tar.gz
+
+    environment:
+      node: 22
+      groups:
+        - AppleConnect
+      # Automatic signing via the AppleConnect ASC API key. `com.jasonsnyder.resaleos`
+      # has never been registered — the first run creates it (`--create` below).
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.jasonsnyder.resaleos
+
+    scripts:
+      - name: Say what is being built
+        script: |
+          # ⛔ FIRST, EVERY TIME. Hearthlight 2026-09-07: a green build was read
+          # as verifying a day's work and had built a commit from a month
+          # earlier — 64 commits sat unpushed and Codemagic clones from GitHub.
+          # Nothing inside CI can detect that; what it can do is put the answer
+          # in the first ten lines.
+          echo "════════════════════════════════════════════════════════════"
+          echo "  BUILDING:  ${CM_COMMIT:-unknown}"
+          git log -1 --format='  %h  %ad  %s' --date=short 2>/dev/null || true
+          echo "  branch:    ${CM_BRANCH:-unknown}"
+          echo "  ⚠️  If that subject is not the work you expect to ship,"
+          echo "     STOP — this build is not about your change."
+          echo "════════════════════════════════════════════════════════════"
+
+          # ⛔ THE ONE THAT WOULD SHIP THE WRONG APP.
+          #
+          # Under EXPO_PUBLIC_RUN_CONTRACT=1 the app renders the driver-contract
+          # runner instead of the fund — that is how the simulator lane reads a
+          # verdict without tapping anything. If it ever leaked into a
+          # distribution build, TestFlight would receive a test harness with the
+          # operator's ledger nowhere in sight, and it would install and launch
+          # perfectly.
+          if [ "${EXPO_PUBLIC_RUN_CONTRACT:-}" = "1" ]; then
+            echo "FAIL — EXPO_PUBLIC_RUN_CONTRACT=1 in a TestFlight build."
+            echo "That ships the contract runner, not the app. Unset it."
+            exit 1
+          fi
+
+      - name: Install (root + mobile)
+        # The engine is imported from `../src` as SOURCE, so the ROOT install is
+        # not optional: `src/db/hash.ts` needs `@noble/hashes`, which is a root
+        # dependency, and Metro resolves it by walking up from mobile/.
+        #
+        # ⚠️ `--legacy-peer-deps` on both. npm's arborist dies with "Cannot read
+        # properties of null (reading 'edgesOut')" on this dependency set
+        # without it, and the message says nothing about peers.
+        script: |
+          npm install --legacy-peer-deps --prefer-offline --no-audit --no-fund
+          npm --prefix mobile install --legacy-peer-deps --prefer-offline --no-audit --no-fund
+
+      - name: The desktop gate
+        # A TestFlight build of code that fails its own tests is worse than no
+        # build: it is a wrong answer that has been distributed. Cheap here.
+        script: |
+          npm run check
+
+      - name: Pin the Hermes binary
+        working_directory: mobile
+        # ⛔ The podspec's fallback is silent and moving. `hermes_source_type()`
+        # asks whether a prebuilt tarball EXISTS on Maven Central, and if that
+        # request fails it falls through to BUILD_FROM_GITHUB_MAIN — the tip of
+        # a branch. That is not a build failure; it is a different input, chosen
+        # by a network round trip.
+        #
+        # Measured 2026-09-09 in the GitHub Actions lane, forty minutes apart on
+        # the same commit: one run downloaded the release tarball and built; the
+        # next found it 404 and produced 4,000 lines of C++ ending in `no type
+        # named 'TypedArray' in namespace 'facebook::jsi'`. The artifact was
+        # still LISTED in the Maven directory while a direct GET returned 404 —
+        # `repo.reactnative.dev` calls itself a cache, and it was missing.
+        #
+        # So: fetch it here with retries and hand the podspec a local file.
+        # LOCAL_PREBUILT_TARBALL outranks every other source type, and a
+        # download that genuinely fails stops the build instead of quietly
+        # compiling something else.
+        script: |
+          set -euo pipefail
+          PROPS=node_modules/react-native/sdks/hermes-engine/version.properties
+          V=$(grep '^HERMES_V1_VERSION_NAME=' "$PROPS" | cut -d= -f2)
+          echo "hermes $V"
+          if [ -s hermes-ios.tar.gz ]; then
+            echo "from cache"
+          else
+            URL="https://repo1.maven.org/maven2/com/facebook/hermes/hermes-ios/$V/hermes-ios-$V-hermes-ios-release.tar.gz"
+            echo "$URL"
+            for i in 1 2 3 4 5; do
+              if curl -fsSL --retry 3 --retry-delay 2 -o hermes-ios.tar.gz "$URL"; then break; fi
+              echo "attempt $i failed; retrying"
+              sleep $(( i * 10 ))
+            done
+          fi
+          if [ ! -s hermes-ios.tar.gz ]; then
+            echo "FAIL — could not fetch the prebuilt Hermes $V, and nothing was cached."
+            echo "If the Maven listing shows the file but a GET 404s, the artifact"
+            echo "host is down and the only thing to do is wait and re-run."
+            exit 1
+          fi
+          ls -l hermes-ios.tar.gz
+
+      - name: Generate the native iOS project (expo prebuild)
+        working_directory: mobile
+        # `mobile/ios` is gitignored (Continuous Native Generation) — regenerated
+        # from app.json every run. prebuild runs `pod install` itself on macOS.
+        #
+        # ⚠️ `HERMES_ENGINE_TARBALL_PATH` is exported HERE rather than written to
+        # `$CM_ENV` in the step above. Codemagic documents `$CM_ENV` for passing
+        # variables between steps, but neither of this account's two working
+        # configs uses it, so it is unproven on this setup — and a cross-step
+        # mechanism that silently does nothing would let the podspec fall back to
+        # the branch tip, which is the exact failure this pin exists to stop. The
+        # path is deterministic, so setting it inline needs no mechanism at all.
+        script: |
+          export HERMES_ENGINE_TARBALL_PATH="$CM_BUILD_DIR/mobile/hermes-ios.tar.gz"
+          test -s "$HERMES_ENGINE_TARBALL_PATH" || { echo "FAIL — the pinned Hermes is missing"; exit 1; }
+          echo "hermes tarball: $HERMES_ENGINE_TARBALL_PATH"
+          npx expo prebuild --platform ios
+
+      - name: Hermes came from the tarball, not from a branch
+        working_directory: mobile
+        # ⚡ The control on the pin above. A prebuilt tarball extracts a
+        # `destroot` containing the framework; a source build has nothing there
+        # until it has compiled for six minutes. Say it now, in one line, rather
+        # than at the far end of a C++ log.
+        script: |
+          FRAMEWORK=ios/Pods/hermes-engine/destroot/Library/Frameworks/ios/hermesvm.framework
+          grep -E 'hermes-engine' ios/Podfile.lock | head -5 || true
+          if [ ! -d "$FRAMEWORK" ]; then
+            echo "FAIL — Hermes is being built from source; the prebuilt pin did not hold."
+            exit 1
+          fi
+          echo "prebuilt: $FRAMEWORK"
+
+      - name: Apply iOS signing profiles
+        working_directory: mobile
+        # One target, no widget — simpler than Debt. `--create` registers the
+        # App ID on the first run, since this bundle id is new.
+        #
+        # ⚠️ Scope `--project` to the real app project, never the **/*.xcodeproj
+        # glob: node_modules native modules ship their own .xcodeproj with no
+        # profile. `--warn-only` is the safety net. (Debt/Freedom lesson.)
+        script: |
+          app-store-connect fetch-signing-files "com.jasonsnyder.resaleos" --type IOS_APP_STORE --create
+          xcode-project use-profiles --project ios/ResaleOS.xcodeproj --warn-only
+
+      - name: Increment the build number
+        working_directory: mobile/ios
+        script: |
+          agvtool new-version -all "$BUILD_NUMBER"
+
+      - name: Set the marketing version from a git tag (tagged builds only)
+        working_directory: mobile/ios
+        # The build NUMBER always auto-increments. The marketing VERSION comes
+        # from app.json via prebuild; a tag (`git tag v0.2.0 && git push --tags`)
+        # pins a release to it.
+        script: |
+          if [ -n "${CM_TAG:-}" ]; then
+            agvtool new-marketing-version "${CM_TAG#v}"
+          else
+            echo "No git tag on this build — keeping the app.json marketing version."
+          fi
+
+      - name: Build the IPA
+        working_directory: mobile
+        # ⚠️ Pin the archive destination to iOS. Without it xcodebuild can
+        # resolve "My Mac (Designed for iPad)" and native targets fail to sign
+        # for Mac — a false "requires a provisioning profile" that dies before
+        # compiling. resale-os sets supportsTablet:false, which makes this
+        # unlikely rather than impossible, and the flag is free.
+        script: |
+          xcode-project build-ipa \
+            --workspace "ios/ResaleOS.xcworkspace" \
+            --scheme "ResaleOS" \
+            --archive-flags="-destination generic/platform=iOS"
+
+      - name: List build outputs
+        script: |
+          find mobile/build mobile/ios/build -iname "*.ipa" 2>/dev/null || true
+
+    artifacts:
+      - mobile/build/ios/ipa/*.ipa
+      - mobile/ios/build/ios/ipa/*.ipa
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Logs/Build/*.xcactivitylog
+
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+      email:
+        recipients:
+          - jason.snyder1984@gmail.com
+        notify:
+          success: true
+          failure: true
+
+# ⚠️ TestFlight builds expire after 90 days. The plan (5.9) is a scheduled
+# rebuild every 80 days so the expiry is a notification rather than a chore —
+# Codemagic does that with a `triggering:` cron on a SECOND workflow, added once
+# this one has passed a real run. Adding it before then would schedule a
+# recurring failure.
