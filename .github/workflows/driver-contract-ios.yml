@@ -153,7 +153,19 @@ jobs:
           echo "app=$APP bundle=$BUNDLE_ID"
 
           xcrun simctl install booted "$APP"
-          xcrun simctl launch booted "$BUNDLE_ID" || true
+
+          # ⚠️ Launched with the console attached, in the background.
+          #
+          # The app installed and launched cleanly on 2026-09-09 and then died
+          # before writing anything, and this lane could say NOTHING about why:
+          # RN strips `console.log` from a Release build, and a JS exception
+          # thrown before the write means no result file — which is the same
+          # observable as "the app never started". An unhandled error still
+          # reaches stderr, and this is the only place it exists.
+          #
+          # `--console-pty` blocks until the app exits, so it is backgrounded and
+          # the poll below is what decides the outcome.
+          ( xcrun simctl launch --console-pty booted "$BUNDLE_ID" > app-console.log 2>&1 || true ) &
 
           # The app runs the contract on mount and writes the file. Poll for it
           # rather than sleeping a fixed amount: a fixed sleep is either slower
@@ -165,6 +177,14 @@ jobs:
             if [ "$(date +%s)" -ge "$DEADLINE" ]; then
               echo "::error::No result file after 90s — the app did not run the contract."
               xcrun simctl io booted screenshot no-result.png || true
+              echo '=== app console ==='
+              cat app-console.log 2>/dev/null || echo '(no console output)'
+              echo '=== crash reports ==='
+              # A simulator app's crash report lands on the HOST, not in the
+              # simulator container.
+              find ~/Library/Logs/DiagnosticReports -name '*.ips' -newermt '-10 minutes' 2>/dev/null                 | while read -r f; do echo "--- $f"; head -60 "$f"; done
+              echo '=== the app process, from the simulator log ==='
+              xcrun simctl spawn booted log show --last 3m --style compact                 --predicate 'process == "ResaleOS"' 2>/dev/null | tail -80 || true
               exit 1
             fi
             sleep 2
@@ -191,6 +211,7 @@ jobs:
           path: |
             mobile/driver-contract-result.json
             mobile/no-result.png
+            mobile/app-console.log
           if-no-files-found: ignore
 
 # Registered on GitHub 2026-09-09.
