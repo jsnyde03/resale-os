@@ -85,64 +85,18 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       refused without a reason, stored in `items` (migration 006), shown by
       `items`, and in the cross-platform scenario so the phone proves it too.
       ⚡ Planted five ways, all red. → closes **B9**.
-- [ ] **5.6** ⚡ **ACTIVE BUILD.** The write screens the desktop CLI owned.
-      ⚠️ **Switch-in correction 2026-09-09: there is no app to put them in.**
-      `mobile/app/` holds a proof harness and the contract runner; no device
-      database, no `FundStore`, no navigation — so 5.6.0 was inserted.
-  - [x] **5.6.0** ✅ **Done 2026-09-09.** `FundProvider` holds one store over the
-        real device ledger; refusals are values, not exceptions; the contract
-        lane still runs without it. Import screen, and `FundStore.invalidate()`
-        because an import replays through a store of its own.
-  - [x] **5.6.1** ✅ **Done 2026-09-09.** The buy screen, D4's override path
-        included. ⚡ `core/capital/quote.ts` extracted out of `cli buy` so both
-        surfaces price a purchase and build the command identically.
-  - [x] **5.6.2** ✅ **Done 2026-09-09.** Sell: an item picker over what the
-        fund is holding, fees suggested from the marketplace model and then
-        corrected against the payout, and the hold time **derived** from the two
-        timestamps rather than typed — which is what puts a sale into the
-        accuracy report at all. CLI matched.
-  - [x] **5.6.3** ✅ **Done 2026-09-09.** One "money out" screen for both, kept
-        visibly distinct: an expense reduces profit and the tax reserve, a
-        payout draws down a liability and changes NAV not at all.
-  - [x] **5.6.4** ✅ **Done 2026-09-09.** Adjust, behind two taps and an
-        eight-character reason. ⛔ It deliberately does NOT offer expense
-        reversal — that needs `reversesEventId` or the analytic table drifts
-        from the ledger, and the event id needs the ledger view (5.8). The
-        refusal surface is in `FundProvider`: refusals are values, every screen
-        renders them the same way, and only the five errors the engine
-        deliberately raises are treated as one.
-  - [x] **5.6.6** ✅ **Done 2026-09-09.** Screen coverage, both halves of D-B60's
-        answer: the pure form models in `src/ui/forms.ts` asserted by Vitest,
-        and `screen-scenario.ts` running a day's work through them on-device.
-        Planted; a rendering library stays deferred.
-  - [x] **5.6.7** ✅ **Done 2026-09-09.** B59: a purchase records what the
-        operator said they expect to net, and `accuracy` reports SCORED and
-        QUOTED separately rather than pooling them. An assumed 3x flip is
-        recorded as nothing — that is the app's guess, not a prediction.
-  - [x] **5.6.5** ✅ **41/41 on a real iOS simulator, 2026-09-09** — driver,
-        store, screens and the backup's restore, all against Apple's SQLite.
-        ⚡ Getting here found a live bug: expo-sqlite caches connections by
-        name, so every backup after the first would have been refused.
-        ⛔ **BLOCKED, externally.** `repo.reactnative.dev` serves the Hermes
-        listing while every GET 404s, so no iOS build can start. Pinned +
-        cached + gated 2026-09-09; re-run when it is back. ⚠️ **And a
-        runtime death from before that is still unexplained** — the app
-        launched and vanished; diagnostics are in place, unrun.
-- [ ] **5.7** ⚡ **ACTIVE BUILD — promoted ahead of the read screens 2026-09-09
-      (Jason agreed).** Backups from the phone. ⛔ The moment the first event is
-      recorded on the phone, the desktop copy is stale and the phone is the only
-      current ledger — on a device that spends its day in a car. Read screens are
-      convenience; this is the failure the whole system exists to prevent.
-  - [x] **5.7.1–5.7.3, 5.7.5** ✅ **Done 2026-09-09.** A backup is the ledger's
-        COMMANDS, replayed into a scratch database before any file exists — so
-        it is verified by restore, not by opening a copy. Automatic after every
-        write, never throws, staleness on the position screen, 30 kept. The
-        restore is a case in the on-device contract.
-  - [~] **5.7.4** ⚙️ **Half done, and honestly half.** `UIFileSharingEnabled`
-        puts the copies in the Files app so they can be dragged to iCloud; the
-        drag is the operator's. ⛔ **A one-tap share needs `expo-sharing`, a
-        native module — deferred until a build can validate it, because no iOS
-        build can start today.** → **B61**.
+- [x] **5.6** ✅ **Done 2026-09-09, 41/41 on device.** The write screens —
+      shell, buy, sell, money out, adjust, import — over one `FundStore`, with
+      refusals as values. ⚡ `quote.ts` and `purchaseCommandFrom` shared with
+      the CLI so a fund cannot disagree with itself about what it was allowed
+      to buy. Screen coverage via pure form models + an on-device contract
+      (**B60** half open: JSX binding still unasserted). D4 and B59 built here.
+- [x] **5.7** ✅ **Done 2026-09-09.** Backups from the phone: the ledger's
+      COMMANDS, replayed into a scratch database *before* any file exists, so a
+      backup is verified by restore rather than by opening a copy. Automatic
+      after every write, staleness on the position screen, 30 kept.
+      ⚠️ **Getting one OFF the device is 5.9b** — the second obligation, and
+      the only one still outstanding.
 - [x] **5.8** ✅ **Done 2026-09-09, 42/42 on device.** The read screens —
       items, ledger, and one Reports screen with profit / accuracy / tax —
       rendering `src/server/views.ts` rather than porting it. ⚡ It was one
