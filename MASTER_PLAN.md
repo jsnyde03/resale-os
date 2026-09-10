@@ -9,142 +9,25 @@ Exactly **one** decomposed section on this page — the active item's.
 
 ## ACTIVE
 
-### Gate 5 — THE PHONE IS THE SYSTEM (re-planned 2026-09-09)
+### Gate 5 — THE PHONE IS THE SYSTEM ✅ **BUILT 2026-09-10**
 
-⛔ **This replaces "eBay ingestion", which is pushed to Gate 6.** Three of
-Jason's constraints landed at once and together they force it:
+⚡ **The fund lives on the phone, knows its exact position offline, and the
+desktop is gone.** 44/44 against Apple's SQLite over the commit that deleted it;
+shipped to TestFlight on Codemagic's first run. `core + scoring + domain` — 4,878
+lines — moved with **zero edits**, and `node:sqlite` really was confined to one
+file, as `ASSUMPTIONS_AND_RISKS` A1 predicted.
 
-| | |
-|---|---|
-| **No VPN or mesh on the phone** | Spark Driver flags them as manipulation apps. Tailscale is dead, and so is every WireGuard-shaped answer |
-| **The desktop has no role** | not a mirror, not a backup client — retired |
-| **It must not assume** | *"the app should be smart enough to exactly know my current bankroll"* — so no snapshots, no manual entry, no sync-and-hope |
+⚠️ **The exit criteria were incomplete**, which the phase after-scan found:
+"the desktop is gone" was satisfied while a capability only the desktop had went
+with it, so **5.12** put the settings screen back. Every item's detail, every
+decision and every plant is in **MASTER_PLAN_LOG.md** — 5.1 through 5.12, plus
+the phase after-scan.
 
-Exact + offline + no home PC leaves one architecture: **the ledger lives on the
-phone.** Hosting it dies in a shop with no signal and puts real money on a
-vendor; any sync scheme is "exact as of last sync", which is the assuming that
-was rejected.
-
-**Stack: Expo + React Native**, matching GigWorkTracker (Expo 56, RN 0.85,
-React 19, TS 6, Vitest — the same runner). ⛔ **Not Capacitor** — Jason spent
-months migrating another app off it. ⛔ **Not Swift** — that means rewriting the
-engine and discarding 445 tests, which are the reason to trust it with money.
-
-⚡ **What this costs is bounded because of the purity discipline.**
-`core + scoring + domain` is **4,878 lines and 445 tests of pure TypeScript that
-move unchanged**. `node:sqlite` is imported in exactly one file, which
-`ASSUMPTIONS_AND_RISKS` A1 predicted: *"the driver interface is 5 methods."*
-
-- [x] **5.1** ✅ **Done 2026-09-09.** `tests/driver-contract.ts` — 18 cases
-      defining what a driver must do, run green against `node:sqlite`. Planted
-      twice (rollback becomes commit; nesting loses SAVEPOINT) and both red. It
-      asserts what the engine leans on, not "SQLite works".
-- [x] **5.2** ✅ **Done 2026-09-09. The purity claim holds.** Expo 56 / RN 0.85
-      at `mobile/`, engine imported straight from `../src` and bundled: **1,213
-      modules, 3.2 MB iOS Hermes bundle, ZERO edits to `src/`**. Verified by
-      finding `INV_IDENTITY`, `PAYOUT_EXCEEDS_PAYABLE`, `SELL_THROUGH_TOO_LOW`
-      and `socialSecurityWageBaseCents` inside the compiled bytecode — "it
-      bundled" would otherwise be true of a bundle that excluded the engine.
-      ⚠️ Metro needed the same `.js`→`.ts` resolver Turbopack did (**B38**).
-- [x] **5.3** ✅ **PROVEN 2026-09-09. 16/16 against expo-sqlite on a real iOS
-      simulator.** The gamble is retired. Run via GitHub Actions on `macos-26`
-      (`.github/workflows/driver-contract-ios.yml`) because this machine has no
-      simulator, no spare RAM and no phone that may carry a VPN. ⚡ **The lane
-      was planted** — `get()` leaking expo-sqlite's `null` instead of
-      `undefined`, the exact divergence the driver normalises — and CI went red
-      with *"expected undefined, got null"*. A gate that cannot fail is
-      decoration.
-- [x] **5.4** ✅ **Done 2026-09-09. The store runs on a phone.** 24/24 on a real iOS simulator.
-  - [x] **5.4.1** ✅ Migrations bundled as source, gated against the directory — no filesystem on
-        a phone. Bundle them as strings, with a gate so the bundle cannot drift
-        from the directory.
-  - [x] **5.4.2** ✅ `src/db/engine-scenario.ts` — 8 cases as DATA, like the driver contract: migrate,
-        contribute, buy, sell, expense, adjust, correct — then assert the chain
-        verifies and `reconcile()` agrees. Run against both drivers.
-  - [x] **5.4.3** ✅ **24/24 on the simulator** — 16 driver + 8 engine.
-  ⚠️ **NOT "445 tests on device".** 14 of the 27 test files never touch a
-  database; they exercise byte-identical pure code with no platform surface, so
-  running them on a phone would be theatre. The 13 that touch the store are what
-  the driver can actually break.
-- [x] **5.4.4** ✅ **The store is platform-free.** Four couplings found and cut:
-      `backup-types.ts`, `migrate-core.ts`, `db-types.ts` (params) and
-      `open-store.ts` for the one genuinely platform-specific thing `FundStore`
-      did. ⛔ **And the hash chain used `node:crypto`** — now `@noble/hashes`,
-      byte-identical, with a golden value pinned and the live ledger still
-      verifying.
-- [x] **5.5** ✅ **Done 2026-09-10. THE FUND IS ON THE PHONE.** 55 events
-      exported, transferred and imported on device — every hash regenerated and
-      compared, a mismatch would have refused it. `src/db/portable.ts`: a fund
-      travels as its COMMANDS and the destination replays them. ⛔ **The desktop
-      ledger is now a SECOND HEAD** — same history, still writable, and one write
-      on either side forks them with no merge. That is 5.10.1.
-- [x] **5.5.1** ✅ **D4 answered and built 2026-09-09.** An override is allowed
-      and may never be silent: `overrodeGates` + `overrideReason` on PURCHASE,
-      refused without a reason, stored in `items` (migration 006), shown by
-      `items`, and in the cross-platform scenario so the phone proves it too.
-      ⚡ Planted five ways, all red. → closes **B9**.
-- [x] **5.6** ✅ **Done 2026-09-09, 41/41 on device.** The write screens —
-      shell, buy, sell, money out, adjust, import — over one `FundStore`, with
-      refusals as values. ⚡ `quote.ts` and `purchaseCommandFrom` shared with
-      the CLI so a fund cannot disagree with itself about what it was allowed
-      to buy. Screen coverage via pure form models + an on-device contract
-      (**B60** half open: JSX binding still unasserted). D4 and B59 built here.
-- [x] **5.7** ✅ **Done 2026-09-09.** Backups from the phone: the ledger's
-      COMMANDS, replayed into a scratch database *before* any file exists, so a
-      backup is verified by restore rather than by opening a copy. Automatic
-      after every write, staleness on the position screen, 30 kept.
-      ⚠️ **Getting one OFF the device is 5.9b** — the second obligation, and
-      the only one still outstanding.
-- [x] **5.8** ✅ **Done 2026-09-09, 42/42 on device.** The read screens —
-      items, ledger, and one Reports screen with profit / accuracy / tax —
-      rendering `src/server/views.ts` rather than porting it. ⚡ It was one
-      import from dragging the desktop SQLite driver into the bundle;
-      `lint:phone` now walks the whole graph. → **B62**, **B63**.
-- [x] **5.8.7** ✅ **Expense reversal, the half 5.6.4 withheld.** Reached from
-      the ledger row that has the event id, capped at what is still standing,
-      and proven on-device to move the ledger and the analytic table together.
-- [x] **5.9** ✅ **Done 2026-09-10. IPA built and PUBLISHED to TestFlight on the
-      FIRST run** — the run that was always going to be the validation pass.
-      Codemagic, adapted from `debt-app-v1`'s Expo-56 lane, carrying the Hermes
-      pin and the build-the-right-commit banner. ⚠️ **The 80-day scheduled
-      rebuild is now unblocked** — it was held until a real run passed, and one
-      has. → **B57** is now visible in TestFlight.
-- [x] **5.9b** ✅ **Done 2026-09-09.** A backups screen with a share sheet:
-      `expo-sharing`, the newest copy first, and wording that claims only what
-      the app can actually observe — a file was OFFERED elsewhere, not that it
-      arrived. ✅ **43/43 on device** — `Installing ExpoSharing (57.0.18)` in the
-      pod log, so the native module really was compiled in.
-- [x] **5.9c** ✅ **Done 2026-09-10. The phone can DECIDE, not only record.**
-      `mobile/app/sourcing.tsx` answers *"should I buy this, and at what price?"* —
-      ceiling, the rule that set it, ordered reasons — and hands the purchase to
-      `buy` so it measures as SCORED. ⚡ **D14 came out of it:** the two screens
-      gated differently (**B58**, measured: 64 divergences in 96 cases, both
-      directions), so `scoring/purchase.ts` is now the only path that decides and
-      `assessQuote` is deleted. **44/44 on device.** → **B64**–**B68**.
-- [x] **5.10** ✅ **Done 2026-09-10. THE DESKTOP IS GONE. 44/44 on device.**
-      3,295 lines — `src/cli`, `src/app`, six `src/server` files, six test files,
-      and the whole Next.js surface. Runtime deps are now `@noble/hashes` + `zod`.
-      ⚡ `views.ts` and `sourcing.ts` moved to `src/screens/` (**B62**, **B65**);
-      `data/resale.db` is retired and refuses to write, so it cannot become a
-      second head. 597 → 522 tests.
-- [x] **5.11** ✅ **Done 2026-09-10. The Gate 5 phase after-scan.** Three stale
-      scope lists closed (**B67**); 5.9c's lessons applied backwards, finding that
-      **two of four verdicts are unreachable** (**B72**); 54 backlog items checked
-      against the code with **19 wrong**; both start-here docs made to match. ⚡ It
-      found **5.12**, which is why Gate 5 is *built* rather than *closed*.
-- [x] **5.12** ✅ **Done 2026-09-10. The fund's rules can be changed again.**
-      `mobile/app/settings.tsx` over `src/ui/settings.ts` — per-item cap, profit
-      floor and hold ceiling per mode, adopt-defaults, and the tax profile. ⚡ It
-      shows the **profit-floor × per-item-cap** interaction before saving, and
-      warns when the stored `Policy.version` has drifted from the code's, which is
-      the only thing that can detect it. ⛔ A separate two-method config door on
-      the provider, not the ledger's door widened. Proven by a **second store
-      reading the change back off disk**; planted.
-
-**Exit:** ✅ **met 2026-09-10.** The fund lives on the phone, knows its exact
-position offline, and the desktop is gone — 44/44 on device over the commit that
-deleted it. ⚠️ The criteria were incomplete: **5.12** was needed because a
-capability only the desktop had went with it.
+**What Gate 5 cost that was not the port:** a hash chain quietly importing
+`node:crypto`, four platform couplings in the store, two screens that gated a
+purchase differently (**D14**), an export carrying a tax profile toward a public
+repo, and a CLI that could fork the ledger the moment the fund left. **None were
+portability problems. They were things the port made visible.**
 
 ---
 
