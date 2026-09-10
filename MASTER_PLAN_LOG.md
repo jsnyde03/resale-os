@@ -3657,3 +3657,53 @@ because stored rows carry them. `tests/verdict-reachability.test.ts` pins the
 **invariant** — if a threshold ever leaves the gates and stays in the
 recommender, it fails, and the branch gets reviewed instead of quietly coming
 alive with a reason string nobody has read.
+
+### 5.11.3 — the deferral ledger, checked against the code rather than re-read
+
+54 open items. **19 were wrong**, and the errors fell into three kinds.
+
+**Three were stale duplicates sitting beside their own closures.** B1, B2 and
+B15 each appeared twice: once struck through and closed, once still open in its
+original wording. Nobody deletes the row that was waiting — the closure gets
+added and the original survives. That is the decay mode of every list like this.
+
+**Eight were moot**, describing surfaces deleted hours earlier: the CLI's
+experimental-SQLite warning, the dashboard's missing browser render, the
+dashboard being stale after a CLI command, an insecure session cookie, an
+unrate-limited password gate, a web sourcing page recomputing from a URL, and
+`assessQuote` disagreeing with the evaluator — that last one settled by D14.
+
+**Eight had premises that MOVED rather than died**, and re-pointing them is the
+part a re-read would have got wrong. The rejection histogram is still worth
+having, but on the phone and behind B68. `B52` was half stale — the `ledger`
+screen it says is missing has existed since 5.8. `B38`'s Turbopack half died with
+Next.js while its Metro half is load-bearing. `B17` — *back up `data/resale.db`,
+the one unregenerable file* — is answered, because that file stopped being the
+fund; but its real half survives as **B32**, now about the phone.
+
+### ⛔ And it found a live regression: the fund's rules cannot be changed
+
+`FundStore` still exposes `setPolicy` and `setTaxProfile`, and **nothing outside
+the test scenarios calls either.** `policy set`, `policy adopt-defaults` and `tax
+profile set` went with the CLI at 5.10; the settings page went with the web; no
+screen replaced them. The engine kept the capability and the product lost the
+door.
+
+⚡ **It compounds with two rules this project had already learned and written
+down.** *Policy lives in the DATABASE, and `ensureSeeded()` only writes when the
+row is absent* — so editing a default in `policy.ts` now cannot reach the live
+fund by any route at all. And *a repair path must not depend on the broken
+thing* — except the repair path is now the missing thing, which is the same
+lesson one turn further out.
+
+⚠️ **Nothing breaks today**, which is exactly why it needed finding rather than
+waiting: mode is derived by replaying the NAV series, and the $100 set-aside
+threshold is already stored. It bites the first time a number has to change —
+and **B26 is already open and needs the state marginal corrected.**
+
+Filed as **5.12** with numbered sub-steps rather than as a backlog row, because
+it is version-blocking: a fund whose rules are frozen is not a fund the operator
+controls. ⚠️ It also means **Gate 5's exit criteria were incomplete** — "the
+desktop is gone" was met while a thing only the desktop could do went with it.
+The phase after-scan is the only pass that could have caught that, which is the
+argument for the rule.

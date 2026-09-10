@@ -134,16 +134,39 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
         every surface that gates, classifies or reports, checked for the
         fails-open shape (**B66**) and for a class asserted in only one direction
         (the SCORED/QUOTED miss was exactly that).
-  - [ ] **5.11.3** Reconcile the accumulated-deferral ledger — B62–B71 and
-        everything filed earlier in the phase, each confirmed still true, still
-        needed, and pointed at a real gate. Several were filed against a desktop
-        that no longer exists.
+  - [x] **5.11.3** ✅ **Done 2026-09-10.** 54 open items checked against the code.
+        **19 were wrong**: 3 stale duplicates sitting beside their own closures,
+        8 moot (they described deleted surfaces), 8 re-pointed at where the
+        premise actually moved. ⛔ **And it found a live regression — 5.12.**
   - [ ] **5.11.4** Gate 5's exit criteria to the log, and the start-here docs
         made to match the code. ⚠️ **`README.md` carries ~14 references to
         deleted code and the repo is PUBLIC.**
   - [ ] **5.11.5** ⛔ **NOT RNTL.** B60's trigger is *"only if a wiring bug
         actually reaches the device"* and it has not fired — 5.9c's failure was a
         dropped tag, which `tsc` caught.
+
+- [ ] **5.12** ⛔ **THE FUND'S RULES CANNOT BE CHANGED. Found by 5.11.3's
+      reconciliation, 2026-09-10.** `setPolicy` and `setTaxProfile` still exist on
+      `FundStore` and **nothing outside the test scenarios calls them** — `policy
+      set`, `policy adopt-defaults` and `tax profile set` went with the CLI, the
+      settings page went with the web, and no screen replaced either.
+      ⚡ **It compounds with two rules already written down.** Policy lives in the
+      DATABASE and `ensureSeeded()` only writes when the row is ABSENT, so a
+      changed default can no longer reach the live fund by any route. And **a
+      repair path must not depend on the broken thing** — the repair path is now
+      the thing that is missing.
+      ⚠️ **It blocks B26**, which is open and needs the state marginal corrected.
+      ⚠️ Nothing breaks today: mode is derived, and the $100 set-aside is already
+      stored. It bites the first time a number has to change.
+  - [ ] **5.12.1** A settings screen: read the stored policy and tax profile,
+        and say plainly when the code's `Policy.version` has moved past the
+        stored one — the only thing that can detect the divergence.
+  - [ ] **5.12.2** Adopt-defaults, and per-field policy edits for the numbers a
+        $50 fund actually turns: per-item cap, profit floor, hold ceiling.
+  - [ ] **5.12.3** The tax profile, through `taxProfileOrDefault()`-style loading
+        so the repair works against a stored value that is already invalid.
+  - [ ] **5.12.4** On-device verification, and the scenario case that proves a
+        written policy survives a reopen.
 
 **Exit:** the fund lives on the phone, knows its exact position offline, and the
 desktop is gone.
@@ -209,11 +232,10 @@ being "done".
 
 Filed, not forgotten. Nothing here is in a gate until it is promoted.
 
-- **B1** Ledger hash-chain verifier script (`scripts/verify-ledger.ts`). Schema
-  carries `prev_hash`/`hash` already; the verifier is not written. → Gate 3.
-- **B2** Import-direction lint (`core` must not import upward). → Gate 3.
-- **B3** Rejection-code histogram on the dashboard — shows *which gate is
-  binding*, which is the instrument for R2. → Gate 4.
+- **B3** Rejection-code histogram — **which gate is actually binding**, over real
+  decisions. ⚠️ Re-pointed 2026-09-10: it was specified on the deleted dashboard,
+  and the surface is now the phone. Needs **B68** first (nothing records a score).
+  → Gate 6.
 - **B4** Prediction-accuracy calibration loop (expected vs actual days and
   proceeds feeding back into confidence). → Gate 6.
 - **B5** Period-close event for reserve true-ups (monthly). → post-Gate 4.
@@ -224,20 +246,16 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
 - **B10** `channel_quotes` + marketplace routing comparison. → post-Gate 5.
 - **B11** Backtest harness: replay historical opportunities against a new policy
   version to see what it would have bought. → Gate 6.
-- **B12** Suppress the `node:sqlite` ExperimentalWarning in CLI output (it
-  currently prints on every command). Cosmetic. → Gate 3.
+- ~~**B12**~~ ✅ **Moot 2026-09-10** — the CLI that printed the warning is deleted.
 - **B13** `BUSINESS_EXPENSE` with an `itemId` that does not exist fails on the
   foreign key with a raw SQLite error rather than an EngineError. → Gate 3.
 - **B14** Revisit Vitest 5 once rolldown ships a working Windows binding (see
   log D-02).
-- **B15** Year-to-date-aware SE tax: stop the 12.4% Social Security half at the
-  annual wage base. Needs YTD earnings including W-2 wages. Irrelevant until the
-  fund is very much larger. → post-Gate 4.
 - **B16** Reopen **D1** before year end: decide `incomeTaxBps` with real numbers
   in hand rather than a guess. The reserve currently covers SE tax only.
-- **B17** ⚠️ **Back up `data/resale.db`.** It is git-ignored, and it is the one
-  file in this project that is not regenerable. A disk failure loses the whole
-  book. Needs a decision on where backups go before the ledger has much in it.
+- ~~**B17**~~ ✅ **Answered 2026-09-10.** `data/resale.db` is a retired snapshot,
+  not the fund. The live ledger is on the phone, backed up on-device after every
+  write, with a copy shared off it. The open half is **B32**.
 - **B18** Category-specific eBay fee rates and any store-subscription rate.
   `src/core/fees.ts` uses the standard 13.25% + $0.40 for everything. → Gate 5.
 - **B19** Make the per-item cap scale differently at tiny bankrolls — 40% of NAV
@@ -288,11 +306,9 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   refused command shipped because no test opens the CLI. Gate 4 adds a second
   interface over the same functions, so a thin harness now serves both. → Gate 4,
   alongside 4.2.
-- **B41** Visual design pass on the dashboard. Jason's read of 4.3 was "a basic
-  screen" — accurate, and deliberate: 4.3 bought correct content and hierarchy,
-  not craft. Worth doing once the screens exist and there is something to design
-  *across*, not one card at a time. Pairs naturally with **B39** (nothing
-  asserts styling). → after **4.11**, when every screen is built.
+- **B41** Visual design pass — re-pointed 2026-09-10 from the deleted dashboard to
+  the **phone app**. The screens are correct and plain; nothing asserts legibility
+  (**B60**), and that judgement is Jason's. → Gate 6.
 - **B51** Anne Arundel and Frederick counties are **graduated**, not flat, and
   are deliberately absent from `MD_2026.localRateBps` — a flat approximation of
   a graduated rate is the exact error 4.8 removed. They fall back to the flat
@@ -301,45 +317,28 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
 - **B49 (was)** ⚡ **`rejectionHistogram()` already exists** on the repository and is
   now reachable read-only — **4.9 is mostly a screen**, not a build. Noticed
   during 4.7's before-scan.
-- **B50** The feed cannot change a row's status from the phone (`setStatus` is a
-  write, and the web surface is read-only by type). Marking something
-  bought/passed is the same decision as **B45**: the first write from the web.
-  → decide both together.
-- **B52** `ledger` and `headroom` still have no screen. The event log is an
-  audit view that belongs on a laptop; headroom is covered by the sourcing
-  screen's ceiling. Both were checked against the gate exit line and judged out
-  — recorded so the judgement is visible rather than an omission. → if wanted.
-- **B44** The sourcing screen defaults hassle to 20%, comp age to 45 days, and
-  postage/travel/tax to zero. Fine for a thrift-store flip, wrong for anything
-  shipped in. Revisit when the fund buys something bulky. → Gate 5.
-- **B45** A scored candidate cannot be saved from the screen — it recomputes
-  from the URL each time. The URL IS the record, which is enough for now, but
-  the feed (4.6) will want `opp add` from the phone. That is the first write
-  from the web surface and needs its own decision. → **4.7**.
+- **B50** Nothing can change an opportunity's status — re-pointed 2026-09-10: the
+  premise was the read-only WEB surface, which is gone. The phone can write, but
+  nothing saves a score to change the status OF. Folded behind **B68**. → Gate 6.5.
+- **B52** `headroom` has no screen. ⚠️ Half stale 2026-09-10: `ledger` DOES have
+  one on the phone. Headroom is covered by what the sourcing screen prints.
+  → Gate 6.
+- ~~**B44**~~ ✅ **Merged into B64 2026-09-10** — the same defaults, one item.
+- ~~**B45**~~ ✅ **Superseded 2026-09-10 by B68.** The premise was the WEB screen
+  recomputing from a URL; the phone screen has no URL. Saving a score is B68.
 - ⛔ ~~**B42**~~ **DEAD 2026-09-09. Tailscale cannot be used at all.** Jason
   drives for **Spark Driver**, which flags VPN and mesh apps as "manipulation
   apps" — installing one risks the driver account, which is real income. **No
   phone-side VPN, ever**, in this project or any other. **A4 is reopened.**
-- **B43** ⚡ **Now live, not deferred.** The session cookie sets `secure: false`
-  because a tailnet served plain HTTP. Any public HTTPS endpoint makes that
-  wrong immediately. → whatever A4 becomes.
-- **B53** ⚠️ **The password gate has no rate limiting.** Irrelevant on a private
-  mesh; a real gap the moment the endpoint is reachable from the internet. →
-  whatever A4 becomes.
-- **B39** ⚠️ **Nothing renders the dashboard in a browser, in CI or otherwise.**
-  `screens.ts` makes the *decisions* testable, but styling, contrast and
-  whether a row is legible at arm's length are asserted by nobody. A headless
-  browser is the obvious answer and this machine cannot install one (see the
-  npm tarball note). → revisit at Gate 5.
-- **B40** The dashboard is read-only and there is no way to refresh it from the
-  phone after a CLI command — it needs a manual reload. A poll or a revalidate
-  button is cheap, but the phone-access decision landed at **4.4**, so this is
-  unblocked. → post-Gate 4.
-- **B38** ⚠️ **`dev` and `build` are pinned to `--webpack`.** Turbopack does not
-  honour `extensionAlias`, so it cannot resolve this repo's `.js`-for-`.ts`
-  imports and 500s on every page. The alternative was rewriting the extension
-  off every import in the financial core to suit the dashboard. Revisit when
-  Turbopack supports it, or if webpack support is dropped. → Gate 5.
+- ~~**B43**~~ ✅ **Moot 2026-09-10** — the session cookie went with the auth gate.
+- ~~**B53**~~ ✅ **Moot 2026-09-10** — the password gate is deleted.
+- ~~**B39**~~ ✅ **Moot 2026-09-10** — the dashboard is deleted. The phone's
+  styling is unasserted for the same reason and that is **B60**.
+- ~~**B40**~~ ✅ **Moot 2026-09-10** — no dashboard, and no CLI to be stale against.
+  The phone reads its own ledger.
+- **B38** **Metro** needs an `extensionAlias` resolver for this repo's
+  `.js`-for-`.ts` imports. ⚠️ Re-pointed 2026-09-10: the Turbopack half died with
+  Next.js; the Metro half is live and the phone depends on it.
 - **B37** `#claimedAgainst` scans every EXPENSE_CORRECTION payload in the ledger
   on each settlement. Fine at 6 events, linear forever. Index it if corrections
   ever become common — they should not.
@@ -347,10 +346,10 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   analytic table `reconcile` never saw; if another is added, it needs its own
   two-source check rather than inheriting this one. → whenever a projection is
   added.
-- **B32** Confirm OneDrive is actually signed in and syncing. The folder was
-  empty apart from `desktop.ini`, so the destination is *configured* but its
-  sync has not been observed. A backup to a folder that never leaves the disk is
-  the failure this was meant to prevent.
+- **B32** ⚠️ **Re-pointed 2026-09-10: this is about the PHONE now.** The desktop
+  OneDrive path is gone. The app writes backups on-device and can share one out,
+  but it can only observe that a file was OFFERED — never that it arrived. There
+  is no recurring off-device guarantee, and the phone is the only home.
 - **B27** 7-day listing engagement as the fast feedback loop — watchers and views
   within a week, rather than waiting for a sale to close. Needs listing tracking.
   → Gate 5.
@@ -375,13 +374,8 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   risk pointed the other way — after 5.10 the scorer is the rare path, so a
   report that ignores the prediction the operator actually decided from is
   blind, not conservative. Built in 5.6.7.
-- **B58** ⛔ **MEASURED 2026-09-09 and THEY DO NOT AGREE — promoted into 5.9c.**
-  `assessQuote` (buy screen) and `evaluateOpportunity` (sourcing) reach the same
-  `assessPurchase`, which skips any gate whose field is `undefined`: the quote
-  candidate carries **velocity** confidence and **no** buy score, the evaluation
-  carries **composite** confidence and one. 64 divergences in a 96-case sweep,
-  **both directions** — BUY then `CONFIDENCE_TOO_LOW`, and REJECT then allowed.
-  → decided in 5.9c.0.
+- ~~**B58**~~ ✅ **Closed 2026-09-10 by D14 in 5.9c.** One gate set; `assessQuote`
+  deleted; `tests/purchase-parity.test.ts` compares the two doors.
 - **B64** No screen takes **condition** or **hassle**; both fall to the schema
   defaults (`hassleBps` 2,000, condition a pessimistic 40%). Both move
   confidence, so they are real dials — but they are new financial input
@@ -468,5 +462,5 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   *after* the assertions, the real failure surfaced as an EBUSY from the temp
   directory cleanup. Both fixed in 5.5.1. Audit the other suites for
   hard-coded migration lists and for handles closed inside a `try`.
-- **B20** `policy set` covers two knobs. Widen it, or build the config UI at
-  Gate 4 and stop editing policy from a shell.
+- ~~**B20**~~ ✅ **Superseded 2026-09-10 by 5.12.** `policy set` is deleted; the
+  need it named is now the whole missing surface.
