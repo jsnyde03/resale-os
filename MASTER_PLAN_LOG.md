@@ -3411,3 +3411,48 @@ is not a document — it is the ledger plus the profile.**
 export a convenience step to unblock Jason. Checking where a file lands before
 writing it is not a step that appears in any plan; it appeared because the
 payload's contents were checked first rather than after.
+
+## 2026-09-10 — the fund reached the phone, and the desktop became a second head
+
+**5.5 is done.** 55 events exported, carried across and imported on device, every
+regenerated hash compared against the exported one. That is the whole design of
+`portable.ts`: a fund travels as its COMMANDS because everything else is derived,
+and the destination replays rather than copies, so a single byte of divergent
+engine behaviour refuses the import instead of accepting something unverifiable.
+
+⛔ **And the moment it landed, this project had two live ledgers.** Same 55-event
+history, both writable, and `cli status` on the desktop still answers cheerfully
+with $50.00. Checked: **nothing guards the desktop CLI's write path.**
+
+The append-only design is what makes this sharp rather than annoying. One
+recorded event on either side and the chains diverge at that point forever;
+there is no merge, and `importLedger` refuses a mismatch **by design** — so the
+one tool built to move a fund between machines is precisely the tool that cannot
+repair a fork. The safety property and the hazard are the same property.
+
+⚠️ **The window is not short, which is why it needs a guard rather than haste.**
+The natural fix is 5.10, which retires the desktop entirely — but 5.10's deletion
+is gated on a backup actually leaving the phone, and that needs Jason. So the
+fork window stays open for as long as that takes, across session boundaries,
+while `cli` remains the interface documented in several places. That is exactly
+the shape of thing that gets used by accident.
+
+### Re-sequencing
+
+5.11 was promoted to the active slot only because 5.10 was blocked; that is no
+longer true, and a phase after-scan running before the phase's last item is out
+of order. **5.10 takes the slot**, 5.11 returns to being the closing item, and
+its remaining sub-steps live here rather than on the plan:
+
+- **5.11.2** Apply 5.9c's lessons backwards to already-shipped screens — every
+  surface that gates, classifies or reports, checked for the fails-open shape
+  (**B66**) and for a class asserted in only one direction (the SCORED/QUOTED
+  miss was exactly that).
+- **5.11.3** Reconcile the accumulated-deferral ledger: B62–B68 and everything
+  filed earlier in the phase, each confirmed still true, still needed, and
+  pointed at a real gate.
+- **5.11.4** Gate 5's exit criteria to the log, and the start-here docs made to
+  match the code. ⚠️ Known stale already: `CLAUDE.md` still says "463 tests",
+  "four gates", "43/43" and "Gate 5 nearly done".
+- **5.11.5** ⛔ **NOT RNTL.** B60's trigger is *"only if a wiring bug actually
+  reaches the device"* and it has not fired.

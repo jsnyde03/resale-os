@@ -72,14 +72,12 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       did. ⛔ **And the hash chain used `node:crypto`** — now `@noble/hashes`,
       byte-identical, with a golden value pinned and the live ledger still
       verifying.
-- [~] **5.5** ⚙️ **Mechanism built and proven on the real ledger; the transfer
-      itself needs the phone.** `src/db/portable.ts` — a fund travels as its
-      COMMANDS (everything else is derived) and the destination **replays** them,
-      comparing every regenerated hash. A mismatch refuses the import rather than
-      accepting something that does not verify. ✅ **The live 55-event ledger
-      exports and re-imports with every hash reproduced, chain OK, reconciling,
-      NAV identical.** `cli export` / `cli import`.
-      ⏳ **Needs Jason:** run `export`, get the JSON onto the phone, import.
+- [x] **5.5** ✅ **Done 2026-09-10. THE FUND IS ON THE PHONE.** 55 events
+      exported, transferred and imported on device — every hash regenerated and
+      compared, a mismatch would have refused it. `src/db/portable.ts`: a fund
+      travels as its COMMANDS and the destination replays them. ⛔ **The desktop
+      ledger is now a SECOND HEAD** — same history, still writable, and one write
+      on either side forks them with no merge. That is 5.10.1.
 - [x] **5.5.1** ✅ **D4 answered and built 2026-09-09.** An override is allowed
       and may never be silent: `overrodeGates` + `overrideReason` on PURCHASE,
       refused without a reason, stored in `items` (migration 006), shown by
@@ -123,34 +121,30 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       gated differently (**B58**, measured: 64 divergences in 96 cases, both
       directions), so `scoring/purchase.ts` is now the only path that decides and
       `assessQuote` is deleted. **44/44 on device.** → **B64**–**B68**.
-- [ ] **5.10** Retire `src/cli`, `src/server`, `src/app` — 3,715 lines — once
-      the phone covers them. ⛔ Not before, and ⚠️ **not until the fund has
-      actually moved**: `cli export` is how it gets onto the phone. `views.ts`
-      MOVES rather than goes (**B62**).
-- [ ] **5.11** ⚡ **ACTIVE BUILD — the Gate 5 phase after-scan.** The only
-      unblocked item left: 5.5 and 5.9 need Jason, and 5.10 must not start until
-      the fund has actually moved. A per-item scan cannot see what only shows up
-      with the whole phase in view.
-  - [x] **5.11.1** ✅ **Done 2026-09-10. The stale-scope-list sweep.** Three
-        instances found and all three closed: the money sweep INVERTED to an
-        exemption list (measured first — zero new violations), an undeclared
-        `src/` layer now red-gates (`src/adapters` had no rules and nobody
-        knew), and **B67 closed** — `tests/ci-scope.test.ts` asserts the CI
-        `paths:` filter covers every layer `lint:phone` DISCOVERS. Planted
-        both directions each time. 593 tests.
-  - [ ] **5.11.2** Apply 5.9c's lessons BACKWARDS to already-shipped screens —
-        every surface that gates, classifies or reports, checked for the
-        fails-open shape (**B66**) and for a class asserted in only one
-        direction (the SCORED/QUOTED miss was exactly that).
-  - [ ] **5.11.3** Reconcile the accumulated-deferral ledger: B62–B68 plus
-        everything filed earlier in the phase, each confirmed as still true,
-        still needed, and pointed at a real gate.
-  - [ ] **5.11.4** Gate 5's exit criteria written to the log, and the start-here
-        docs (`CLAUDE.md`, `README.md`) made to match the code.
-  - [ ] **5.11.5** ⛔ **NOT RNTL.** B60's trigger is *"only if a wiring bug
-        actually reaches the device"* and it has not fired — 5.9c's failure was
-        a dropped tag, which `tsc` caught. The gap stays named, not guessed at.
-
+- [ ] **5.10** ⚡ **ACTIVE BUILD — retire the desktop.** ~3,715 lines. Unblocked
+      2026-09-10 when the fund reached the phone.
+  - [ ] **5.10.1** ⛔ **STOP THE FORK, before anything else.** Two ledgers now
+        share one 55-event history and the desktop still accepts writes; append-only
+        plus a hash chain means a fork cannot be merged, and `portable.ts` refuses a
+        mismatched import BY DESIGN. The desktop must refuse to write.
+  - [ ] **5.10.2** ⏳ **[NEEDS JASON] A backup must actually LEAVE the phone**
+        before the deletion in .4. Today the desktop db and its OneDrive copies are
+        the safety net; retiring them makes the phone the fund's only home. 5.9b
+        built the share sheet and can only observe that a file was *offered*.
+  - [ ] **5.10.3** Move `views.ts` (**B62**) and `sourcing.ts` (**B65**) out of
+        `src/server` — the phone renders both. A new layer red-gates until declared,
+        which is 5.11.1's undeclared-layer check doing its job.
+  - [ ] **5.10.4** Delete `src/cli`, `src/app` and what is left of `src/server`.
+        ⛔ Gated on .1, .2 and .3.
+  - [ ] **5.10.5** Prune what only they used — Next config and deps,
+        `tsconfig.web.json`, the web suites, the auth/proxy surface,
+        `check-binding.mjs`.
+  - [ ] **5.10.6** Point every gate at the new shape: `ci-scope` test, the lane's
+        `paths:` filter, `lint:phone` roots, the three typecheck configs.
+  - [ ] **5.10.7** On-device verification.
+- [ ] **5.11** The Gate 5 phase after-scan. ✅ **.1 done 2026-09-10** (three stale
+      scope lists closed, **B67** with it). Remaining sub-steps are in the log; they
+      are retrieved at switch-in, after 5.10 closes the phase.
 **Exit:** the fund lives on the phone, knows its exact position offline, and the
 desktop is gone.
 
@@ -402,6 +396,17 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   hand-typed list, which is what makes it a control. ⚠️ Scoped to the `paths:`
   block, not a grep of the file — every one of those directories is also named
   in a comment there.
+- **B69** ⚡ **Barcode scanning in the aisle** (Jason, 2026-09-10). The SCAN is
+  the easy part — `expo-camera` does it offline, one screen. ⛔ **But a barcode
+  is a product identity, not a price**, and the sourcing screen's binding fields
+  are asking price (the tag in front of you — always typed), resale, sold-in-90
+  and comps. A UPC supplies **none** of them without the eBay data route, which
+  is **D12**, and sold comps are the gated half of D12. ⚡ **The offline-first
+  win is different and better: scan → OWN HISTORY.** A UPC is a stable key, so
+  the third leg of D12 — "own history to accumulate" — works on the device with
+  no network and gets better every flip. ⚠️ Much resale stock has no usable
+  barcode (vintage, used, lots, bundles), so this widens the easy cases rather
+  than replacing manual entry. → Gate 6, sequenced AFTER D12's data route.
 - **B68** A score made in the aisle is **not saved** — the phone evaluates and
   hands off, and nothing lands in `opportunities`. Correct for 5.9c (writing
   opportunities is tier 3, still closed) but it is the precondition for **6.5**,
