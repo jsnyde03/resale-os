@@ -4178,3 +4178,35 @@ hysteretic — it depends on the path NAV took — and a hypothesis has no path.
 the answer means *"at this bankroll, arrived at cleanly"*. It is an
 approximation, and it is named as one in the code rather than left for someone
 to discover.
+
+### 6.5.3 — the watchlist, and what it deliberately leaves off
+
+Only **not yet** is on it. A buyable item is a decision, not a note; a
+never-buyable one is a *closed* decision, and keeping either would make this a
+list of things to re-read forever. ⚡ The closed ones are **counted, never
+listed** — the number is worth knowing (how much of what you pick up is finished
+rather than pending) and the items are not, because nothing about the fund
+changes them.
+
+⚠️ **It recomputes, which is the opposite of the rule everywhere else**, and the
+distinction is deliberate. The feed reports stored verdicts and never re-runs
+today's policy over an old row, because that shows a score which was never the
+reason for any decision. This asks a **different question** — *at what bankroll
+would this clear under the rules as they stand now* — which is only answerable
+forward. The stored verdict is untouched, and a row scored under an older policy
+version is flagged rather than quietly re-judged.
+
+⚠️ **An empty list is three different facts**, and it says which: nothing scored
+yet, nothing waiting on the bankroll, or *"none of the 12 you passed on would
+clear at any bankroll."* The last is the common one and it is an answer, not an
+absence.
+
+One defensive choice worth naming: a row whose stored input will not parse is
+**skipped, not fatal**. It was written by an older shape and one bad row must not
+take the screen with it.
+
+⛔ **A cent-division I wrote and the lint would have caught.** The first draft had
+a local `fmt` doing `cents / 100` for the headline, under a comment saying this
+file may not do arithmetic on money. `formatCents` exists for exactly that.
+Fixed before running the gate, which is luck rather than discipline — the gate is
+what makes it not matter.

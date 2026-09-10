@@ -157,6 +157,14 @@ function Position() {
         </View>
       </View>
 
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <View style={{ flex: 1 }}>
+          <Button label="Waiting" onPress={() => router.push('/watchlist')} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button label="What blocks me" onPress={() => router.push('/rejections')} />
+        </View>
+      </View>
       <Button label="Rules and tax" onPress={() => router.push('/settings')} />
 
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>

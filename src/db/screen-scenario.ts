@@ -28,6 +28,9 @@ import { adjustModel, reverseModel, sellModel, spendModel } from '../ui/forms.js
 import { policyEdit, policyFieldsFrom, taxEdit, taxFieldsFrom } from '../ui/settings.js';
 import { evaluateForm } from '../screens/sourcing.js';
 import { rejectionsView } from '../screens/rejections.js';
+import { watchlist } from '../screens/watchlist.js';
+import { parseOpportunity } from '../domain/opportunity.js';
+import { evaluateOpportunity } from '../scoring/evaluate.js';
 import { OpportunityReader, OpportunityRepository } from './repositories/opportunities.js';
 import { profitReport } from './reporting.js';
 import { makeVerifiedBackup } from './backup-portable.js';
@@ -384,6 +387,44 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
         dear.verdict.unlock.unlock.kind !== slow.verdict.unlock.unlock.kind,
         'not yet and never are different answers',
       );
+    },
+  },
+  {
+    // ⚡ 6.5.3 on device, end to end: score three, keep one.
+    name: 'watchlist: only the refusals that expire are kept, and the closed ones are counted',
+    run: (db) => {
+      const store = funded(db, 5_000);
+      const repo = new OpportunityRepository(db);
+
+      const score = (name: string, price: string, resale: string, sold: string, active: string) => {
+        const r = evaluateForm({ name, category: 'TOYS', price, resale, sold90: sold, active }, store.state());
+        ok(r.ok, `${name} should parse`);
+        if (r.ok) repo.save(r.input, r.evaluation, T0);
+      };
+
+      score('dear', '30.00', '120.00', '40', '3');   // good, just too expensive
+      score('slow', '12.00', '60.00', '2', '30');    // no bankroll fixes slow
+      score('buyable', '12.00', '60.00', '40', '3'); // already a buy
+
+      const rows = new OpportunityReader(db).list({ limit: 200 });
+      eq(rows.length, 3, 'all three were recorded');
+
+      const view = watchlist(
+        rows.map((r) => ({
+          opportunityId: r.opportunity_id,
+          input: parseOpportunity(JSON.parse(r.input_json)),
+          policyVersion: r.policy_version,
+        })),
+        store.state(),
+        computeMetrics(store.state()).navCents,
+        evaluateOpportunity,
+      );
+
+      eq(view.rows.map((r) => r.name), ['dear'], 'only the one that expires is kept');
+      eq(view.closed, 1, 'the closed one is counted');
+      eq(view.considered, 3, 'and everything was considered');
+      ok(view.rows[0]!.shortfallCents > 0, 'with the bankroll it still needs');
+      ok(!view.rows[0]!.stale, 'scored under the current rules');
     },
   },
   {

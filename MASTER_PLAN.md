@@ -101,8 +101,10 @@ buyable** — intended, counterintuitive, and fatal to a binary search.
       hypothetical evaluated at the real bankroll.
 - [x] **6.5.2** ✅ **Done 2026-09-10.** *"Not yet — this becomes a buy at $150"*
       or *"Put it down — no bankroll makes this a buy."*
-- [ ] **6.5.3** The watchlist proper — saved opportunities whose answer is AT $X,
-      nearest threshold first, against today's NAV. Only these are worth keeping.
+- [x] **6.5.3** ✅ **Done 2026-09-10.** Nearest threshold first, against today's
+      NAV. ⛔ **Buyable and never-buyable are both left off** — one is a decision,
+      the other a closed one; the closed ones are COUNTED, never listed. ⚠️ It
+      recomputes and says so, and flags a row scored under older rules.
 - [x] **6.5.4** ✅ **Done 2026-09-10.** *"This stops being a buy above $500"* —
       measured, not theorised: GROWTH lifts the profit floor $8 → $15.
 - [ ] **6.5.5** On-device verification.
