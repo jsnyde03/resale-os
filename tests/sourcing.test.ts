@@ -227,3 +227,41 @@ describe('the one line you read while holding the thing', () => {
     expect(v.reasons[0]).toBeTruthy();
   });
 });
+
+describe('the screen names the FIX, not just the failing gate', () => {
+  // ⚡ B70. `HOLD_TOO_LONG` refuses most real candidates and the screen used to
+  // name it without naming the way out. The hold is derived, so it inverts.
+  it('inverts the hold formula against the listings actually entered', () => {
+    const slow = ok({ ...GOOD, sold90: '4', active: '10' });
+    expect(slow.failedGates.map((g) => g.code)).toContain('HOLD_TOO_LONG');
+    // ⚠️ This fixture is a $500 fund, so the mode is GROWTH and the ceiling is
+    // 60 days, not BOOTSTRAP's 21. The ceiling comes from the MODE, which is
+    // derived from the bankroll — the number an operator needs changes as the
+    // fund grows, and that is the point of deriving it rather than printing a
+    // constant. 90 * (10 + 1) / 60 = 16.5 -> 17.
+    expect(slow.holdFix.againstActiveListings).toBe(10);
+    expect(slow.holdFix.ceilingDays).toBe(60);
+    expect(slow.holdFix.soldNeededIn90Days).toBe(17);
+  });
+
+  it('follows the MODE, so the number a $50 fund needs is not the number a $500 fund needs', () => {
+    const bootstrap = evaluateForm({ ...GOOD, sold90: '4', active: '10' }, fund(5_000));
+    if (!bootstrap.ok) throw new Error('expected a verdict');
+    // BOOTSTRAP's 21-day ceiling: 90 * 11 / 21 = 47.14 -> 48.
+    expect(bootstrap.verdict.holdFix.ceilingDays).toBe(21);
+    expect(bootstrap.verdict.holdFix.soldNeededIn90Days).toBe(48);
+  });
+
+  it('is the number that actually clears the gate, not an approximation', () => {
+    // ⛔ Measured, not asserted: buying at exactly that many sales must pass the
+    // hold gate, and one fewer must not. A rounding error either way makes the
+    // screen tell someone to walk away from a buy, or to buy a refusal.
+    for (const active of [0, 1, 5, 10, 25]) {
+      const needed = ok({ ...GOOD, sold90: '1', active: String(active) }).holdFix.soldNeededIn90Days;
+      const at = ok({ ...GOOD, sold90: String(needed), active: String(active) });
+      const below = ok({ ...GOOD, sold90: String(needed - 1), active: String(active) });
+      expect(at.failedGates.map((g) => g.code)).not.toContain('HOLD_TOO_LONG');
+      expect(below.failedGates.map((g) => g.code)).toContain('HOLD_TOO_LONG');
+    }
+  });
+});

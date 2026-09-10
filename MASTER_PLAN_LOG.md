@@ -3852,3 +3852,28 @@ legitimately be high is the case being sourced.
 **B68** is the precondition for two later things at once: B3's rejection
 histogram has nothing to count and 6.5's watchlist has nothing to watch until an
 aisle decision is recorded somewhere.
+
+### 6.0.1 — the screen names the fix
+
+`SourcingVerdict` carries `holdFix`, and the screen prints it when
+`HOLD_TOO_LONG` bites: *"Against 10 listed, you need 48 sold in 90 days to clear
+the 21-day ceiling."* Closes **B70**.
+
+⚡ **It follows the MODE.** The ceiling comes from the bankroll-derived mode, so a
+$500 fund is told **17** where a $50 fund is told **48**. The number an operator
+needs is not a constant, and printing one would be wrong for most of the fund's
+life — which is the argument for deriving it rather than documenting it.
+
+⚠️ **Asserted as EXACT rather than as the formula.** The obvious test — compare
+the output to `90 * (active + 1) / ceiling` — is a round trip through one
+encoder: it restates the implementation and cannot fail. Instead the test buys at
+exactly the number and one below it, across five listing counts, and asserts the
+hold gate clears at N and refuses at N-1. **A rounding error either way makes the
+screen tell someone to walk away from a buy, or to chase a refusal.** Planted by
+turning `ceil` into `floor`: three claims red.
+
+⚠️ **A wrong expectation of mine, corrected by the test rather than shipped.** I
+asserted a 21-day ceiling against a fixture that is a **$500** fund — which is
+GROWTH, and 60 days. The test failed with *"expected 60 to be 21"*, and the fix
+was the expectation, not the code. It became the second case: the number must
+follow the mode, and now both are pinned.

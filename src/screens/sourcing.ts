@@ -14,6 +14,7 @@
 
 import { parseOpportunity } from '../domain/opportunity.js';
 import { evaluateOpportunity } from '../scoring/evaluate.js';
+import { soldNeededForHold } from '../core/velocity.js';
 import { formatCents } from '../core/money.js';
 import type { Bps, Cents } from '../core/money.js';
 import type { FundState } from '../core/capital/state.js';
@@ -93,6 +94,21 @@ export interface SourcingVerdict {
   readonly velocityIsEstimate: boolean;
   /** Every gate that failed, for the histogram at 4.7 and for arguing with. */
   readonly failedGates: readonly { code: string; message: string; actual: number; limit: number }[];
+  /**
+   * ⚡ **What would FIX the hold, not just the fact that it failed.**
+   *
+   * `HOLD_TOO_LONG` is the gate that refuses most real candidates, and the
+   * screen used to name it without naming the way out. The hold is derived —
+   * `90 x (active + 1) / sold90` — so it inverts exactly: against this many
+   * listings, this many sales in 90 days clears the ceiling. That number **is**
+   * the sourcing rule for retail arbitrage, and it is the one an operator can
+   * carry between items. Backlog **B70**.
+   */
+  readonly holdFix: {
+    readonly soldNeededIn90Days: number;
+    readonly againstActiveListings: number;
+    readonly ceilingDays: number;
+  };
   readonly policyVersion: string;
 }
 
@@ -230,6 +246,11 @@ export function evaluateForm(
       confidenceBps: e.result.confidenceBps,
       velocityIsEstimate: e.economics.velocity.source === 'OPERATOR_ESTIMATE',
       failedGates,
+      holdFix: {
+        soldNeededIn90Days: soldNeededForHold(e.metrics.modePolicy.maxHoldDays, input.activeListings),
+        againstActiveListings: input.activeListings,
+        ceilingDays: e.metrics.modePolicy.maxHoldDays,
+      },
       policyVersion: e.policyVersion,
     },
   };

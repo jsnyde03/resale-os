@@ -159,10 +159,13 @@ depends on the aisle screen being usable, and three filed items make it so with
 no external dependency, no key and no quota — while the API half is gated on
 access this project may not get.
 
-- [ ] **6.0.1** The screen names the FIX, not just the failing gate (**B70**).
-      `soldNeededForHold` is already in core and tested: at 10 active listings a
-      21-day ceiling needs **48 sold in 90 days**, and that number IS the sourcing
-      rule for retail clearance.
+- [x] **6.0.1** ✅ **Done 2026-09-10. Closes B70.** The verdict carries `holdFix`
+      and the screen prints it when the hold gate bites: *"against 10 listed you
+      need 48 sold in 90 days to clear the 21-day ceiling."* ⚡ It follows the
+      MODE, so a $500 fund is told 17 rather than 48 — the number an operator
+      needs changes as the bankroll grows. Proven EXACT, not approximate: at N it
+      clears and at N-1 it does not, across five listing counts. Planted (ceil to
+      floor → 3 red).
 - [ ] **6.0.2** Condition and hassle become inputs (**B64**, **B71**). Sealed
       retail deserves high condition confidence and currently takes a pessimistic
       40% default, which drags the composite against D14's stricter gate — the one
@@ -424,12 +427,7 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   half** — measured 2026-09-10: clearance flips clear profit and ROI easily and
   are refused on HOLD_TOO_LONG. The scan makes the query clean; it does not make
   the data available. → Gate 6, AFTER D12's data route.
-- **B70** ⚡ **The sourcing screen names the failing gate but not the fix.**
-  `soldNeededForHold(targetDays, active)` exists in `src/core/velocity.ts` and is
-  **CLI-only** — the phone says HOLD_TOO_LONG without saying that 10 active
-  listings need 48 sold/90d to clear BOOTSTRAP's 21-day ceiling. That number IS
-  the sourcing rule for retail arbitrage, and it is one line of already-tested
-  core. Top candidate to fold into the next screen work. → Gate 6.
+- ~~**B70**~~ ✅ **Closed 2026-09-10 in 6.0.1.**
 - **B71** ⚠️ **Condition is a real dial and retail clearance is where it bites.**
   Sealed new stock deserves high condition confidence; it currently takes the
   pessimistic 40% default (**B64**), which drags the composite against D14's

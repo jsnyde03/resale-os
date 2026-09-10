@@ -214,6 +214,24 @@ export default function Sourcing() {
                       <Text style={{ color: C.dim, fontSize: 13, lineHeight: 18 }}>{g.message}</Text>
                     </View>
                   ))}
+                  {/* ⚡ B70. Naming the gate is not the same as naming the way
+                      out, and the hold is the gate that refuses most real
+                      candidates. It inverts exactly, so say the number. */}
+                  {verdict.failedGates.some((g) => g.code === 'HOLD_TOO_LONG') ? (
+                    <View style={{ paddingTop: 10, borderTopWidth: 1, borderTopColor: C.line, marginTop: 6 }}>
+                      <Text style={{ color: C.text, fontSize: 14, lineHeight: 20 }}>
+                        Against {verdict.holdFix.againstActiveListings} listed, you need{' '}
+                        <Text style={{ color: C.good }}>
+                          {verdict.holdFix.soldNeededIn90Days} sold in 90 days
+                        </Text>{' '}
+                        to clear the {verdict.holdFix.ceilingDays}-day ceiling.
+                      </Text>
+                      <Muted>
+                        That is the number to look for before anything else — margin rarely
+                        refuses a flip at this bankroll, hold time does.
+                      </Muted>
+                    </View>
+                  ) : null}
                 </Card>
               ) : null}
 
