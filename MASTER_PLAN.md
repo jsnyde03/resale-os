@@ -127,24 +127,11 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       ⚡ `views.ts` and `sourcing.ts` moved to `src/screens/` (**B62**, **B65**);
       `data/resale.db` is retired and refuses to write, so it cannot become a
       second head. 597 → 522 tests.
-- [ ] **5.11** ⚡ **ACTIVE BUILD — the Gate 5 PHASE after-scan.** ✅ **.1 done**
-      (three stale scope lists closed, **B67** with them). A per-item scan cannot
-      see what only appears with the whole phase in view.
-  - [ ] **5.11.2** Apply 5.9c's lessons BACKWARDS to already-shipped screens —
-        every surface that gates, classifies or reports, checked for the
-        fails-open shape (**B66**) and for a class asserted in only one direction
-        (the SCORED/QUOTED miss was exactly that).
-  - [x] **5.11.3** ✅ **Done 2026-09-10.** 54 open items checked against the code.
-        **19 were wrong**: 3 stale duplicates sitting beside their own closures,
-        8 moot (they described deleted surfaces), 8 re-pointed at where the
-        premise actually moved. ⛔ **And it found a live regression — 5.12.**
-  - [ ] **5.11.4** Gate 5's exit criteria to the log, and the start-here docs
-        made to match the code. ⚠️ **`README.md` carries ~14 references to
-        deleted code and the repo is PUBLIC.**
-  - [ ] **5.11.5** ⛔ **NOT RNTL.** B60's trigger is *"only if a wiring bug
-        actually reaches the device"* and it has not fired — 5.9c's failure was a
-        dropped tag, which `tsc` caught.
-
+- [x] **5.11** ✅ **Done 2026-09-10. The Gate 5 phase after-scan.** Three stale
+      scope lists closed (**B67**); 5.9c's lessons applied backwards, finding that
+      **two of four verdicts are unreachable** (**B72**); 54 backlog items checked
+      against the code with **19 wrong**; both start-here docs made to match. ⚡ It
+      found **5.12**, which is why Gate 5 is *built* rather than *closed*.
 - [ ] **5.12** ⛔ **THE FUND'S RULES CANNOT BE CHANGED. Found by 5.11.3's
       reconciliation, 2026-09-10.** `setPolicy` and `setTaxProfile` still exist on
       `FundStore` and **nothing outside the test scenarios calls them** — `policy

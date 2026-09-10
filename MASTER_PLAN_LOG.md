@@ -3707,3 +3707,60 @@ controls. ⚠️ It also means **Gate 5's exit criteria were incomplete** — "t
 desktop is gone" was met while a thing only the desktop could do went with it.
 The phase after-scan is the only pass that could have caught that, which is the
 argument for the rule.
+
+### 5.11.4 — Gate 5's exit criteria, and the docs made to match the code
+
+**Gate 5's exit, clause by clause.**
+
+1. **The fund lives on the phone.** 55 events exported, transferred and imported
+   on device on 2026-09-10, every regenerated hash compared against the exported
+   one. `data/resale.db` is a retired snapshot and refuses to write.
+2. **It knows its exact position offline.** Every figure on every screen is
+   derived from the ledger on the device at that instant — no snapshot, no sync,
+   no network. That was Jason's constraint on the whole gate: *"the app should
+   be smart enough to exactly know my current bankroll."*
+3. **The desktop is gone.** `src/cli`, `src/app`, `src/server` — 3,295 lines —
+   plus the Next.js surface. Runtime dependencies are `@noble/hashes` and `zod`.
+
+Proven by **44/44 against Apple's SQLite** in CI on the commit that deleted the
+desktop: the same cases passed before and after, which is the assertion that
+matters. Shipped to TestFlight on Codemagic's first run.
+
+⚠️ **The exit criteria were incomplete, and the phase after-scan is what showed
+it.** "The desktop is gone" was satisfied while a capability only the desktop
+had went with it — nothing can change the fund's policy or tax profile. That is
+**5.12**, and it is the honest reason Gate 5 is *built* rather than *closed*.
+
+**`README.md` is rewritten.** It was a CLI tutorial for software that no longer
+exists: fourteen command examples, a ranked-feed walkthrough, a backup-config
+recipe, and a factual error — it claimed the tax tables were 2025 figures marked
+`verified: false` when `DEFAULT_TAX_TABLES` has been the **verified 2026** set
+since 4.6. On a public repository that is the file people read first.
+
+The conceptual content survived almost entirely, because it was never about the
+CLI: derived hold time, gross-versus-net, verify-then-promote, three profit
+numbers kept apart, the seven rules, the account model. What changed is the
+surface those ideas are demonstrated on. ⚡ And the hold-time formula gained the
+inversion that makes it usable in a shop — **sold >= 4.3 x (active + 1)** to
+clear BOOTSTRAP's 21-day ceiling.
+
+### 5.11.5 — not RNTL, and why that is a decision rather than a deferral
+
+⛔ **`@testing-library/react-native` is NOT being added.** B60's condition is
+Jason's and it is precise: *add it only if a wiring bug actually reaches the
+device.* It has not fired.
+
+The temptation to call it fired came from 5.9c, where the first device build
+failed on `mobile/app/index.tsx` — but that was a **dropped closing tag**, which
+`tsc` caught before any device saw it, not a binding pointed at the wrong state.
+A typechecker cannot see the second kind and that is exactly what RNTL would be
+for. **Reading a syntax error as the trigger would spend a dependency on
+evidence that does not support it**, and the gap stays named instead.
+
+⚠️ What actually covers the screens is worth restating, because "no RNTL" reads
+like "untested": the form models are pure and tested in Node, the screen models
+live in `src/screens/` and are tested where there is no browser and no device,
+and `screen-scenario.ts` executes the whole sequence a person performs against
+Apple's SQLite on a simulator. **What none of them see is whether the price box
+is bound to `price`.** That is the gap, it is one file's worth of risk, and it
+is named rather than guessed at.

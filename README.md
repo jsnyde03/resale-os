@@ -1,18 +1,24 @@
 # Resale OS
 
-A private resale intelligence and capital management system. One operator, one
-machine, real money.
+A private resale intelligence and capital management system. One operator, real
+money, **and it runs on a phone.**
 
 It runs a resale business as a fund: it decides what may be bought, how much
 capital may be risked, tracks every item and transaction, splits profit between
 tax, reserves, the owner and reinvestment, and expands its own operating
 boundaries as the bankroll grows.
 
-**Status:** Gates 1 to 4 complete — deterministic capital engine and ledger,
-plus opportunity scoring, a ranked feed, prediction accuracy and verified
-backups. **Gate 5 — the phone is the system — is nearly done:** the engine, the
-ledger, every screen and the backups run on the device, verified 43/43 against
-Apple's SQLite in CI. 583 tests green.
+**Status:** Gates 1 to 5 built. The deterministic capital engine, the ledger,
+opportunity scoring, prediction accuracy and verified backups — **all of it runs
+on the device**, verified 44/44 against Apple's SQLite in CI and shipped to
+TestFlight. **The desktop was deleted on 2026-09-10**: no CLI, no web app, no dev
+server. 526 tests green.
+
+⚡ **Why a phone.** The operator sources in shops. Nothing may be installed that
+reaches a home machine, a hosted ledger dies where there is no signal, and any
+sync scheme is only "exact as of last sync" — which is the assuming the design
+rejects. Exact, offline and no home PC leaves one architecture: **the ledger
+lives on the phone.**
 
 **Live since 2026-09-08 on a real $50 bankroll.** BOOTSTRAP mode: $20 max per
 item, 21-day hold ceiling, $8 minimum profit — and **nothing is set aside until
@@ -43,21 +49,14 @@ Requires Node >= 22.5 (for the built-in `node:sqlite` — there is nothing to co
 
 ```bash
 npm install
-npm run check          # five gates: bytes, imports, phone bundle, types, 583 tests
+npm run check          # five gates: bytes, imports, phone bundle, types, 526 tests
+cd mobile && npx expo start
 ```
 
-Run a real fund:
-
-```bash
-npx tsx src/cli/index.ts contribute --amount=50
-npx tsx src/cli/index.ts buy  --id=pin-01 --name="Disney 50th pin" \
-                              --category=DISNEY_PINS --price=12 --resale=32 \
-                              --sold=60 --active=4
-npx tsx src/cli/index.ts sell --id=pin-01 --gross=32 --fee=4.24 --payment=0.30 \
-                              --postage=4.68 --packaging=0.35 --days=5
-npx tsx src/cli/index.ts status
-npx tsx src/cli/index.ts verify
-```
+⚠️ **There is no command-line interface.** `npm run check` is the whole
+developer surface; the operator surface is the app. The engine is imported into
+it unchanged — `core + scoring + domain` moved to React Native with **zero
+edits**, which is what the purity rule below was for.
 
 ### How long it will take to sell is derived, not typed
 
@@ -68,9 +67,15 @@ sold in 90 days, how many are listed now. The hold time comes out of them.
 expectedDays = 90 × (activeListings + 1) / soldLast90Days
 ```
 
-The `+ 1` is your own listing joining the queue. `--days=7` still works as a hand
-estimate, but it carries a fixed **30% confidence** — below every mode's floor —
-so a guess can never clear the gate on its own.
+The `+ 1` is your own listing joining the queue. A hand estimate still works but
+carries a fixed **30% confidence** — below every mode's floor — so a guess can
+never clear the gate on its own.
+
+⚡ **Inverted, that is the sourcing rule you can use in a shop:** to clear
+BOOTSTRAP's 21-day ceiling you need roughly **4.3 x (active + 1)** sold in 90
+days — ten competing listings means 48 sold. Measured against the live policy,
+clearance flips clear the profit and ROI floors easily and are refused on **hold
+time**, which is the constraint that actually decides.
 
 `headroom` gives you the number to look for in a shop:
 
@@ -79,21 +84,16 @@ To sell inside 10 days against 5 active listings, you need at least
 54 sold in 90 days (26 to clear the 21-day ceiling).
 ```
 
-`npx tsx src/cli/index.ts help` lists everything.
-
 ⚠️ **`--resale` is the GROSS price you expect to sell at**, before fees. The
 system nets it through the marketplace fee model — 13.25% + $0.40 on eBay, plus
 postage and packaging — before any gate sees a profit figure. Treating gross as
 net is how a $7.01 profit looks like $17.00.
 
-⚠️ **The ledger lives at `data/resale.db` and is git-ignored.** It is the one
-file here that is not regenerable.
+⚠️ **`data/resale.db` is a RETIRED snapshot, not the fund.** The ledger moved to
+the phone on 2026-09-10 and that file no longer changes. The app keeps its own
+backups on the device.
 
-```bash
-npx tsx src/cli/index.ts backup config --to="$OneDrive/resale-os-backups"
-```
-
-After that it is **automatic** — every command that moves money writes a copy,
+Backups are **automatic** — every write makes a copy,
 because a backup that needs discipline is a backup that does not exist.
 
 The copy is verified before it is trusted: it is opened, its hash chain walked,
@@ -102,24 +102,18 @@ passes**. Verify-then-promote matters — writing straight to the destination
 would let a corrupt source destroy a good previous backup before anyone knew it
 was corrupt.
 
-`latest` is refreshed every time; one dated copy per day gives point-in-time
-recovery, pruned past 90 days, and pruning never empties the directory.
+The newest 30 are kept, and the position screen reports how many events behind
+the last copy is, so a silently failing backup cannot look like a working one.
 
-`status` reports how many events behind the last successful copy is, so a
-silently failing backup cannot look like a working one.
-
-The most useful command in the field:
-
-```bash
-npx tsx src/cli/index.ts headroom --category=DISNEY_PINS
-# DISNEY_PINS: up to $20.00 landed cost clears every capital gate.
-# To clear the $8.00 minimum profit on a $20.00 item, it has to sell for at
-# least $38.91 gross on EBAY.
-```
+⚠️ **A copy ON the device is not a backup OF the device.** The app can share one
+out, and it can only observe that a file was OFFERED — never that it arrived. It
+says exactly that, because the one claim an operator would act on by not
+checking is the one that must never be a lie.
 
 ⚠️ **Policy lives in the database, not in the code.** Changing a default in
-`policy.ts` does not change a fund that already exists. `policy show` warns when
-the two versions disagree; `policy adopt-defaults` applies them.
+`policy.ts` does not change a fund that already exists — `ensureSeeded()` only
+writes when the row is absent. ⛔ **And nothing can currently change it:** the
+commands that did went with the desktop, and the replacement screen is **5.12**.
 
 ### What that run actually does
 
@@ -142,11 +136,8 @@ hash chain: OK.  replay: OK.
 
 ### What to buy
 
-`opp` scores an opportunity against the fund as it stands right now.
-
-```bash
-npx tsx src/cli/index.ts opp add --id=cart-01 --name="retro cartridge"       --category=GAMES --price=15 --resale=39 --sold=60 --active=4       --comps=38,39,40,38.50
-```
+The **sourcing screen** scores an opportunity against the fund as it stands
+right now, on the device, offline:
 
 ```
 $15.00 landed  ->  $28.08 net  ->  $13.08 profit (87% ROI)
@@ -163,7 +154,8 @@ BUY  cart-01
   Risk 41/55, mostly share of the fund in one item, modeled downside, uncertain hold time.
 ```
 
-`opp list` is the ranked feed — best score, then least risk, then soonest to sell:
+⚠️ **The ranked feed is not on the phone yet.** It looked like this, and it is
+what **B3** and **B68** are for — nothing currently saves a score to rank:
 
 ```
 id            buy  risk  conf  days  profit    max pay   rec
@@ -180,8 +172,9 @@ slow-01       30   47    35%   315   $16.95    $20.00    REJECT
 high score *and* a low risk; collapsing them into one number would destroy that
 gate before it exists.
 
-`opp rejections` says which gate is actually binding, which is the thing to look
-at if nothing is passing.
+⚠️ **Which gate is actually binding** — the thing to look at when nothing is
+passing — needs scores to be saved first, and they are not yet. Backlog **B3**,
+behind **B68**.
 
 ### Three profit numbers, and why they are kept apart
 
@@ -199,8 +192,8 @@ as "profit" is how a business quietly spends its tax money on boxes.
 
 ### How good were the guesses?
 
-`buy --from-opp=X` carries a scored opportunity's prediction onto the item, which
-is the only thing that makes this measurable:
+Scoring an item and then recording the purchase from that screen carries the
+prediction onto the item, which is the only thing that makes this measurable:
 
 ```
 scored sales            1
@@ -230,18 +223,14 @@ SE earnings for the year the reserve is genuinely **zero**; the sale that
 crosses the line carries the whole thing at once.
 
 Income tax needs facts the ledger cannot know, so it **abstains until you set a
-profile** rather than guessing:
+profile** rather than guessing.
 
-```bash
-npx tsx src/cli/index.ts tax profile set --filing=MARRIED_JOINT \
-      --other-income=45000 --w2-wages=45000 --state-rate-bps=0
-npx tsx src/cli/index.ts tax show      # the year so far, and any shortfall
-```
-
-⚠️ **The tax tables are 2025 figures marked `verified: false`.** They are
-*accepted as adequate for 2026* by the owner, which is deliberately **not** the
-same as verified — `tax tables` shows both facts, and the acceptance expires at
-the 2027 year boundary so the question comes back.
+⚡ **The 2026 tables are VERIFIED and are the default.** The figures came from a
+sibling project's tax engine (IRS Rev. Proc. 2025-32; SSA 2026 COLA), were
+**generated by script rather than typed**, and were machine-checked back against
+the source — 65 figures, exact. ⛔ **Never hand-transcribe a bracket:** a typo is
+wrong money and reads exactly like a correct number. The 2025 tables are kept,
+still `verified: false`, for replaying older events.
 
 The owner is paid on the first profitable transaction. There is no configuration
 in which the fund keeps everything — `validatePolicy()` throws on it.
@@ -330,10 +319,9 @@ src/db/        driver, migrations, store, replay, hash chain
 src/ui/        pure form models the write screens are made of
 src/adapters/  source adapters (eBay, manual, CSV)          [Gate 6]
 src/market/    scarcity, demand, momentum, radar            [Gate 7]
-src/cli/       the operator interface — retired at 5.10
 mobile/        the Expo app; the engine is imported from src/, unchanged
-tests/         583 tests; financial logic weighted heaviest
+tests/         526 tests; financial logic weighted heaviest
 ```
 
-A visually impressive dashboard with incorrect bankroll math is unacceptable, so
-the dashboard is Gate 4 and the math was Gate 1.
+A visually impressive screen with incorrect bankroll math is unacceptable, so
+the math was Gate 1 and the screens came fourth and fifth.
