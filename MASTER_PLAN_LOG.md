@@ -4269,3 +4269,15 @@ improvement.
 until then"* and I did not correct it, because I had accepted my own sequencing.
 The plan said blocked, so blocked is what I reported — which is how a wrong plan
 becomes a wrong answer to a direct question.
+
+⚠️ **And the commit above shipped the log entry without the plan edit.** The
+script's plan replacement failed on a bad anchor — the assert threw, the write
+never ran — while the log append and the commit went ahead anyway, because they
+were separate commands in the same chain. So for one commit the log described a
+re-sequencing the queue did not contain.
+
+⛔ **Exactly the failure mode this project keeps recording, one turn after
+recording it again**: `git rm` aborting while `npm run check` went green over a
+prune that had not happened; a python `print` dying before its `write`. **A step
+that fails silently in a chain of steps that continue.** The fix each time is the
+same and it is not cleverness \u2014 verify the effect, not the exit.
