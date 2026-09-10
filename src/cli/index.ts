@@ -291,8 +291,8 @@ function main(): void {
   backup                                      copy the ledger, and verify the copy
   backup config --to=dir [--auto=off] [--retain-days=90]
   backup status                               is it current, and where
-  export [--to=resale-export.json]      # the fund, as commands
-  import --from=resale-export.json      # replays and verifies every hash
+  export [--to=data/resale-export.json] # the fund, as commands (gitignored)
+  import --from=data/resale-export.json # replays and verifies every hash
   adjust --account=LIQUID --amount=-1.00 --reason="..." [--reverses=evt_X]
                                               correct a mistake; append-only, so
                                               both the error and the fix remain
@@ -1239,7 +1239,12 @@ ${pad('  priced by you', 24)}${report.quotedN}`,
       case 'export': {
         // The fund as its commands, which is all a fund is — everything else
         // is derived. Written to a file the phone can import.
-        const out = args.flags.to ?? 'resale-export.json';
+        // ⛔ Defaults INTO `data/`, which is gitignored, because this payload
+        // carries `config` and config carries `tax_profile`. The old default
+        // wrote to the repo ROOT, where nothing ignored it — the documented
+        // workflow was one `git add -A` from publishing the operator's filing
+        // status on a public repo, permanently. Found 2026-09-10.
+        const out = args.flags.to ?? 'data/resale-export.json';
         const dump = exportLedger(store.db, now);
         writeFileSync(out, JSON.stringify(dump, null, 2), 'utf8');
         console.log(`exported ${dump.events.length} events to ${out}`);

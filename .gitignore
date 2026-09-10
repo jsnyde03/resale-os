@@ -8,6 +8,12 @@ coverage/
 .env.local
 data/*.db
 data/backups/
+# ⛔ An EXPORT carries `config`, and config carries `tax_profile`. The repo
+# is public and GitHub keeps objects fetchable by SHA, so a single `git add -A`
+# is unrecoverable. `cli export` defaults into `data/`; these cover a --to=
+# that lands anywhere else. B56 cost a whole fresh repo for this exact class.
+data/*.json
+*-export.json
 data/*.db-journal
 data/*.db-wal
 data/*.db-shm

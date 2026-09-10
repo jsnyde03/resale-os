@@ -3362,3 +3362,52 @@ READ fails safe** — `check-source-bytes.mjs` enumerates source extensions
 precisely so it does not read a PNG and report its bytes as control characters;
 inverting that one would break it. The test is which way the omission falls:
 toward *not checking* something, or toward *not trusting* something.
+
+## 2026-09-10 — 5.9 shipped, and the export was a leak waiting for one `git add -A`
+
+**Codemagic built and published on the first run**, which is what 5.9 said that
+run would be: the validation pass. Hermes pin, `expo prebuild`, signing, IPA,
+TestFlight upload — the whole lane, adapted from `debt-app-v1`, correct first
+time. The one thing verified from here beforehand was the generated project name:
+`codemagic.yaml` hardcodes `ios/ResaleOS.xcodeproj`, and rather than trusting the
+comment that said so, the GitHub Actions log was checked for what `prebuild`
+actually emits — `ResaleOS.app`, `.xcodeproj`, `.xcworkspace`. It matched.
+
+⚠️ **The 80-day rebuild is NOT a scheduled workflow.** The plan assumed a second
+Codemagic workflow with a `triggering:` cron. Jason deploys manually, so it is a
+**date obligation**, and this repo already has the right home for those — the
+Recurring table, built precisely because "a recurring obligation with a checkbox
+gets ticked once and then never fires again". ⚠️ I could not verify whether
+Codemagic even schedules from `codemagic.yaml` (web search was unavailable), and
+**declined to write a recurring job on an unverified premise** — which is the
+same reasoning that held the cron back in the first place.
+
+### ⛔ The export carried the tax profile into an untracked-by-nothing path
+
+About to generate the export to make 5.5 one step, I checked where it lands
+first. **`cli export` defaulted to `resale-export.json` in the repo ROOT**, and
+`.gitignore` covered `data/*.db` and `data/backups/` — **not** `*.json`, and not
+the root at all.
+
+The payload is the commands **plus `config`**, and `config` carries
+`tax_profile`. Verified by running an export to a temp path outside the repo and
+printing the **keys only**: `policy, tax_profile, tax_tables_acceptance,
+backup_settings, backup_state`.
+
+⛔ **So the documented way to move the fund onto the phone was one `git add -A`
+from publishing a real person's filing status, income and county on a public
+repo — permanently, because GitHub keeps objects fetchable by SHA.** That is
+**B56's exact class**, and B56 already cost this project a whole fresh repository.
+It had not recurred; it had simply never been closed on this path.
+
+Fixed in two layers, because one is a rule somebody has to remember: the default
+now writes into `data/` (already the home of the non-committable things), and
+`.gitignore` gained `data/*.json` and `*-export.json` so a `--to=` pointed
+anywhere else is still caught. Both verified with `git check-ignore`. The rule is
+recorded in `CLAUDE.md` next to the tax-profile rule it belongs to: **an export
+is not a document — it is the ledger plus the profile.**
+
+⚠️ **Worth noting how it was nearly missed.** The plan called generating the
+export a convenience step to unblock Jason. Checking where a file lands before
+writing it is not a step that appears in any plan; it appeared because the
+payload's contents were checked first rather than after.

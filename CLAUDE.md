@@ -36,6 +36,15 @@ force-pushing does not take it back: **GitHub keeps the objects, fetchable by
 SHA.** Measured twice on this project. Write "the operator's county", never the
 county. Same for `C:/Users/<name>/...` paths.
 
+⛔ **`cli export` WRITES SUCH A FILE.** Its payload is the commands **plus
+`config`, and `config` carries `tax_profile`.** Until 2026-09-10 it defaulted to
+`resale-export.json` in the **repo root**, which nothing ignored — the documented
+way to move the fund onto the phone was one `git add -A` from publishing a real
+person's filing status, permanently, on a public repo. It now defaults into
+`data/`, and `.gitignore` covers `data/*.json` and `*-export.json` as well. ⚠️ **An
+export is not a document — it is the ledger plus the profile.** Treat it like the
+database, never like an artifact.
+
 **Gates 1–4 are closed. Gate 5 — THE PHONE IS THE SYSTEM — is nearly done**
 (2026-09-09). The ledger, the engine, every write and read screen, backups and
 the import all run on the device: **43/43 against Apple's SQLite** in
@@ -53,8 +62,8 @@ orientation.
 
 | | |
 |---|---|
-| **Move the fund** | `cli export`, get the JSON onto the phone, import it. ⚡ **Everything above is machinery until this happens** — the phone holds an empty ledger today. |
-| **Codemagic** | Add the repo and point it at the `AppleConnect` group. `codemagic.yaml` is written; the first run is the validation pass. |
+| **Move the fund** | ⚡ **THE ONE THING LEFT, and it is now one step.** The export is already generated at **`data/resale-export.json`** (55 events, gitignored). Get it onto the phone — the app is on TestFlight as of 2026-09-10 — and import it. ⛔ **Everything above is machinery until this happens**, and **5.10 cannot start** until it does, because `cli export` is how the fund gets there and 5.10 deletes the CLI. |
+| ~~**Codemagic**~~ | ✅ **Done 2026-09-10 — built AND published to TestFlight on the first run.** ⚠️ Deployment is **manual**, so the 80-day rebuild is a reminder in MASTER_PLAN's Recurring table, not a scheduled workflow. |
 | **Two repos** | Delete `resale-os-prescrub-2` and `resale-os-prescrub-private`. Both are private, both still hold the scrubbed tax profile, and the CLI token cannot delete. The history is bundled and restore-verified in the OneDrive backups folder. |
 | **B26** | Verify the operator's state and local rates against the published table. Half closed — the local rate is confirmed; the state marginal is not. |
 | **D2** | The owner split (20/10/70) is still a default. Not live below $100 NAV, and the fund is at $50 — four to six flips away. |

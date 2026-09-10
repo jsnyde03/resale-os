@@ -105,15 +105,12 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
 - [x] **5.8.7** ✅ **Expense reversal, the half 5.6.4 withheld.** Reached from
       the ledger row that has the event id, capped at what is still standing,
       and proven on-device to move the ledger and the analytic table together.
-- [~] **5.9** ✅ **Decided 2026-09-09: TestFlight via CODEMAGIC** (Jason —
-      "look at the debt app for how one used it before"). `codemagic.yaml`
-      written, adapted from `debt-app-v1`'s proven Expo-56 lane and carrying
-      the Hermes pin and the build-the-right-commit banner.
-      ⏳ **Needs Jason:** add the repo in Codemagic and point it at the
-      `AppleConnect` variable group. Nothing else can be done from here, and
-      the FIRST run is the validation pass. The 80-day scheduled rebuild is a
-      second workflow, added only after this one passes — scheduling it now
-      would schedule a recurring failure.
+- [x] **5.9** ✅ **Done 2026-09-10. IPA built and PUBLISHED to TestFlight on the
+      FIRST run** — the run that was always going to be the validation pass.
+      Codemagic, adapted from `debt-app-v1`'s Expo-56 lane, carrying the Hermes
+      pin and the build-the-right-commit banner. ⚠️ **The 80-day scheduled
+      rebuild is now unblocked** — it was held until a real run passed, and one
+      has. → **B57** is now visible in TestFlight.
 - [x] **5.9b** ✅ **Done 2026-09-09.** A backups screen with a share sheet:
       `expo-sharing`, the newest copy first, and wording that claims only what
       the app can actually observe — a file was OFFERED elsewhere, not that it
@@ -209,6 +206,7 @@ being "done".
 | when | what |
 |---|---|
 | **Every January** | **The tax-table review.** A new tax year means new federal brackets, a new standard deduction and a new SS wage base. Add `TAX_TABLES_<year>`, generate it from GigWorkTracker's config **by script**, and re-run the 65-figure comparison — nothing re-checks that transcription automatically, because a cross-repo test would red-gate this project whenever the other app moves *(was B47)*. ⚠️ **GigWorkTracker needs the same review in the same month** — its ROADMAP §6 describes its half. Do them together or they drift *(was B48)*. |
+| **Every 80 days** | **Rebuild and re-publish to TestFlight.** Builds expire after **90 days**, so this fires before the expiry rather than after it. ⚠️ **Not a CI cron** — Jason deploys Codemagic manually (2026-09-10), so this is a reminder, not a workflow. The plan previously assumed a second scheduled workflow; that assumption is retired. First publish: **2026-09-10**, so the next is due **2026-11-29**. |
 | **At each year boundary** | Any `TaxTablesAcceptance` expires by design. If the tables for the new year are not in yet, `tax show` starts warning again — that is the system asking, not a bug. |
 
 ---
