@@ -4246,3 +4246,26 @@ The fix has a precedent in this codebase: `validatePolicy` is exhaustive **by
 construction**, driven off a defaults object's keys, after a hand-written field
 list let `minSellThroughBps` through as `undefined`, reach a gate as `NaN`, and
 print *"vs a NaN% minimum"* — failing closed by luck.
+
+### 6.1 re-sequenced — the blocked half was not the important half
+
+Jason asked what 6.1 was waiting for, and answering it precisely showed the
+sequencing was wrong.
+
+6.1 was ordered eBay-first and marked **BLOCKED**. eBay approval gates only the
+*finding* half. ⚡ **Three of the four gates that refused every candidate in
+today's measurements are fed by SOLD data** — hold time
+(`90 × (active + 1) / sold90`), confidence (comps are 40% of it), and
+sell-through — and **SoldComps needs no eBay account, no approval and no card**:
+100 requests a month on the free tier.
+
+⚠️ **And the use case makes it sharper.** On a clearance rack the operator is
+holding the item. *Finding* is the half he does not need; *what does it sell for
+and how fast* is the whole question. Ordering the vendor-gated, less useful half
+first would have idled the build behind an approval that buys the smaller
+improvement.
+
+⛔ **I also let a wrong statement stand.** Jason said *"I can't do anything else
+until then"* and I did not correct it, because I had accepted my own sequencing.
+The plan said blocked, so blocked is what I reported — which is how a wrong plan
+becomes a wrong answer to a direct question.
