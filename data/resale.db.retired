@@ -1,14 +1,11 @@
-This ledger is RETIRED. The fund lives on the phone.
+This database is HISTORY, not the fund.
 
-Moved 2026-09-10: 55 events exported, transferred and imported on device,
-every regenerated hash compared against the exported one.
+The fund moved to the phone on 2026-09-10: 55 events exported, transferred and
+imported on device, every regenerated hash compared against the exported one.
+This file is a snapshot at that moment and does not move again.
 
-Recording anything here would FORK the chain. Both databases share a history,
-the ledger is append-only over a hash chain, and a fork cannot be merged —
-importLedger compares every hash and refuses a mismatch by design.
+The CLI that read it was deleted at 5.10 the same day, along with the whole
+desktop surface. Recovering it means checking out a commit from before that.
 
-Reads are still allowed (status, verify, ledger, items, export) because until
-a backup has actually left the phone, data/resale.db is the fund's only other
-copy. Deleting it would trade a fork risk for a loss risk.
-
-Delete this file to undo, deliberately.
+Do not create a second ledger here. The chain is append-only and a fork cannot
+be merged - an import compares every hash and refuses a mismatch by design.

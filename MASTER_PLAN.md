@@ -130,10 +130,12 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
         a backup leaves the phone this is the fund's only other copy. ⚡ The list
         names what may RUN, so a command nobody thought of is refused. Planted
         twice (guard removed → 3 red; allowlist ignored → reads red).
-  - [ ] **5.10.2** ⏳ **[NEEDS JASON] A backup must actually LEAVE the phone**
-        before the deletion in .4. Today the desktop db and its OneDrive copies are
-        the safety net; retiring them makes the phone the fund's only home. 5.9b
-        built the share sheet and can only observe that a file was *offered*.
+  - [x] **5.10.2** ✅ **Done 2026-09-10.** A backup left the phone (Jason).
+        ⚠️ **My framing of this was too strong and is corrected:** 5.10.4 deletes
+        CODE, not `data/resale.db`, and code is recoverable from git — so the
+        desktop copy was never destroyed, only made harder to read. The real
+        ongoing risk is narrower: it is a stale snapshot at 55 events the moment
+        the phone records anything.
   - [x] **5.10.3** ✅ **Done 2026-09-10.** `views.ts` and `sourcing.ts` are now
         `src/screens/` — screen MODELS, decided outside the `.tsx` so they can be
         tested where there is no browser and no device. Closes **B62** and **B65**.
@@ -141,13 +143,23 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
         for `src/screens`, and `ci-scope` caught it missing from the lane's `paths:`
         filter — B67's exact failure mode, found by a control rather than by a
         person, one hour after that control was written.
-  - [ ] **5.10.4** Delete `src/cli`, `src/app` and what is left of `src/server`.
-        ⛔ Gated on .1, .2 and .3.
-  - [ ] **5.10.5** Prune what only they used — Next config and deps,
-        `tsconfig.web.json`, the web suites, the auth/proxy surface,
-        `check-binding.mjs`.
-  - [ ] **5.10.6** Point every gate at the new shape: `ci-scope` test, the lane's
-        `paths:` filter, `lint:phone` roots, the three typecheck configs.
+  - [x] **5.10.4** ✅ **Done 2026-09-10. 3,295 lines gone** — `src/cli`,
+        `src/app`, six `src/server` files, and the six test files that only
+        covered them. 597 → 522 tests, all green: nothing outside those
+        directories imported them.
+  - [x] **5.10.5** ✅ **Done 2026-09-10.** `proxy.ts`, `next.config.ts`,
+        `tsconfig.web.json`, `postcss.config.mjs`, `next-env.d.ts`,
+        `check-binding.mjs`; the `dev`/`build`/`start`/`serve`/`cli` scripts; and
+        next, react, react-dom, tailwind. **Runtime deps are now `@noble/hashes`
+        and `zod`.** ⚠️ `git rm` is all-or-nothing and ABORTED on the one
+        gitignored path — the gates went green over a prune that had not
+        happened. Verified by listing the files, not by trusting the green.
+  - [x] **5.10.6** ✅ **Done 2026-09-10.** Lane filter gained `src/screens/**`
+        (**by the gate, not by memory**) and dropped `src/server/**`; typecheck is
+        two configs; `.gitignore` and the retired marker no longer describe a CLI
+        that exists. ⚡ **`CLAUDE.md` swept of 15 stale references** — it was
+        telling a new session to run a deleted CLI. ⚠️ **`README.md` still has
+        ~14 and is public** → 5.11.4.
   - [ ] **5.10.7** On-device verification.
 - [ ] **5.11** The Gate 5 phase after-scan. ✅ **.1 done 2026-09-10** (three stale
       scope lists closed, **B67** with it). Remaining sub-steps are in the log; they

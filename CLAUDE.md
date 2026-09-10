@@ -8,17 +8,20 @@ next.** Exactly one item is decomposed on it — the active one. Detail and
 rationale live in `MASTER_PLAN_LOG.md`; read the entry for anything you are
 about to change.
 
-**Status (2026-09-09): Gates 1-4 CLOSED. Gate 5 — THE PHONE IS THE SYSTEM — is ACTIVE.**
+**Status (2026-09-10): Gates 1-4 CLOSED. Gate 5 — THE PHONE IS THE SYSTEM —
+is all but closed: the fund LIVES ON THE PHONE and the desktop is deleted.**
 
-Live on a real **$50** bankroll. 463 tests. `npm run check` runs four gates:
-source bytes, import direction, typecheck, tests.
+Live on a real **$50** bankroll. **522 tests.** `npm run check` runs five gates:
+source bytes, import direction, phone bundle, typecheck, tests.
 
 ---
 
 ## Where things stand — read this first
 
-**The fund is live and real.** $50 of actual money, `data/resale.db`, backed up
-to OneDrive after every command that moves money.
+⚡ **The fund is live, real, and ON THE PHONE.** $50 of actual money. The app
+holds the ledger; it is backed up on-device after every write, and a copy has
+been shared off it. `data/resale.db` is a RETIRED snapshot at 55 events — it is
+history, not the fund.
 
 ```
 Bankroll (NAV)   $50.00    BOOTSTRAP: $20 max/item, 21-day ceiling, $8 min profit
@@ -45,10 +48,10 @@ person's filing status, permanently, on a public repo. It now defaults into
 export is not a document — it is the ledger plus the profile.** Treat it like the
 database, never like an artifact.
 
-**Gates 1–4 are closed. Gate 5 — THE PHONE IS THE SYSTEM — is nearly done**
-(2026-09-09). The ledger, the engine, every write and read screen, backups and
-the import all run on the device: **43/43 against Apple's SQLite** in
-`.github/workflows/driver-contract-ios.yml`.
+**The ledger, the engine, every write and read screen, the sourcing screen,
+backups and the import all run on the device: 44/44 against Apple's SQLite** in
+`.github/workflows/driver-contract-ios.yml`. The app ships via Codemagic to
+TestFlight.
 
 ⛔ **THE DESKTOP LEDGER IS RETIRED AND REFUSES TO WRITE (2026-09-10).** The fund
 moved to the phone, and from that instant two databases shared one 55-event
@@ -66,9 +69,12 @@ writes every key, so a row would have travelled and retired the live fund on
 arrival. ⛔ **The allowlist names what may RUN**, so a command added later is
 refused rather than admitted.
 
-⛔ **The desktop is being RETIRED, not maintained.** `src/cli`, `src/server` and
-`src/app` go at 5.10. ⚠️ **`src/server/views.ts` (**B62**) and
-`src/server/sourcing.ts` (**B65**) MOVE rather than go** — the phone renders both.
+⛔ **THE DESKTOP IS GONE (5.10, 2026-09-10).** `src/cli`, `src/app` and
+`src/server` — 3,295 lines — deleted, with the Next.js surface and six test
+files. ⚡ **`views.ts` and `sourcing.ts` MOVED to `src/screens/`** (B62, B65):
+they are screen MODELS and the phone renders them. There is no web app, no dev
+server and no CLI. **Anything below describing one is history** — read it in the
+log, not as instructions.
 
 See `MASTER_PLAN.md` for the decomposed active item; it is the queue, this is
 orientation.
@@ -77,7 +83,7 @@ orientation.
 
 | | |
 |---|---|
-| **Move the fund** | ⚡ **THE ONE THING LEFT, and it is now one step.** The export is already generated at **`data/resale-export.json`** (55 events, gitignored). Get it onto the phone — the app is on TestFlight as of 2026-09-10 — and import it. ⛔ **Everything above is machinery until this happens**, and **5.10 cannot start** until it does, because `cli export` is how the fund gets there and 5.10 deletes the CLI. |
+| ~~**Move the fund**~~ | ✅ **Done 2026-09-10.** 55 events imported on device, every hash reproduced. |
 | ~~**Codemagic**~~ | ✅ **Done 2026-09-10 — built AND published to TestFlight on the first run.** ⚠️ Deployment is **manual**, so the 80-day rebuild is a reminder in MASTER_PLAN's Recurring table, not a scheduled workflow. |
 | **Two repos** | Delete `resale-os-prescrub-2` and `resale-os-prescrub-private`. Both are private, both still hold the scrubbed tax profile, and the CLI token cannot delete. The history is bundled and restore-verified in the OneDrive backups folder. |
 | **B26** | Verify the operator's state and local rates against the published table. Half closed — the local rate is confirmed; the state marginal is not. |
@@ -93,7 +99,7 @@ margin play needing hold tolerance a $50 fund does not have. Backlog **B28**.
 ### Five gates run on every check
 
 ```
-npm run check    # source bytes · import direction · PHONE BUNDLE · typecheck · 583 tests
+npm run check    # source bytes · import direction · PHONE BUNDLE · typecheck · 522 tests
 ```
 
 ⚡ **`lint:phone` walks the import graph** from every `src/` module the phone
@@ -113,7 +119,7 @@ green. A control that has never been planted is not a control.
 Break any of these and the product stops being what it is.
 
 1. **`src/core/**` is pure.** No I/O, no clock, no randomness, no framework. It
-   imports nothing from `db`, `server` or `cli`. The clock is passed in.
+   imports nothing from `db` or `screens`. The clock is passed in.
 2. **Integer cents. Always.** No floats in the ledger, ever. Rates are integer
    basis points. `allocate()` is remainder-exact.
 3. **The ledger is append-only double-entry.** Balances are derived by summing
@@ -199,10 +205,11 @@ Break any of these and the product stops being what it is.
   in the file.** `\b` is a backspace. It happened THREE times on 2026-09-09 — in
   a regex that then matched nothing, and twice in this very rule. `lint:bytes`
   caught all three. Use a raw string (`r'...'`), or the Edit tool.
-- ⛔ **Screens never do arithmetic on money**, and `npm run lint:imports` now
-  enforces it in `src/app` and `src/server`. `formatCents` renders it;
-  `toDollarsInput` makes it editable in a form. The rule was stated in 4.2 and
-  broken three times in 4.11 before anything checked.
+- ⛔ **Screens never do arithmetic on money**, and `npm run lint:imports`
+  enforces it over the WHOLE tree minus `src/core` — an exemption list, so a new
+  screen corpus is swept the day it is born. `formatCents` renders it;
+  `toDollarsInput` makes it editable in a form. Stated in 4.2, broken three
+  times in 4.11 before anything checked.
 - ⚠️ **Run the whole `npm run check`, not the one gate you are editing.** A
   Python `\b` put four literal 0x08 bytes into a regex, which then matched
   nothing; `lint:bytes` named the file and byte the moment it ran, but I had
@@ -224,16 +231,14 @@ Break any of these and the product stops being what it is.
   `LedgerReader` plus writes — that shape invites one more capability each time.
   Saving opportunities and changing their status from the phone is tier 3, still
   closed, and is Gate 5's **5.5**.
-- ⛔ **The dashboard reaches the ledger through `src/server/views.ts` and
-  nowhere else**, and `npm run lint:imports` enforces it — `src/app` may not
-  import `src/db`, `src/cli` or `node:sqlite`. The view layer does no
-  arithmetic on money; even formatting goes through `formatCents`. A screen
-  that needs a number it does not have gets it added to `src/core` with tests.
-- ⚠️ **Two tsconfigs, and `npm run typecheck` runs BOTH.** The root is node-only
-  by design (no DOM, no JSX); `tsconfig.web.json` is the web half. Next rewrites
-  whichever config it is pointed at, so `next.config.ts` sets
-  `typescript.tsconfigPath` — otherwise it edits the root one and the split is
-  gone. `agentRules: false` likewise stops `next dev` appending to this file.
+- ⛔ **A screen that needs a number it does not have gets it added to
+  `src/core` with tests** — never computed in the screen. `src/screens/views.ts`
+  is the read model and does no arithmetic on money; even formatting goes
+  through `formatCents`.
+- ⚠️ **Two tsconfigs, and `npm run typecheck` runs BOTH.** The root is
+  node-only (no DOM, no JSX); `mobile/tsconfig.json` is the phone's. ⛔ **The
+  phone half was missing from `typecheck` until 2026-09-10**, so every screen
+  was typechecked only in CI — fifteen minutes away, on a macOS runner.
 - ⛔ **A DEV SERVER EXECUTES CODE THAT DOES NOT TYPECHECK.** On 2026-09-08 a
   `store.commit()` was planted in `page.tsx` to prove `LedgerReader` rejected
   it. `tsc` rejected it exactly as intended — and a **forgotten dev server on
@@ -242,46 +247,26 @@ Break any of these and the product stops being what it is.
   ADJUSTMENTs (a CONTRIBUTION touches two accounts and an adjustment only pairs
   against retained earnings); the 47 events and their reversal are in the
   ledger forever, which is what append-only means.
-  **Three rules came out of it:** ⚠️ *check every dev port before editing app
-  files*, not just the one you started; ⚠️ **never plant a side effect in a
-  file a running server can execute** — plant type errors and verify with
-  `tsc`, then restore before starting anything; and ⛔ **a type is a
-  compile-time promise only** — `withStore` now hands screens an object that
-  physically has no `commit` on it, so the same mistake gets a `TypeError`
-  instead of writing to a real financial record.
-- ⚠️ **The auth gate is on `withStore`, NOT in `src/proxy.ts`.** Next's own docs
-  say proxy "should not be used as a full session management or authorization
-  solution", and a routing check is default-open: it protects the paths someone
-  remembered to match. Gating the DATA means a new screen is gated the moment it
-  reads anything. The proxy only redirects so an expired session sees a login
-  form. ⛔ **No loopback exemption anywhere** — a tunnel makes every remote
-  request arrive looking local.
-- ⛔ **The dev server binds `0.0.0.0` unless told otherwise**, which put the whole
-  financial position on the LAN with no auth for two items. `dev` and `start`
-  now pass `--hostname 127.0.0.1`. Reading it on a phone needs LAN access, which
-  needs the auth gate (4.9) — do not undo the binding without doing 4.9 first.
-- ⛔ **The feed reports stored verdicts; it never recomputes them.** Re-running
-  today's policy over an old row would show a score that was never the reason
-  for any decision. A row whose `policy_version` has moved on is marked **stale**
-  and keeps its numbers; re-scoring is a CLI action because it is a decision.
-  ⚠️ An UNSCORED row (`policy_version === null`) is not stale — different fact.
-- ⚠️ **The dashboard reaches opportunities through `OpportunityReader`**, not
-  `opportunities()` — the repository can `save()` and `setStatus()`. Both share
-  the same module-level query functions, so there is one implementation of the
-  ranking reachable two ways with different powers.
+  ⚡ **The rule that outlives the web app:** ⚠️ **never plant a side effect in
+  a file anything might execute** — plant type errors and verify with `tsc`,
+  then restore before running anything; and ⛔ **a type is a compile-time
+  promise only.** The fix was not a rule, it was handing the caller an object
+  that physically has no `commit` on it, so the same mistake gets a `TypeError`
+  instead of moving real money.
 - ⛔ **"Too expensive" and "walk away" are different answers, and the difference
   is measured.** `priceFixable` re-runs the evaluator with the asking price set
   to the ceiling; if that is a BUY, price is the whole problem. Do not infer it
   from which gates failed — a gate can care about price indirectly. And the
   screen's explanation follows the verdict: the price ceiling explains a price
   problem, the failing gate explains everything else.
-- ⚠️ **The screen's DECISIONS live in `src/server/screens.ts`, not in the `.tsx`.**
+- ⚠️ **The screen's DECISIONS live in `src/screens/`, not in the `.tsx`.**
   Which rows, in what order, which warnings and how loud — all tested there,
-  because there is no browser here. `page.tsx` is typography only. ⛔ Styling and
-  legibility are asserted by NOTHING (B39); that judgement is Jason's.
-- ⚠️ **`dev` and `build` are pinned to `--webpack`.** Turbopack does not honour
-  `extensionAlias` and cannot resolve this repo's `.js`-for-`.ts` imports; every
-  page 500s. Backlog B38. Kill the dev server when done — check the port.
+  because there is no browser here and no device. The `.tsx` is typography only.
+  ⛔ Styling and legibility are asserted by NOTHING (B39); that judgement is
+  Jason's.
+- ⚠️ **Metro needs an `extensionAlias` resolver for this repo's `.js`-for-`.ts`
+  imports.** Turbopack could not do it and every page 500'd; Metro needed the
+  same shim. Backlog **B38**.
 - ⛔ **This machine cannot download a large npm tarball in one shot, and npm
   does not resume.** Anything over ~20 MB dies partway with
   `ERR_SSL_WRONG_VERSION_NUMBER` (npm) or `SEC_E_INVALID_TOKEN` (curl) — the
@@ -415,7 +400,6 @@ Break any of these and the product stops being what it is.
 ```bash
 npm run check                       # typecheck + full suite
 npm test                            # vitest run
-npx tsx src/cli/index.ts help       # the operator interface
-npx tsx src/cli/index.ts verify     # hash chain + independent replay
+cd mobile && npx expo start         # the operator interface IS the phone
 ```
 

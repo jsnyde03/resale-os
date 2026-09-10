@@ -50,7 +50,6 @@ on:
       - 'src/screens/**'
       - 'src/scoring/**'
       - 'src/domain/**'
-      - 'src/server/**'
       - 'mobile/**'
       - 'tests/driver-node.test.ts'
       - 'tests/engine-scenario-node.test.ts'

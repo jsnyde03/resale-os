@@ -3537,3 +3537,51 @@ references in three files, invisible to that pattern. Typecheck named all four
 immediately. Same lesson as the `truncated-search-hides-a-class` and
 `audit-site-lists-undercount` cases: **the enumeration is the thing that fails,
 not the fix** — search for the symbol, not for the path you expect.
+
+### 5.10.4–.6 — the desktop is gone
+
+**3,295 lines deleted**: `src/cli`, `src/app`, the six remaining `src/server`
+files, and the six test files that only covered them. 597 → 522 tests, all
+green. Nothing outside those directories imported them — checked before
+deleting, not after.
+
+⚠️ **Two things were checked rather than assumed, and one of them mattered.**
+`tests/screens.test.ts` imports `dashboardView`, which SURVIVES — but only as
+*input* to `primaryScreen`, so `views.test.ts` still covers the survivor and
+deleting it lost no coverage. And `feed.ts` encodes a genuinely subtle rule —
+*an unscored row is not stale; that is a different fact* — which would have gone
+with it. It survives because `CLAUDE.md` already states it: **the knowledge
+outlives the code**, which is the whole reason that section exists.
+
+⛔ **`git rm` is all-or-nothing, and it aborted.** One of the six prune paths
+(`next-env.d.ts`) was gitignored, so the command failed and deleted **none** of
+them — and `npm run check` went green anyway, because `package.json` no longer
+referenced any of them. **A green that meant "nothing happened".** Caught by
+listing the files afterwards instead of trusting the exit. The same shape as the
+plant-verification rule: confirm the change landed, not just that the suite is
+happy.
+
+Runtime dependencies are now **`@noble/hashes` and `zod`**. Next, React,
+react-dom and Tailwind are gone.
+
+### The docs were telling a new session to run a deleted CLI
+
+`CLAUDE.md` carried **15** references to deleted code — a Commands block
+pointing at `npx tsx src/cli/index.ts`, an auth-gate rule about `withStore`, a
+dev-server binding rule, a Turbopack pin, `tsconfig.web.json`. In a start-here
+file that is worse than stale: it is instructions to do impossible things.
+
+Swept in the same item that caused it, and the dead bullets were **cut rather
+than annotated** — narrating a deletion is how a lean document regrows. What
+survived is the part that outlives the surface: the dev-server incident keeps
+*never plant a side effect in a file anything might execute* and *a type is a
+compile-time promise only*, without the `withStore` specifics.
+
+⚠️ **`README.md` still carries ~14 and it is a PUBLIC repo.** Left to 5.11.4
+deliberately rather than done badly at the end of a long item.
+
+⚠️ **A python `print()` of a `⛔` killed a script mid-run** — cp1252 console
+encoding — and it threw *before* the `write()`, so that pass changed nothing
+while looking like it had failed halfway. The stale-reference count appeared to
+drop only because the next grep used a narrower pattern. **Two near-misses in
+one item from trusting a command's appearance over its effect.**
