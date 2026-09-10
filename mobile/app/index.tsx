@@ -157,6 +157,8 @@ function Position() {
         </View>
       </View>
 
+      <Button label="Rules and tax" onPress={() => router.push('/settings')} />
+
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <Link href="/ledger" style={{ color: C.faint, paddingTop: 4 }}>
           every event →

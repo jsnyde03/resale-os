@@ -132,28 +132,14 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       **two of four verdicts are unreachable** (**B72**); 54 backlog items checked
       against the code with **19 wrong**; both start-here docs made to match. ⚡ It
       found **5.12**, which is why Gate 5 is *built* rather than *closed*.
-- [ ] **5.12** ⛔ **THE FUND'S RULES CANNOT BE CHANGED. Found by 5.11.3's
-      reconciliation, 2026-09-10.** `setPolicy` and `setTaxProfile` still exist on
-      `FundStore` and **nothing outside the test scenarios calls them** — `policy
-      set`, `policy adopt-defaults` and `tax profile set` went with the CLI, the
-      settings page went with the web, and no screen replaced either.
-      ⚡ **It compounds with two rules already written down.** Policy lives in the
-      DATABASE and `ensureSeeded()` only writes when the row is ABSENT, so a
-      changed default can no longer reach the live fund by any route. And **a
-      repair path must not depend on the broken thing** — the repair path is now
-      the thing that is missing.
-      ⚠️ **It blocks B26**, which is open and needs the state marginal corrected.
-      ⚠️ Nothing breaks today: mode is derived, and the $100 set-aside is already
-      stored. It bites the first time a number has to change.
-  - [ ] **5.12.1** A settings screen: read the stored policy and tax profile,
-        and say plainly when the code's `Policy.version` has moved past the
-        stored one — the only thing that can detect the divergence.
-  - [ ] **5.12.2** Adopt-defaults, and per-field policy edits for the numbers a
-        $50 fund actually turns: per-item cap, profit floor, hold ceiling.
-  - [ ] **5.12.3** The tax profile, through `taxProfileOrDefault()`-style loading
-        so the repair works against a stored value that is already invalid.
-  - [ ] **5.12.4** On-device verification, and the scenario case that proves a
-        written policy survives a reopen.
+- [x] **5.12** ✅ **Done 2026-09-10. The fund's rules can be changed again.**
+      `mobile/app/settings.tsx` over `src/ui/settings.ts` — per-item cap, profit
+      floor and hold ceiling per mode, adopt-defaults, and the tax profile. ⚡ It
+      shows the **profit-floor × per-item-cap** interaction before saving, and
+      warns when the stored `Policy.version` has drifted from the code's, which is
+      the only thing that can detect it. ⛔ A separate two-method config door on
+      the provider, not the ledger's door widened. Proven by a **second store
+      reading the change back off disk**; planted.
 
 **Exit:** the fund lives on the phone, knows its exact position offline, and the
 desktop is gone.

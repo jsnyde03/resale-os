@@ -24,6 +24,8 @@ import {
 import { FundStore } from '../../../src/db/store.js';
 import type { Command } from '../../../src/core/capital/commands.js';
 import type { FundState } from '../../../src/core/capital/state.js';
+import type { Policy } from '../../../src/core/capital/policy.js';
+import type { TaxProfile } from '../../../src/core/tax/profile.js';
 import { computeMetrics, type CapitalMetrics } from '../../../src/core/capital/metrics.js';
 import { EngineError } from '../../../src/core/capital/engine.js';
 import { InvariantViolation } from '../../../src/core/ledger/invariants.js';
@@ -44,6 +46,11 @@ import { backupStaleness } from '../../../src/db/backup-types.js';
  * equivalent mistake is a red screen, which is worse: it looks like the app
  * broke rather than like the fund said no.
  */
+/** A config write either landed or was refused with a reason. */
+export type ConfigOutcome =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly refusal: string };
+
 export type CommitOutcome =
   | { readonly ok: true; readonly eventId: string }
   | { readonly ok: false; readonly refusal: string; readonly hint?: string };
@@ -102,6 +109,17 @@ export interface Fund {
   /** How many events have happened since the last verified copy, and whether that is a problem. */
   readonly backup: { readonly behind: number; readonly stale: boolean; readonly lastError: string | null };
   readonly commit: (command: Command) => CommitOutcome;
+  /**
+   * ⛔ **CONFIG, and only config.** A separate door with two methods, not the
+   * ledger's door widened by two — that shape invites one more capability each
+   * time. These write the fund's RULES; they record no event and move no money,
+   * and the ledger cannot be reached through them.
+   *
+   * ⚠️ They refresh, like `commit` does. A screen that wrote policy and forgot
+   * would leave every other screen reading the old numbers.
+   */
+  readonly setPolicy: (policy: Policy) => ConfigOutcome;
+  readonly setTaxProfile: (profile: TaxProfile) => ConfigOutcome;
   /** Re-read after something wrote outside `commit` — an import, a restore. */
   readonly refresh: () => void;
 }
@@ -163,6 +181,31 @@ export function FundProvider({
         lastError: backupState.lastError,
       },
       refresh,
+      setPolicy: (policy: Policy): ConfigOutcome => {
+        try {
+          store.setPolicy(policy);
+          // Config is not an event, so the hash chain does not move — but the
+          // backup carries `config`, and a rule change nobody backed up is a
+          // rule change that dies with the phone.
+          writeDeviceBackup(store);
+          return { ok: true };
+        } catch (err) {
+          return { ok: false, refusal: err instanceof Error ? err.message : String(err) };
+        } finally {
+          refresh();
+        }
+      },
+      setTaxProfile: (profile: TaxProfile): ConfigOutcome => {
+        try {
+          store.setTaxProfile(profile);
+          writeDeviceBackup(store);
+          return { ok: true };
+        } catch (err) {
+          return { ok: false, refusal: err instanceof Error ? err.message : String(err) };
+        } finally {
+          refresh();
+        }
+      },
       commit: (command: Command): CommitOutcome => {
         try {
           const result = store.commit(command);

@@ -25,6 +25,7 @@ import { purchaseCommandFrom } from '../core/capital/quote.js';
 import { evaluatePurchase } from '../scoring/purchase.js';
 import { itemIdFrom } from '../core/ids.js';
 import { adjustModel, reverseModel, sellModel, spendModel } from '../ui/forms.js';
+import { policyEdit, policyFieldsFrom, taxEdit, taxFieldsFrom } from '../ui/settings.js';
 import { profitReport } from './reporting.js';
 import { makeVerifiedBackup } from './backup-portable.js';
 import { dashboardView } from '../screens/views.js';
@@ -202,6 +203,65 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
       eq(view.accuracy.n, 1, 'one measurable sale');
       eq(view.accuracy.scoredN, 1, 'the scorer produced this expectation');
       eq(view.accuracy.quotedN, 0, 'and it must not be pooled with a hand estimate');
+    },
+  },
+  {
+    // ⛔ 5.12. The rules are stored in the DATABASE, so a screen that appears to
+    // save them proves nothing until a DIFFERENT store reads them back off disk.
+    name: 'settings: an edited policy survives, read back by a second store',
+    run: (db) => {
+      const store = funded(db, 50_000);
+      const before = store.policy();
+
+      const edit = policyEdit(before, 'BOOTSTRAP', {
+        ...policyFieldsFrom(before, 'BOOTSTRAP'),
+        maxHoldDays: '30',
+      }, 50_000);
+      ok(edit.problems.length === 0, 'the edit should parse');
+      ok(edit.next !== null, 'the edit should be a change');
+      store.setPolicy(edit.next!);
+
+      // ⚠️ A SECOND store over the same database. `store.state()` answers from a
+      // cache, so re-reading through the writer would be the engine agreeing
+      // with itself — the exact failure B54 records.
+      const reopened = new FundStore(db, () => T0);
+      eq(reopened.policy().modes.BOOTSTRAP.maxHoldDays, 30, 'the new ceiling is on disk');
+      eq(
+        reopened.policy().modes.GROWTH,
+        before.modes.GROWTH,
+        'the other mode was not quietly rewritten',
+      );
+      ok(reopened.policy().version !== before.version, 'the version moved, or drift is undetectable');
+
+      // ⛔ And the rules must not have touched the money.
+      eq(reopened.derivedState().balances.LIQUID, 50_000, 'a policy change moves no money');
+      eq(reopened.derivedState().eventCount, store.state().eventCount, 'and records no event');
+    },
+  },
+  {
+    name: 'settings: a tax profile survives, and the repair path opens against a broken one',
+    run: (db) => {
+      const store = funded(db, 50_000);
+      // ⛔ The repair must work against a stored value that is already invalid —
+      // adding a required field makes every existing row invalid, including for
+      // the fix. That has shipped twice on this project.
+      const fields = taxFieldsFrom(undefined);
+      const edited = taxEdit({
+        ...fields,
+        otherIncome: '45000',
+        stateRatePercent: '7.15',
+        stateRateBasis: 'state + local, published table',
+      });
+      ok(edited.problems.length === 0, 'a rate WITH a basis is accepted');
+      store.setTaxProfile(edited.next!);
+
+      const reopened = new FundStore(db, () => T0);
+      eq(reopened.taxProfile().stateIncomeTaxBps, 715, 'the rate is on disk as integer bps');
+      ok(reopened.taxProfile().configured, 'and the profile reads as configured');
+
+      // The refusal half, through the same model the screen uses.
+      const bare = taxEdit({ ...fields, stateRatePercent: '7.15', stateRateBasis: '' });
+      ok(bare.next === null, 'a non-zero rate with no basis is refused');
     },
   },
   {

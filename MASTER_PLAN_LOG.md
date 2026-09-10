@@ -3764,3 +3764,48 @@ and `screen-scenario.ts` executes the whole sequence a person performs against
 Apple's SQLite on a simulator. **What none of them see is whether the price box
 is bound to `price`.** That is the gap, it is one file's worth of risk, and it
 is named rather than guessed at.
+
+## 2026-09-10 — 5.12: the rules can be changed again
+
+`src/ui/settings.ts` and `mobile/app/settings.tsx`. Per-item cap, minimum profit
+and hold ceiling for the active mode; adopt-defaults; and the tax profile.
+
+**Three things it does that a plain form would not.**
+
+⚡ **It shows what the two numbers multiply into, before saving.** A profit floor
+and a per-item cap imply a required multiple that neither one states — a $100
+floor against 40% of a $50 NAV demands 7.2x on every flip. That combination is
+how a fund silently stops being able to buy anything, and it already cost this
+project a day. `assessProfitFloor` was written for it; now it runs against the
+*edited* policy while the operator is still typing.
+
+⚡ **It warns when the stored version has drifted from the code's**, because that
+is the only thing that can detect it. Policy lives in the database and
+`ensureSeeded()` only writes when the row is absent, so a stored policy older
+than the code keeps running old numbers in silence — a $100 floor once passed 139
+tests while the live fund still ran $8. Every edit bumps the version for the same
+reason.
+
+⛔ **The repair path opens against a broken value.** `taxFieldsFrom` reads
+tolerantly and is asserted against an unconfigured profile, a malformed one and
+no profile at all — because the screen that fixes a bad profile must not refuse
+to open against one. That exact failure shipped **twice** here: `policy
+adopt-defaults` and `tax profile set` both validated the stored value before
+replacing it, so the one command that could fix a stale config could not run
+against one.
+
+**The door is narrow on purpose.** `setPolicy` and `setTaxProfile` are two
+methods on the provider, not two more capabilities on the ledger's door — the
+shape the Gate 4 decision warned about, where `withConfigStore` was kept separate
+from `LedgerReader` precisely because widening invites one more each time. They
+refresh like `commit` does, and they trigger a backup: config is not an event and
+does not move the hash chain, but the backup carries `config`, and **a rule
+change nobody backed up is a rule change that dies with the phone.**
+
+⚠️ **Proven by a SECOND store reading the database.** `store.state()` answers
+from a cache, so re-reading through the writer would be the engine agreeing with
+itself — B54's exact failure. The scenario opens a fresh `FundStore` over the
+same `db`, and asserts the new ceiling is there, the *other* mode was not quietly
+rewritten, the version moved, and **no money moved and no event was recorded.**
+Planted: making `setPolicy` persist the old value reddened it with *"the new
+ceiling is on disk: expected 30, got 21"*.
