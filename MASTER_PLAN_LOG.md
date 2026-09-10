@@ -3585,3 +3585,25 @@ encoding — and it threw *before* the `write()`, so that pass changed nothing
 while looking like it had failed halfway. The stale-reference count appeared to
 drop only because the next grep used a narrower pattern. **Two near-misses in
 one item from trusting a command's appearance over its effect.**
+
+### 5.10 closed — 44/44 on device with the desktop deleted
+
+The device run over the deletion commit passed **44/44**. That is the assertion
+that matters: not that the desktop code was removable, but that **removing it
+changed nothing the phone does.** The same 44 cases that passed before the
+deletion passed after it, against Apple's SQLite, in Hermes.
+
+**Gate 5's exit is met on all three clauses.** The fund lives on the phone; it
+knows its exact position offline, derived from the ledger on the device with no
+network and nothing carried from a desktop; and the desktop is gone.
+
+⚠️ **What Gate 5 actually turned out to be.** It was planned as a port — move
+`core + scoring + domain` unchanged and wrap them in screens. That part held
+exactly as predicted: 4,878 lines of pure TypeScript moved with **zero edits**,
+and `node:sqlite` really was confined to one file, as `ASSUMPTIONS_AND_RISKS` A1
+said it would be. **The work that was not planned was all of the other kind** —
+a hash chain quietly importing `node:crypto`, four platform couplings inside the
+store, a save format that had to be proven against a second driver, two screens
+that gated a purchase differently, an export that carried a tax profile into a
+public repo, and a CLI that could fork the ledger the moment the fund left. None
+of those were portability problems. **They were things the port made visible.**

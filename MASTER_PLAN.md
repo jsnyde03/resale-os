@@ -121,49 +121,30 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       gated differently (**B58**, measured: 64 divergences in 96 cases, both
       directions), so `scoring/purchase.ts` is now the only path that decides and
       `assessQuote` is deleted. **44/44 on device.** → **B64**–**B68**.
-- [ ] **5.10** ⚡ **ACTIVE BUILD — retire the desktop.** ~3,715 lines. Unblocked
-      2026-09-10 when the fund reached the phone.
-  - [x] **5.10.1** ✅ **Done 2026-09-10. The fork is shut.** `data/resale.db` is
-        retired by a marker FILE beside it — not a `config` row, which would have
-        travelled with an export and retired the phone on arrival. Writes exit 1;
-        `status`, `verify`, `ledger`, `items` and `export` still run, because until
-        a backup leaves the phone this is the fund's only other copy. ⚡ The list
-        names what may RUN, so a command nobody thought of is refused. Planted
-        twice (guard removed → 3 red; allowlist ignored → reads red).
-  - [x] **5.10.2** ✅ **Done 2026-09-10.** A backup left the phone (Jason).
-        ⚠️ **My framing of this was too strong and is corrected:** 5.10.4 deletes
-        CODE, not `data/resale.db`, and code is recoverable from git — so the
-        desktop copy was never destroyed, only made harder to read. The real
-        ongoing risk is narrower: it is a stale snapshot at 55 events the moment
-        the phone records anything.
-  - [x] **5.10.3** ✅ **Done 2026-09-10.** `views.ts` and `sourcing.ts` are now
-        `src/screens/` — screen MODELS, decided outside the `.tsx` so they can be
-        tested where there is no browser and no device. Closes **B62** and **B65**.
-        ⚡ **Both new gates fired on cue:** the undeclared-layer check demanded rules
-        for `src/screens`, and `ci-scope` caught it missing from the lane's `paths:`
-        filter — B67's exact failure mode, found by a control rather than by a
-        person, one hour after that control was written.
-  - [x] **5.10.4** ✅ **Done 2026-09-10. 3,295 lines gone** — `src/cli`,
-        `src/app`, six `src/server` files, and the six test files that only
-        covered them. 597 → 522 tests, all green: nothing outside those
-        directories imported them.
-  - [x] **5.10.5** ✅ **Done 2026-09-10.** `proxy.ts`, `next.config.ts`,
-        `tsconfig.web.json`, `postcss.config.mjs`, `next-env.d.ts`,
-        `check-binding.mjs`; the `dev`/`build`/`start`/`serve`/`cli` scripts; and
-        next, react, react-dom, tailwind. **Runtime deps are now `@noble/hashes`
-        and `zod`.** ⚠️ `git rm` is all-or-nothing and ABORTED on the one
-        gitignored path — the gates went green over a prune that had not
-        happened. Verified by listing the files, not by trusting the green.
-  - [x] **5.10.6** ✅ **Done 2026-09-10.** Lane filter gained `src/screens/**`
-        (**by the gate, not by memory**) and dropped `src/server/**`; typecheck is
-        two configs; `.gitignore` and the retired marker no longer describe a CLI
-        that exists. ⚡ **`CLAUDE.md` swept of 15 stale references** — it was
-        telling a new session to run a deleted CLI. ⚠️ **`README.md` still has
-        ~14 and is public** → 5.11.4.
-  - [ ] **5.10.7** On-device verification.
-- [ ] **5.11** The Gate 5 phase after-scan. ✅ **.1 done 2026-09-10** (three stale
-      scope lists closed, **B67** with it). Remaining sub-steps are in the log; they
-      are retrieved at switch-in, after 5.10 closes the phase.
+- [x] **5.10** ✅ **Done 2026-09-10. THE DESKTOP IS GONE. 44/44 on device.**
+      3,295 lines — `src/cli`, `src/app`, six `src/server` files, six test files,
+      and the whole Next.js surface. Runtime deps are now `@noble/hashes` + `zod`.
+      ⚡ `views.ts` and `sourcing.ts` moved to `src/screens/` (**B62**, **B65**);
+      `data/resale.db` is retired and refuses to write, so it cannot become a
+      second head. 597 → 522 tests.
+- [ ] **5.11** ⚡ **ACTIVE BUILD — the Gate 5 PHASE after-scan.** ✅ **.1 done**
+      (three stale scope lists closed, **B67** with them). A per-item scan cannot
+      see what only appears with the whole phase in view.
+  - [ ] **5.11.2** Apply 5.9c's lessons BACKWARDS to already-shipped screens —
+        every surface that gates, classifies or reports, checked for the
+        fails-open shape (**B66**) and for a class asserted in only one direction
+        (the SCORED/QUOTED miss was exactly that).
+  - [ ] **5.11.3** Reconcile the accumulated-deferral ledger — B62–B71 and
+        everything filed earlier in the phase, each confirmed still true, still
+        needed, and pointed at a real gate. Several were filed against a desktop
+        that no longer exists.
+  - [ ] **5.11.4** Gate 5's exit criteria to the log, and the start-here docs
+        made to match the code. ⚠️ **`README.md` carries ~14 references to
+        deleted code and the repo is PUBLIC.**
+  - [ ] **5.11.5** ⛔ **NOT RNTL.** B60's trigger is *"only if a wiring bug
+        actually reaches the device"* and it has not fired — 5.9c's failure was a
+        dropped tag, which `tsc` caught.
+
 **Exit:** the fund lives on the phone, knows its exact position offline, and the
 desktop is gone.
 
@@ -177,7 +158,7 @@ desktop is gone.
 | 2 | Opportunity + Buy/Risk score + eligibility + recommendation | ✅ Done 2026-09-08 |
 | 3 | Inventory & sale lifecycle, expenses, reserves, distributions, charge-offs, recoveries | ✅ Done 2026-09-08 |
 | 4 | Dashboard + rules/config UI | ✅ Done 2026-09-08 |
-| 5 | **The phone is the system** — engine ported, ledger on-device, desktop retired | ⚡ **ACTIVE** |
+| 5 | **The phone is the system** — engine ported, ledger on-device, desktop retired | ✅ **Built 2026-09-10** — 5.11 (the phase after-scan) is closing it |
 | 6 | **Sourcing: the app finds and recommends** — Browse API for candidates, SoldComps for value, own history accumulating | ⚡ **NEXT** — data route settled (**D12**) |
 | 6.5 | **The watchlist that unlocks** — an out-of-reach opportunity is kept, carries the NAV at which it clears every gate, and resurfaces when the fund crosses it | Open |
 | 7 | Market Radar beta — scarcity, demand, momentum, market opportunity, confidence | Open |
