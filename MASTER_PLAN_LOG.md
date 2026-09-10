@@ -3607,3 +3607,53 @@ store, a save format that had to be proven against a second driver, two screens
 that gated a purchase differently, an export that carried a tax profile into a
 public repo, and a CLI that could fork the ledger the moment the fund left. None
 of those were portability problems. **They were things the port made visible.**
+
+### 5.11.2 — 5.9c's lessons, applied backwards
+
+The SCORED/QUOTED miss was *a class asserted in only one of its directions*.
+Rather than re-read screens looking for more of those by eye, the shape was
+turned into a sweep: extract every string-literal union in `src/`, and check
+which members never appear anywhere in the test corpus. **11 unions scanned, 3
+with partially-untested members.**
+
+Two were small. `MARKETPLACES` never tests `MERCARI` — currently unreachable
+config, since no screen offers a marketplace choice. `BuyScoreCap` never tested
+`NONE`, which is the **ordinary** case: both caps were asserted and "not capped"
+was not, so a change that always applied a cap would have passed. `recommend()`
+branches on `boundBy === 'NONE'` to decide whether to tell the operator what held
+the score down, so a wrong NONE is a wrong sentence in front of someone holding
+the object. Now asserted.
+
+### ⛔ The third was not small: two of four verdicts cannot happen
+
+`recommend()` returns BUY, WATCH, PASS or REJECT. **15,360 evaluations across
+NAV, price, gross, sold, active, hassle and comps produced BUY and REJECT only.**
+
+⚡ **The mechanism was proven rather than argued.** Every score threshold the
+recommender checks — buy score, risk, confidence — is *also* a capital gate in
+`assessPurchase`, reading the identical field from the identical `ModePolicy`,
+and `recommend()` short-circuits to REJECT the moment any gate fails. Reaching
+WATCH/PASS therefore needs every gate to pass *while* a score falls short, which
+is a contradiction. **Planted: disabling the buy-score gate made the verdict set
+become `['BUY', 'PASS', 'REJECT', 'WATCH']` immediately.**
+
+⚠️ **What that means for the product, which is the real finding.** The Buy Score
+and the Risk Score are computed, displayed, stored — and **never decide
+anything**. Anything they would have rejected, a gate rejected first. They are
+instruments, not judges. `SCORING_SPEC` does not say that.
+
+**The alternative was considered and NOT recommended.** Removing buy score and
+risk from the hard gates would make WATCH real — *"close, but not yet, and it
+would qualify at $X"* is exactly the aisle answer, and it is the natural verdict
+for **6.5**'s watchlist. ⛔ But those same gates are what `evaluatePurchase` uses
+to decide whether a purchase may be RECORDED (D14). Loosening them would let the
+buy screen accept a low-scoring purchase with no override — **partially undoing
+D14 a day after it was settled.** And 6.5 does not need WATCH: its own wording is
+*"carries the NAV at which it clears every gate"*, which is computed from gate
+failures directly.
+
+So the gates stay, the verdict set stays two, and the four members stay declared
+because stored rows carry them. `tests/verdict-reachability.test.ts` pins the
+**invariant** — if a threshold ever leaves the gates and stays in the
+recommender, it fails, and the branch gets reviewed instead of quietly coming
+alive with a reason string nobody has read.

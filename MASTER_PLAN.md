@@ -393,6 +393,17 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   hand-typed list, which is what makes it a control. ⚠️ Scoped to the `paths:`
   block, not a grep of the file — every one of those directories is also named
   in a comment there.
+- **B72** ⚡ **The scorer has four verdicts and can produce two.** Measured
+  2026-09-10: 15,360 evaluations returned **BUY and REJECT only**; `WATCH` and
+  `PASS` never occurred and no test had ever asserted either. **Mechanism proven
+  by plant:** every score threshold `recommend()` checks — buy score, risk,
+  confidence — is ALSO a capital gate on the same `ModePolicy` field, and a
+  failed gate short-circuits to REJECT; disabling the buy-score gate made both
+  verdicts appear immediately. ⚠️ **So the Buy and Risk scores inform but never
+  decide** — anything they would reject, a gate already did.
+  ⛔ **Not deleted:** `opportunities.recommendation` has a CHECK naming all four
+  and old rows may carry them. Pinned by `tests/verdict-reachability.test.ts`,
+  which asserts the INVARIANT rather than the dead code. → read before **6.5**.
 - **B69** ⚡ **Barcode scanning in the aisle** (Jason, 2026-09-10). The SCAN is
   the easy part — `expo-camera` does it offline, one screen. ⛔ **But a barcode
   is a product identity, not a price**, and the sourcing screen's binding fields
