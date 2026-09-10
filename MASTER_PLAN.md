@@ -141,8 +141,39 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       the provider, not the ledger's door widened. Proven by a **second store
       reading the change back off disk**; planted.
 
-**Exit:** the fund lives on the phone, knows its exact position offline, and the
-desktop is gone.
+**Exit:** ✅ **met 2026-09-10.** The fund lives on the phone, knows its exact
+position offline, and the desktop is gone — 44/44 on device over the commit that
+deleted it. ⚠️ The criteria were incomplete: **5.12** was needed because a
+capability only the desktop had went with it.
+
+---
+
+### Gate 6 — SOURCING: THE APP FINDS AND RECOMMENDS
+
+⚡ **ACTIVE BUILD.** The data route is settled (**D12**): Browse API to find,
+SoldComps to value, own history to accumulate, manual as the fallback that stays
+wired.
+
+⛔ **6.0 goes first, and it is not the API.** Everything the eBay work unlocks
+depends on the aisle screen being usable, and three filed items make it so with
+no external dependency, no key and no quota — while the API half is gated on
+access this project may not get.
+
+- [ ] **6.0.1** The screen names the FIX, not just the failing gate (**B70**).
+      `soldNeededForHold` is already in core and tested: at 10 active listings a
+      21-day ceiling needs **48 sold in 90 days**, and that number IS the sourcing
+      rule for retail clearance.
+- [ ] **6.0.2** Condition and hassle become inputs (**B64**, **B71**). Sealed
+      retail deserves high condition confidence and currently takes a pessimistic
+      40% default, which drags the composite against D14's stricter gate — the one
+      case where confidence should legitimately be high is the case being sourced.
+- [ ] **6.0.3** Save the score (**B68**). Nothing records an aisle decision, so
+      **B3**'s rejection histogram has nothing to count and **6.5**'s watchlist
+      has nothing to watch. It is the precondition for both.
+- [ ] **6.0.4** On-device verification.
+
+**Exit:** the aisle screen answers *"should I buy this, at what price, and if not
+what would fix it"* — and remembers what it was asked.
 
 ---
 
@@ -371,6 +402,12 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   ⛔ **Not deleted:** `opportunities.recommendation` has a CHECK naming all four
   and old rows may carry them. Pinned by `tests/verdict-reachability.test.ts`,
   which asserts the INVARIANT rather than the dead code. → read before **6.5**.
+- **B73** ⚠️ **Settings covers three fields of ONE mode.** 5.12 edits the ACTIVE
+  mode's per-item cap, profit floor and hold ceiling. Not editable: the OTHER
+  mode (so GROWTH's rules cannot be set before the fund reaches $500), and the
+  whole `allocation` block — owner split and the set-aside NAV threshold. ⚡
+  **That block is what D2 needs**, and D2 is due at $100 NAV, which is four to
+  six flips away. → before D2 is answered.
 - **B69** ⚡ **Barcode scanning in the aisle** (Jason, 2026-09-10). The SCAN is
   the easy part — `expo-camera` does it offline, one screen. ⛔ **But a barcode
   is a product identity, not a price**, and the sourcing screen's binding fields

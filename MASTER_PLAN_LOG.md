@@ -3809,3 +3809,46 @@ same `db`, and asserts the new ceiling is there, the *other* mode was not quietl
 rewritten, the version moved, and **no money moved and no event was recorded.**
 Planted: making `setPolicy` persist the old value reddened it with *"the new
 ceiling is on disk: expected 30, got 21"*.
+
+### 5.12's after-scan, and what Gate 6 opens with
+
+⚠️ **A defect I introduced, found by probing rather than reading.** The version
+bump appended `+edited` unconditionally, so four edits produced
+`2026-09-08.5+edited+edited+edited+edited` and it grew without bound. A version
+string is what a person reads when deciding whether to adopt defaults; an
+unreadable one is a warning nobody acts on. It counts now — `+edited`,
+`+edited2`, `+edited3` — and a test asserts the string contains "edited" exactly
+once after five edits.
+
+**B73** is the honest limit of 5.12: it edits three fields of the ACTIVE mode.
+The other mode cannot be set before the fund reaches it, and the whole
+`allocation` block — the owner split and the set-aside threshold — has no screen
+at all. ⚡ **That block is what D2 needs**, and D2 is due at $100 NAV, four to six
+flips away.
+
+### Gate 6 takes the active slot, and 6.0 is deliberately not the API
+
+The data route is settled (D12) and the interesting half of it is **gated**:
+Marketplace Insights is Limited Release, individual developers are denied, and
+the logged-out sold search hit a login wall in August. Without sold comps the
+45% confidence gate refuses nearly every purchase — so that work is a
+precondition the project may or may not win.
+
+⛔ **Which is exactly why it does not go first.** Three already-filed items make
+the aisle screen usable with no external dependency, no key and no quota, and
+they serve the strategy Jason actually named — Walmart clearance racks:
+
+**B70** is the one with the best ratio in the whole backlog. `soldNeededForHold`
+is already in core, already tested, and CLI-only — so the phone says
+HOLD_TOO_LONG without saying that ten competing listings need 48 sold in 90 days
+to clear it. That number *is* the sourcing rule for retail arbitrage, and it is
+one line away from the screen being held at the rack.
+
+**B64/B71** matter because of D14. Sealed retail stock deserves high condition
+confidence and currently takes a pessimistic 40% default, dragging the composite
+against a gate that just got stricter — the one case where confidence should
+legitimately be high is the case being sourced.
+
+**B68** is the precondition for two later things at once: B3's rejection
+histogram has nothing to count and 6.5's watchlist has nothing to watch until an
+aisle decision is recorded somewhere.

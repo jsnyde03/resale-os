@@ -11,6 +11,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   bpsFromPercent,
+  bumpEdited,
   percentFromBps,
   policyEdit,
   policyFieldsFrom,
@@ -88,6 +89,27 @@ describe('editing a mode', () => {
     const e = policyEdit(DEFAULT_POLICY, 'BOOTSTRAP', { ...fields(), maxPerItemPercent: '100' }, NAV);
     if (e.problems.length > 0) expect(e.next).toBeNull();
     else expect(e.next?.modes.BOOTSTRAP.maxCapitalPerItemBps).toBe(10_000);
+  });
+});
+
+describe('the version bump stays readable', () => {
+  it('counts instead of growing forever', () => {
+    // ⚠️ The first version appended `+edited` unconditionally, so four edits
+    // produced `+edited+edited+edited+edited`. A version string is read by a
+    // person deciding whether to adopt defaults; an unreadable one is a warning
+    // nobody acts on.
+    expect(bumpEdited('1.2.3')).toBe('1.2.3+edited');
+    expect(bumpEdited('1.2.3+edited')).toBe('1.2.3+edited2');
+    expect(bumpEdited('1.2.3+edited2')).toBe('1.2.3+edited3');
+    expect(bumpEdited('1.2.3+edited9')).toBe('1.2.3+edited10');
+
+    let p = DEFAULT_POLICY;
+    for (let i = 0; i < 5; i += 1) {
+      const e = policyEdit(p, 'BOOTSTRAP', { ...policyFieldsFrom(p, 'BOOTSTRAP'), maxHoldDays: String(20 + i) }, NAV);
+      if (e.next) p = e.next;
+    }
+    expect(p.version).toBe(`${DEFAULT_POLICY.version}+edited5`);
+    expect(p.version.match(/edited/g)).toHaveLength(1);
   });
 });
 

@@ -167,7 +167,7 @@ export function policyEdit(
   // later detect a stored policy drifting from the code's.
   const next: Policy = {
     ...stored,
-    version: changed ? `${stored.version}+edited` : stored.version,
+    version: changed ? bumpEdited(stored.version) : stored.version,
     modes: { ...stored.modes, [mode]: edited },
   };
 
@@ -182,6 +182,21 @@ export function policyEdit(
   }
 
   return { problems, next: changed ? next : null, changed, reachability: reach(navCents, edited) };
+}
+
+/**
+ * `1.2.3` -> `1.2.3+edited` -> `1.2.3+edited2` -> `1.2.3+edited3`.
+ *
+ * ⚠️ Bounded in SHAPE, not just bumped. The first version appended `+edited`
+ * unconditionally, so four edits produced `+edited+edited+edited+edited` and it
+ * grew forever — a version string is read by a person deciding whether to adopt
+ * defaults, and an unreadable one is a warning nobody acts on.
+ */
+export function bumpEdited(version: string): string {
+  const m = /^(.*?)\+edited(\d*)$/.exec(version);
+  if (!m) return `${version}+edited`;
+  const n = m[2] === '' ? 1 : Number(m[2]);
+  return `${m[1]}+edited${n + 1}`;
 }
 
 function reach(navCents: Cents, policy: ModePolicy): ProfitFloorReachability {
