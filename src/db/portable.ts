@@ -15,6 +15,22 @@
  * ⚠️ This is the one file in the project that is not regenerable, so the import
  * is written to fail loudly and leave the destination unusable rather than
  * half-populated. It runs inside a transaction.
+ *
+ * ⛔ **WHAT DELIBERATELY DOES NOT TRAVEL: scored opportunities.**
+ *
+ * The `opportunities` table is neither a command nor config. It is also not
+ * derivable — it records what was *decided*, when, and under which policy
+ * version, and no replay can reconstruct that. So it is **device-local**, and a
+ * lost phone loses the scoring history while the money survives intact.
+ *
+ * That is a decision (**6.0.5**, 2026-09-10), not an oversight. Carrying rows a
+ * replay cannot check would cost this format the one property that makes moving
+ * a fund trustworthy: **everything in the file is verified by regenerating it.**
+ * Scoring history is advisory — it feeds a rejection histogram and a watchlist.
+ * The ledger is not, and it is what the guarantee is spent on.
+ *
+ * ⚠️ `tests/portable.test.ts` pins the top-level shape so this stays a decision
+ * rather than drifting the first time someone finds it convenient.
  */
 
 import type { Db } from './db-types.js';

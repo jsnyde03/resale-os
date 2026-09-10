@@ -14,7 +14,7 @@ import {
   backupFilename,
   makeVerifiedBackup,
 } from '@/db/backup-portable.js';
-import { importLedger, type LedgerExport } from '@/db/portable.js';
+import { exportLedger, importLedger, type LedgerExport } from '@/db/portable.js';
 import { FundStore } from '@/db/store.js';
 import { openDb } from '@/db/driver.js';
 import { migrate } from '@/db/migrate.js';
@@ -155,5 +155,53 @@ describe('making one', () => {
         return dirty;
       }, CLOCK),
     ).toThrowError(BackupRefused);
+  });
+});
+
+describe('what a fund carries, and what it deliberately leaves behind', () => {
+  /**
+   * ⛔ **6.0.5, decided 2026-09-10: scored opportunities are DEVICE-LOCAL.**
+   *
+   * They are neither a command nor config, and they are not derivable — a score
+   * records what was decided, when, and under which policy version, and no
+   * replay reconstructs that. Carrying rows a replay cannot check would cost
+   * this format the property that makes moving a fund trustworthy: **everything
+   * in the file is verified by regenerating it.**
+   *
+   * ⚠️ This pins the top-level SHAPE so the boundary stays a decision rather
+   * than drifting the first time somebody finds it convenient. If the format is
+   * meant to grow, this test is the thing that has to be changed on purpose.
+   */
+  it('carries the commands and the config, and nothing else', () => {
+    const dump = exportLedger(fundedStore().db, CLOCK());
+    expect(Object.keys(dump).sort()).toEqual(['config', 'events', 'exportedAt', 'version']);
+    expect(dump.events.length).toBeGreaterThan(0);
+  });
+
+  it('leaves scored opportunities behind, and the money is unaffected', () => {
+    const store = fundedStore();
+    // The row a phone writes every time the aisle screen is used.
+    store.db.run(
+      `INSERT INTO opportunities (
+         opportunity_id, created_at, updated_at, name, category, source, marketplace,
+         asking_price_cents, landed_cost_cents, expected_gross_cents,
+         marketplace_fee_cents, postage_cents, packaging_cents, net_proceeds_cents,
+         expected_profit_cents, expected_roi_bps, modeled_downside_cents,
+         active_listings, velocity_source, sell_through_bps, expected_days_to_sale,
+         expected_days_p90, status, input_json
+       ) VALUES ('opp-x',?,?,'x','TOYS','MANUAL','EBAY',1,1,1,1,1,1,1,1,1,1,0,'COMPS',1,1,1,'PASSED','{}')`,
+      [CLOCK(), CLOCK()],
+    );
+    expect(store.db.get('SELECT 1 AS n FROM opportunities')).toBeDefined();
+
+    const dump = exportLedger(store.db, CLOCK());
+    // ⚠️ Asserted on the serialised file, not on the object — a key added later
+    // would reach the JSON even if the interface still looked the same.
+    expect(JSON.stringify(dump)).not.toContain('opp-x');
+    expect(JSON.stringify(dump)).not.toContain('opportunit');
+
+    // And the thing the guarantee IS spent on still travels whole.
+    expect(dump.events.some((e) => e.command.type === 'CONTRIBUTION')).toBe(true);
+    expect(dump.config.policy).toBeDefined();
   });
 });

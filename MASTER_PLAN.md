@@ -61,11 +61,13 @@ access this project may not get.
       separate reader; planted (save → no-op).
 - [x] **6.0.4** ✅ **Done 2026-09-10. 47/47 against Apple's SQLite**, up from 44
       — the settings policy write, the tax-profile repair, and the recorded score.
-- [ ] **6.0.5** ⚠️ **Scored opportunities are NOT in the backup.** `exportLedger`
-      carries commands and config; the `opportunities` table is neither, so
-      scoring history dies with the phone while the money survives. Either extend
-      the export (a `LEDGER_EXPORT_VERSION` bump, and the import must tolerate an
-      older file) or state plainly that scores are device-local. **[DECISION]**
+- [x] **6.0.5** ✅ **Decided and built 2026-09-10 (Jason): scores are
+      DEVICE-LOCAL, said plainly.** The export stays *just the commands and the
+      config*, because that is what makes it verifiable by replay — carrying rows
+      a replay cannot check would spend the guarantee on advisory data. Stated in
+      `portable.ts` where the format is defined, on the **backups screen** where
+      the operator reads it, and in `CLAUDE.md`. ⚡ Pinned by a test on the
+      **serialised JSON**, so growing the format is deliberate; planted.
 
 **Exit:** the aisle screen answers *"should I buy this, at what price, and if not
 what would fix it"* — and remembers what it was asked.
@@ -97,6 +99,7 @@ what would fix it"* — and remembers what it was asked.
 |---|---|---|
 | D1 | What the tax reserve covers | ✅ **Incremental annual tax, 2026-09-08.** SE tax + federal brackets + QBI + state. ⚠️ Income tax abstains until a `TaxProfile` is set — **D7** |
 | D14 | Which gate set decides a purchase, given the two paths disagree | ✅ **One evaluator everywhere — 2026-09-10.** `evaluateOpportunity` gates every purchase, typed or scored; `assessQuote`'s candidate stops being a decision path. ⚠️ **Deliberately stricter on the live fund:** a buy typed with no comps and middling sell-through now needs **D4**'s override with a reason. Measured first — 64 divergences in 96 cases, both directions (**B58**) |
+| D15 | Whether a backup carries scoring history | ✅ **No — scores are DEVICE-LOCAL, 2026-09-10.** The export is the commands plus config, and **everything in it is verified by regenerating it**. Opportunities are neither, and not derivable — a score records what was decided, when, under which policy — so carrying them would spend that guarantee on advisory data. ⚠️ A lost phone loses the rejection histogram and the watchlist, and **none of the fund**. The app says so on the backups screen |
 | D13 | How far the app goes in online drops | ⛔ **Monitoring and alerting IN; checkout automation OUT — 2026-09-09.** Being first to KNOW is clean and is most of the edge; automating checkout violates retailer terms, and the penalty is order cancellations, account bans and flagged payment methods. **For a fund that is a capital event** — risking the accounts and payment rails the whole operation runs on, to win one console. ⛔ Nothing that defeats anti-bot systems: no CAPTCHA solving, fingerprint spoofing, proxy rotation or multiple accounts. ⚡ And the strategy points the same way: online drops are where the competition is scripts; **in-store allocation is where it is people, and Jason is in stores all day** |
 | D12 | How the app values what it finds | ✅ **Browse API to find, SoldComps to value, own history to accumulate, manual as fallback — 2026-09-09.** ⛔ Sold comps are gated (Marketplace Insights is Limited Release and individual devs are denied; the logged-out sold search hit a login wall Aug 2026), and **without them the 45% confidence gate refuses nearly every purchase** — so this is a precondition, not an enhancement. Start on the free tier (100/mo); **Jason: "9 bucks is nothing"**, so Starter (2,000/mo) is pre-approved when it bites. ⚠️ The resellers work around eBay and the direction of travel is tightening — the manual path stays wired |
 | D11 | When the fund starts buying | ⛔ **Not until the system is ready, and never arbitrarily** (Jason 2026-09-09): *"It doesn't make sense to arbitrarily buy something."* A purchase this system cannot justify is the exact thing it exists to prevent, so "exercise it with a real buy" is not a reason. **Ready means the phone can decide, not just record** — 5.9c |

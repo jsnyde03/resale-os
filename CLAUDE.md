@@ -215,6 +215,16 @@ Break any of these and the product stops being what it is.
   Python `\b` put four literal 0x08 bytes into a regex, which then matched
   nothing; `lint:bytes` named the file and byte the moment it ran, but I had
   been running `lint:imports` alone. A gate you skip is a gate you do not have.
+- ⛔ **A BACKUP CARRIES THE COMMANDS AND THE CONFIG. Scored opportunities are
+  DEVICE-LOCAL, and that is a decision** (6.0.5, 2026-09-10, Jason). The
+  `opportunities` table is neither a command nor config, and it is **not
+  derivable** — it records what was decided, when, and under which policy
+  version, and no replay reconstructs that. Carrying rows a replay cannot check
+  would cost the format the one property that makes moving a fund trustworthy:
+  **everything in the file is verified by regenerating it.** Scoring history is
+  advisory — a rejection histogram and a watchlist; the ledger is not.
+  `tests/backup-portable.test.ts` pins the top-level shape **on the serialised
+  JSON**, so growing the format has to be deliberate.
 - ⚠️ **BATCH the device lane; it triggers on every push.** `driver-contract-ios`
   is a ~15-minute **macOS** job, the runner is serialised, and pushing per
   sub-item queues a run for every commit — each one verifying a tree the next

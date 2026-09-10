@@ -3984,3 +3984,39 @@ verified against Apple's SQLite rather than against Node's:
 running them on a device is not that SQLite might differ — it is that the store,
 the migrations, the bundling and the driver normalisation all sit between the
 screen and the row, and only the device exercises that stack in order.
+
+### 6.0.5 / D15 — scores are device-local, and the app says so
+
+Jason took the narrower option. **The export stays the commands plus the config.**
+
+The reasoning is about what the format is *for*. Its whole value is that the
+destination **replays** every command and compares every regenerated hash, so a
+single byte of divergent engine behaviour refuses the import rather than being
+accepted. That guarantee only covers things a replay can regenerate. Scored
+opportunities cannot be regenerated — they record what was decided, when, and
+under which policy version — so carrying them would put unverifiable rows inside
+a file whose entire claim is that everything in it was verified. ⚡ **The cost of
+the alternative was the guarantee itself, and what it would have bought is
+advisory data.**
+
+Said in three places, because a boundary stated only in code is one nobody
+learns until they lose something:
+
+- **`portable.ts`**, where the format is defined and where the next person to
+  find it convenient will be standing;
+- **the backups screen**, in the operator's words — *a copy carries the ledger
+  and the rules; it does not carry the items you scored and walked away from.*
+  ⚠️ Same discipline as 5.9b's wording about a file being OFFERED rather than
+  arriving: **a copy that quietly omitted something would be the second-most
+  dangerous lie that screen could tell**;
+- **`CLAUDE.md`**, so a session does not "helpfully" widen it.
+
+⚠️ **Pinned on the SERIALISED JSON, not on the object.** A key added to the
+return type would reach the file even while the interface still looked right, so
+the test asserts `JSON.stringify(dump)` contains neither the row's id nor the
+word. Planted by making `exportLedger` grow an `opportunities` key: both claims
+red, the shape one and the content one.
+
+**What this costs, stated honestly:** losing the phone loses the rejection
+histogram (**B3**) and whatever depth **6.5**'s watchlist has accumulated. It
+loses none of the money, none of the rules, and none of the tax position.

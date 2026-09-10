@@ -95,6 +95,16 @@ export default function Backups() {
           somewhere else.
         </Muted>
 
+        {/* ⛔ 6.0.5. Saying what a backup does NOT carry is the same discipline as
+            saying a file was only OFFERED. A copy that quietly omitted something
+            would be the second-most dangerous lie this screen could tell. */}
+        <Muted>
+          A copy carries the ledger and the rules — every event, every setting. It does not carry
+          the items you scored and walked away from: those are a record of decisions, not of money,
+          and nothing can verify them by replaying. Losing this phone loses the scoring history and
+          none of the fund.
+        </Muted>
+
         <Button label="Make one now" onPress={makeOne} />
 
         {note ? <Text style={{ color: C.good, fontSize: 13 }}>{note}</Text> : null}
