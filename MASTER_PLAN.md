@@ -309,6 +309,14 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   whole `allocation` block — owner split and the set-aside NAV threshold. ⚡
   **That block is what D2 needs**, and D2 is due at $100 NAV, which is four to
   six flips away. → before D2 is answered.
+- **B75** ⚠️ **The device lane flaked once, and the error blamed the wrong
+  thing.** `bootstatus ... || true` swallowed a failed boot, so a simulator stuck
+  2m22s in data migrations was installed into and launched anyway, surfacing 90s
+  later as *"the app did not run the contract"*. The **same commit passed on a
+  re-run**. Fixed 2026-09-10: a failed boot is now named, retried once, and
+  reported as the RUNNER; the result deadline is 180s. ⚠️ **Watch whether it
+  recurs** — one flake is an anecdote, and a gate that fails randomly stops being
+  read.
 - **B74** ⚠️ **SoldComps: `totalItems` is the count on the CURRENT PAGE, not a
   grand total.** Reading it as the sold count returns the page size — a plausible
   wrong number, which is the worst kind. The real count needs paginating until

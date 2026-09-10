@@ -4106,3 +4106,35 @@ and both times the expectation was mine.
 
 The screen also prints the clearance rule when hold time leads, so the answer to
 *"why is nothing passing"* arrives with the number that would change it.
+
+### The device lane flaked, and the error named the wrong culprit
+
+6.2's first device run failed with *"No result file after 90s — the app did not
+run the contract."* **The same commit, re-run with no changes, passed 48/48.**
+
+⚠️ **Diagnosed before touching anything.** The lane's own design says a missing
+result means the app never ran rather than a case failing, and the console and
+crash-report sections were both empty — so the app was not the evidence. Above
+the error, the log showed the simulator spending **2m22s** on `CloudTabsMigrator`
+and `Vibrations` data migrations and ending on status **4294967295**.
+
+⛔ **`xcrun simctl bootstatus "$DEVICE" -b || true` swallowed that.** The script
+installed into and launched on a simulator that had not finished booting, and the
+failure surfaced ninety seconds later **attributed to the app**. An error that
+names the wrong cause is worse than one that fails loudly: it sends the next
+person to read code that was never the problem — which is exactly what this
+project's *"'Failed' is a step, not a phase"* rule was written about, one level
+further out.
+
+A failed boot is now **named, retried once, and reported as the RUNNER**, and the
+result deadline is 180s because a first launch on a freshly-migrated simulator is
+slow and the old budget could not tell "slow" from "dead". The poll still exits
+the moment the file appears, so a good run costs nothing.
+
+⚡ **Re-running the same commit is what made this cheap.** It is the one action
+that separates a flaky environment from a real defect, and it costs a single
+cycle — much less than a speculative fix to code that was never broken, which
+this project has paid for before.
+
+⚠️ Filed as **B75** rather than called closed: **one flake is an anecdote.** If it
+recurs the retry is treating a symptom.

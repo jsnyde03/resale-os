@@ -119,7 +119,6 @@ function rejectionHistogram(db: ReadOnlyDb): RejectionHistogram {
     "SELECT reasoning_json, score_breakdown_json FROM opportunities WHERE recommendation = 'REJECT'",
   )) {
     rejectedRows += 1;
-    const before = counts.size === 0 ? -1 : 0;
     let found = 0;
 
     // Structured first. Rows written before 6.2 do not have it.
@@ -146,7 +145,6 @@ function rejectionHistogram(db: ReadOnlyDb): RejectionHistogram {
     }
 
     if (found === 0) unreadableRows += 1;
-    void before;
   }
 
   return {
