@@ -59,7 +59,8 @@ access this project may not get.
       would ever see them. ⚡ **B3**'s rejection histogram now has something to
       count and **6.5**'s watchlist has something to watch. Read back through a
       separate reader; planted (save → no-op).
-- [ ] **6.0.4** On-device verification.
+- [x] **6.0.4** ✅ **Done 2026-09-10. 47/47 against Apple's SQLite**, up from 44
+      — the settings policy write, the tax-profile repair, and the recorded score.
 - [ ] **6.0.5** ⚠️ **Scored opportunities are NOT in the backup.** `exportLedger`
       carries commands and config; the `opportunities` table is neither, so
       scoring history dies with the phone while the money survives. Either extend

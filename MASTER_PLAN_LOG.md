@@ -3967,3 +3967,20 @@ Codemagic one it generalises: **batch the pushes, or cancel what they supersede.
 ⚠️ It is the same principle already recorded for build minutes, applied to a lane
 that did not exist when that lesson was learned — which is how most of this
 project's repeat defects have looked.
+
+### 6.0.4 — 47/47, and what the three new cases prove
+
+Up from 44. The additions are the three writes this session introduced, each
+verified against Apple's SQLite rather than against Node's:
+
+- a **policy edit** read back by a second `FundStore` over the same database,
+  with the other mode untouched, the version moved, and no money moved;
+- a **tax profile** written after being loaded from an unconfigured value \u2014 the
+  repair path opening against a broken one;
+- a **scored opportunity** recorded, including a REJECT, read back through a
+  separate reader, with the rejection histogram no longer empty.
+
+⚠️ Each of those is a write the phone could not do this morning. The value of
+running them on a device is not that SQLite might differ — it is that the store,
+the migrations, the bundling and the driver normalisation all sit between the
+screen and the row, and only the device exercises that stack in order.

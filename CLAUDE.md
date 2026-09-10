@@ -8,10 +8,11 @@ next.** Exactly one item is decomposed on it — the active one. Detail and
 rationale live in `MASTER_PLAN_LOG.md`; read the entry for anything you are
 about to change.
 
-**Status (2026-09-10): Gates 1-4 CLOSED. Gate 5 — THE PHONE IS THE SYSTEM —
-is all but closed: the fund LIVES ON THE PHONE and the desktop is deleted.**
+**Status (2026-09-10): Gates 1-5 BUILT. The fund LIVES ON THE PHONE, the desktop
+is deleted, and Gate 6 — SOURCING — is active.** The aisle screen decides, names
+what would fix a refusal, and records every decision including the walk-aways.
 
-Live on a real **$50** bankroll. **522 tests.** `npm run check` runs five gates:
+Live on a real **$50** bankroll. **550 tests.** `npm run check` runs five gates:
 source bytes, import direction, phone bundle, typecheck, tests.
 
 ---
@@ -49,7 +50,7 @@ export is not a document — it is the ledger plus the profile.** Treat it like 
 database, never like an artifact.
 
 **The ledger, the engine, every write and read screen, the sourcing screen,
-backups and the import all run on the device: 44/44 against Apple's SQLite** in
+backups and the import all run on the device: 47/47 against Apple's SQLite** in
 `.github/workflows/driver-contract-ios.yml`. The app ships via Codemagic to
 TestFlight.
 
@@ -99,7 +100,7 @@ margin play needing hold tolerance a $50 fund does not have. Backlog **B28**.
 ### Five gates run on every check
 
 ```
-npm run check    # source bytes · import direction · PHONE BUNDLE · typecheck · 522 tests
+npm run check    # source bytes · import direction · PHONE BUNDLE · typecheck · 550 tests
 ```
 
 ⚡ **`lint:phone` walks the import graph** from every `src/` module the phone
