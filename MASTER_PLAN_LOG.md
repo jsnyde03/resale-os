@@ -4138,3 +4138,43 @@ this project has paid for before.
 
 ⚠️ Filed as **B75** rather than called closed: **one flake is an anecdote.** If it
 recurs the retry is treating a symptom.
+
+## 2026-09-10 — 6.5: not yet, or never?
+
+⛔ **The before-scan disproved the item's premise.** It was filed as *"the
+watchlist that unlocks"*, on the idea that a refused item is waiting for the
+bankroll. **Measured: mostly it is not.** Three of four refused candidates never
+become a buy at any NAV up to **$500,000** — hold time, margin and sell-through
+do not care how rich the fund is. So the valuable answer is the one nobody asked
+for: **put it down, it will never be a buy.** A watchlist is what is left over.
+
+⛔ **And the obvious algorithm was wrong.** The unlock is **not monotonic**: a
+$12 → $30 item is a BUY at $490 and is REFUSED at $500, because GROWTH lifts the
+minimum profit from $8 to $15 and drops the per-item cap from 40% to 20%. ⚡ At
+$250 in BOOTSTRAP and $500 in GROWTH a single item is capped at **the same
+$100** — doubling the fund buys no extra room while the profit floor nearly
+doubles. **Growing the fund can take a buy away**, which a bisection would never
+find: it assumes once true, always true. So it scans, densely around the switch,
+and a plant that removed that density reddened two claims — including *"expected
+55000 to be 50000"*, the exact imprecision the density prevents.
+
+### ⚠️ A cast that made the whole thing a no-op, and typechecked
+
+The first wiring asked the hypothetical question with
+`{ ...state, hypotheticalNavCents: navCents } as FundState`. **It compiled.** But
+NAV is DERIVED from balances, nothing reads that field, and every one of the
+twenty-one hypothetical evaluations would have run at the **real** bankroll —
+the scan returning one answer repeated twenty-one times, with a confident
+"never" for everything.
+
+`fundAtNav` moves the LIQUID balance instead, and a test asserts
+`computeMetrics(fundAtNav(state, X)).navCents === X` for four values, plus that
+the mode flips at the threshold and nothing else about the fund changes.
+⚠️ **`as` is how a lie passes a typechecker**, and the only thing that catches it
+is asserting the effect rather than the shape.
+
+⚠️ **The mode is taken from the threshold, not from history.** The real mode is
+hysteretic — it depends on the path NAV took — and a hypothesis has no path. So
+the answer means *"at this bankroll, arrived at cleanly"*. It is an
+approximation, and it is named as one in the code rather than left for someone
+to discover.

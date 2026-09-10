@@ -80,6 +80,36 @@ from, and answers exactly as well as it does today when the network does not.
 **Exit:** the fund can answer *"why is nothing passing?"* from its own record
 instead of from a hunch.
 
+### Gate 6.5 — NOT YET, OR NEVER?
+
+⚡ **ACTIVE BUILD**, and the before-scan **corrected it**. It was filed as *"the
+watchlist that unlocks"*, on the premise that a refused item is waiting for the
+bankroll. **Measured 2026-09-10: mostly it is not.** Three of four refused
+candidates never become a buy at **any** NAV up to $500,000 — hold time, margin
+and sell-through do not care how rich the fund is. The genuinely useful answer is
+the one nobody asked for: **put it down, it will never be a buy.**
+
+⛔ **And the obvious algorithm is wrong.** The unlock is **NOT MONOTONIC**: a
+$12 → $30 item is a BUY at $490 and is REFUSED at $500, because GROWTH raises the
+minimum profit from $8 to $15. **Growing the fund can make an item stop being
+buyable** — intended, counterintuitive, and fatal to a binary search.
+
+- [x] **6.5.1** ✅ **Done 2026-09-10.** `src/screens/unlock.ts` — NOW / AT $X /
+      NEVER, by SCANNING 21 bankrolls, dense around the mode switch. ⛔ The
+      hypothetical fund moves a BALANCE; the first version spread a
+      `hypotheticalNavCents` field and cast it, which typechecked while every
+      hypothetical evaluated at the real bankroll.
+- [x] **6.5.2** ✅ **Done 2026-09-10.** *"Not yet — this becomes a buy at $150"*
+      or *"Put it down — no bankroll makes this a buy."*
+- [ ] **6.5.3** The watchlist proper — saved opportunities whose answer is AT $X,
+      nearest threshold first, against today's NAV. Only these are worth keeping.
+- [x] **6.5.4** ✅ **Done 2026-09-10.** *"This stops being a buy above $500"* —
+      measured, not theorised: GROWTH lifts the profit floor $8 → $15.
+- [ ] **6.5.5** On-device verification.
+
+**Exit:** a refusal comes with its own expiry date, or with the news that it has
+none.
+
 ---
 
 ## Queue

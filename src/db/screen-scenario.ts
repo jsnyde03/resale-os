@@ -349,6 +349,44 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
     },
   },
   {
+    // ⚡ 6.5 on device: a refusal that expires, and one that does not.
+    name: 'sourcing: a refusal says NOT YET with a bankroll, or NEVER',
+    run: (db) => {
+      const store = funded(db, 5_000);
+
+      // Good and fast, simply too expensive for a $50 fund.
+      const dear = evaluateForm(
+        { name: 'dear', category: 'TOYS', price: '30.00', resale: '120.00', sold90: '40', active: '3' },
+        store.state(),
+      );
+      ok(dear.ok, 'the form should parse');
+      if (!dear.ok) return;
+      ok(!dear.verdict.buy, 'refused at this bankroll');
+      eq(dear.verdict.unlock.unlock.kind, 'AT_NAV', 'but it expires');
+      if (dear.verdict.unlock.unlock.kind === 'AT_NAV') {
+        ok(dear.verdict.unlock.unlock.navCents > 5_000, 'at a bankroll above this one');
+      }
+
+      // Slow, and no bankroll fixes slow.
+      const slow = evaluateForm(
+        { name: 'slow', category: 'TOYS', price: '12.00', resale: '60.00', sold90: '2', active: '30' },
+        store.state(),
+      );
+      ok(slow.ok, 'the form should parse');
+      if (!slow.ok) return;
+      eq(slow.verdict.unlock.unlock.kind, 'NEVER', 'this one is closed');
+      if (slow.verdict.unlock.unlock.kind === 'NEVER') {
+        ok(slow.verdict.unlock.unlock.because.includes('HOLD_TOO_LONG'), 'and it says why');
+      }
+
+      // ⛔ The two must not be the same answer. Before 6.5 both were "REJECT".
+      ok(
+        dear.verdict.unlock.unlock.kind !== slow.verdict.unlock.unlock.kind,
+        'not yet and never are different answers',
+      );
+    },
+  },
+  {
     name: 'sell: the form model records the sale and the hold it derived',
     run: (db) => {
       const store = funded(db, 50_000);

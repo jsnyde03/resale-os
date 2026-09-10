@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } fro
 
 import { evaluateForm, headline, type SourcingForm } from '../../src/screens/sourcing.js';
 import { opportunityIdFrom } from '../../src/core/ids.js';
+import { formatCents } from '../../src/core/money.js';
 import {
   CONDITIONS,
   CONDITION_LABELS,
@@ -355,6 +356,49 @@ export default function Sourcing() {
                   })
                 }
               />
+
+              {/* ⚡ 6.5. Not yet, or never — the answer that ENDS a decision.
+                  Most refusals are never: hold time, margin and sell-through do
+                  not care how big the fund is. */}
+              {!verdict.buy ? (
+                <Card
+                  style={{
+                    borderWidth: 1,
+                    borderColor: verdict.unlock.unlock.kind === 'AT_NAV' ? C.warn : C.bad,
+                  }}
+                >
+                  {verdict.unlock.unlock.kind === 'AT_NAV' ? (
+                    <>
+                      <Text style={{ color: C.warn, fontSize: 16, marginBottom: 6 }}>
+                        Not yet — this becomes a buy at{' '}
+                        {formatCents(verdict.unlock.unlock.navCents)} of bankroll.
+                      </Text>
+                      <Muted>
+                        Nothing about the item has to change. Worth keeping a note of.
+                      </Muted>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={{ color: C.bad, fontSize: 16, marginBottom: 6 }}>
+                        Put it down — no bankroll makes this a buy.
+                      </Text>
+                      <Muted>
+                        A bigger fund does not fix how long it takes to sell, how thin the margin
+                        is, or how few of them sell. Checked up to $50,000.
+                      </Muted>
+                    </>
+                  )}
+                </Card>
+              ) : null}
+
+              {/* ⚠️ The surprising direction, and only when it applies. */}
+              {verdict.unlock.lostAboveCents !== null ? (
+                <Muted>
+                  ⚠️ This stops being a buy above{' '}
+                  {formatCents(verdict.unlock.lostAboveCents)} of bankroll — the rules get
+                  stricter as the fund grows, not looser.
+                </Muted>
+              ) : null}
 
               <Muted>
                 Scored against policy {verdict.policyVersion}, and against the ledger on this phone

@@ -15,6 +15,7 @@
 import { parseOpportunity, type OpportunityInput } from '../domain/opportunity.js';
 import { evaluateOpportunity, type Evaluation } from '../scoring/evaluate.js';
 import { soldNeededForHold } from '../core/velocity.js';
+import { assessUnlock, fundAtNav, type UnlockAssessment } from './unlock.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { canonicalize } from '../db/hash.js';
@@ -126,6 +127,12 @@ export interface SourcingVerdict {
     readonly againstActiveListings: number;
     readonly ceilingDays: number;
   };
+  /**
+   * ⚡ **Not yet, or never?** — the answer that ends a decision instead of
+   * leaving it open. Most refusals are NEVER: hold time, margin and sell-through
+   * do not care how rich the fund is. See `unlock.ts`.
+   */
+  readonly unlock: UnlockAssessment;
   readonly policyVersion: string;
 }
 
@@ -279,6 +286,14 @@ export function evaluateForm(
       ? false
       : atCeiling !== null && atCeiling.result.recommendation === 'BUY';
 
+  // ⚠️ Evaluated against HYPOTHETICAL bankrolls, which is why the evaluator is
+  // passed as a function rather than this file reaching a store.
+  const unlock = assessUnlock(
+    input,
+    (navCents) => evaluateOpportunity(input, fundAtNav(state, navCents)),
+    e.metrics.navCents,
+  );
+
   const failedGates = e.gates.results
     .filter((r) => !r.passed)
     .map((r) => ({ code: r.code, message: r.message, actual: r.actual, limit: r.limit }));
@@ -314,6 +329,7 @@ export function evaluateForm(
       confidenceBps: e.result.confidenceBps,
       velocityIsEstimate: e.economics.velocity.source === 'OPERATOR_ESTIMATE',
       failedGates,
+      unlock,
       holdFix: {
         soldNeededIn90Days: soldNeededForHold(e.metrics.modePolicy.maxHoldDays, input.activeListings),
         againstActiveListings: input.activeListings,
