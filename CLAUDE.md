@@ -183,6 +183,18 @@ Break any of these and the product stops being what it is.
   Python `\b` put four literal 0x08 bytes into a regex, which then matched
   nothing; `lint:bytes` named the file and byte the moment it ran, but I had
   been running `lint:imports` alone. A gate you skip is a gate you do not have.
+- ⛔ **A list of WHERE TO LOOK goes stale in silence; a list of WHAT IS SAFE TO
+  READ fails safe.** Five instances of the first: `lint:imports`' screen
+  directories, the iOS lane's `paths:` filter (**three times**), and
+  `npm run typecheck`, which never ran `mobile/tsconfig.json` at all — so every
+  phone screen was typechecked only in CI. Each time the omission fell toward
+  *not checking*, and a green meant **"did not run"** while looking exactly like
+  "passed". ⚠️ **Do not invert the other kind:** `check-source-bytes.mjs`
+  enumerates source extensions so it does not read a PNG and report its bytes as
+  control characters. **The test is which way the omission falls** — toward not
+  checking something, or toward not trusting it. Fix the first kind by inverting
+  it to an exemption list, or by making it answer to something that DISCOVERS:
+  `check-phone-bundle.mjs --print-layers`, asserted by `tests/ci-scope.test.ts`.
 - ⚠️ **The web can write CONFIG but never the ledger** (Gate 4 decision,
   2026-09-08). `withConfigStore` is a *separate* door with five methods, not
   `LedgerReader` plus writes — that shape invites one more capability each time.

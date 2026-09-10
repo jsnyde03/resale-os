@@ -3316,3 +3316,49 @@ fund has actually moved**, because `cli export` is how it gets onto the phone an
 5.10 deletes the CLI. That leaves the phase after-scan, which is mandatory at a
 phase boundary anyway and has real content: two repeating patterns to sweep for,
 and 5.9c's lessons to apply backwards to screens that shipped before them.
+
+### 5.11.1 — the stale-scope-list sweep, and the distinction it turned up
+
+Three instances of one shape, all closed.
+
+**The money-arithmetic sweep** iterated a hand-written list of the places screens
+live — while the comment directly above it told the next reader to *"search the
+tree, or at minimum re-read the list every time a directory is born."* The code
+did not do what its own comment said. ⚠️ **Measured before changing anything:
+the list was not actually short today** — every `.tsx` directory sits under a
+swept root — so this was structural risk, not a live defect, and it is now
+inverted: sweep everything under `src/` and `mobile/`, exempt `src/core/` where
+money arithmetic belongs. Sweeping the whole tree produced **zero** new
+violations, so behaviour is identical today and different the day a directory is
+born. Planted in `src/scoring/`, a directory the old list never looked at: the
+new sweep flags it, and the old list is **blind to it**.
+
+**An undeclared layer was silent.** `src/adapters` has existed for the whole life
+of this gate with no `FORBIDDEN` entry — named in other layers' forbidden lists,
+carrying no rules of its own, so it could have imported `node:sqlite` or
+`src/cli` freely. It happened to be **empty**, so nothing was violated; the gate
+simply had no opinion and would not have gained one when a file appeared. Any
+`src/` directory containing source must now be declared, restricted or
+deliberately unrestricted. Planted by dropping one file into `src/adapters`.
+
+**B67 is closed, and not the way it was filed.** The filing assumed the fix was
+to generate the YAML. The better answer was to make the hand-written filter
+**answer to** the discovered closure: `check-phone-bundle.mjs --print-layers`
+emits the `src/` layers the phone transitively reaches, and
+`tests/ci-scope.test.ts` fails if the `paths:` filter misses one. ⚠️ Printed
+from the whole closure, not from the roots — `src/domain` is reached only
+*through* `src/scoring`, so a filter built from direct imports would miss it for
+exactly the reason the one-level import lint missed `views.ts`. ⚠️ And the test
+parses the `paths:` **block**, not the file: every one of those directories is
+also named in a comment there, so a grep would have passed while asserting
+nothing. Planted by removing `src/scoring/**` and leaving the comments.
+
+### ⚡ The distinction worth keeping
+
+Not every hand-written list is a defect, and a later pass should not "fix" the
+one that is correct. **A list of WHERE TO LOOK goes stale in silence** — a new
+directory is simply not checked and nothing says so. **A list of WHAT IS SAFE TO
+READ fails safe** — `check-source-bytes.mjs` enumerates source extensions
+precisely so it does not read a PNG and report its bytes as control characters;
+inverting that one would break it. The test is which way the omission falls:
+toward *not checking* something, or toward *not trusting* something.

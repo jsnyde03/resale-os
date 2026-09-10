@@ -1,4 +1,4 @@
-# Resale OS — MASTER PLAN
+  # Resale OS — MASTER PLAN
 
 **The queue.** Terse by rule. Detail, rationale and completed narrative live in
 [MASTER_PLAN_LOG.md](MASTER_PLAN_LOG.md). Specs live in [docs/](docs/).
@@ -134,10 +134,13 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       unblocked item left: 5.5 and 5.9 need Jason, and 5.10 must not start until
       the fund has actually moved. A per-item scan cannot see what only shows up
       with the whole phase in view.
-  - [ ] **5.11.1** Sweep 5.1→5.9c for the two patterns this phase kept
-        repeating: a **hand-written scope list** that went stale (`paths:`,
-        `typecheck`, `lint:imports`' directory list — three so far, **B67**), and
-        a **control whose two sides come from one source**. Fix or file each.
+  - [x] **5.11.1** ✅ **Done 2026-09-10. The stale-scope-list sweep.** Three
+        instances found and all three closed: the money sweep INVERTED to an
+        exemption list (measured first — zero new violations), an undeclared
+        `src/` layer now red-gates (`src/adapters` had no rules and nobody
+        knew), and **B67 closed** — `tests/ci-scope.test.ts` asserts the CI
+        `paths:` filter covers every layer `lint:phone` DISCOVERS. Planted
+        both directions each time. 593 tests.
   - [ ] **5.11.2** Apply 5.9c's lessons BACKWARDS to already-shipped screens —
         every surface that gates, classifies or reports, checked for the
         fails-open shape (**B66**) and for a class asserted in only one
@@ -394,12 +397,13 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   defaults (`hassleBps` 2,000, condition a pessimistic 40%). Both move
   confidence, so they are real dials — but they are new financial input
   surface. → Gate 6.
-- **B67** ⛔ **The iOS lane's `paths:` filter went stale twice more in one
-  item** — 5.8 put `src/server/views.ts` on the device and 5.9c put
-  `src/scoring/purchase.ts` there, and neither triggered a run. Fixed by hand
-  again, which is the third time. `lint:phone` DISCOVERS the closure by scanning
-  `mobile/`; a YAML path list cannot, so the fix is to generate the filter or to
-  trigger broadly and gate inside the job. → Gate 5/6.
+- ~~**B67**~~ ✅ **Closed 2026-09-10 in 5.11.1.** Not by generating the YAML —
+  by making it ANSWER to the discovered closure. `check-phone-bundle.mjs
+  --print-layers` emits the layers the phone reaches; `tests/ci-scope.test.ts`
+  fails if the filter misses one. The two sides are an import-graph walk and a
+  hand-typed list, which is what makes it a control. ⚠️ Scoped to the `paths:`
+  block, not a grep of the file — every one of those directories is also named
+  in a comment there.
 - **B68** A score made in the aisle is **not saved** — the phone evaluates and
   hands off, and nothing lands in `opportunities`. Correct for 5.9c (writing
   opportunities is tier 3, still closed) but it is the precondition for **6.5**,

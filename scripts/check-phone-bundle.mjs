@@ -129,4 +129,26 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
+// ⚡ **B67.** The CI lane's `paths:` filter names the directories a device run
+// depends on, by hand, and it has been short three times — `src/ui`, then
+// `src/server` and `src/scoring` in one item. The closure is right here; the
+// filter just never had to answer to it. `--print-layers` emits the `src/`
+// layers the phone actually reaches, and `tests/ci-scope.test.ts` asserts the
+// workflow covers every one.
+//
+// ⚠️ Printed from `seen` (the whole closure), not from `roots` (what `mobile/`
+// imports directly) — `src/domain` is reached only THROUGH `src/scoring`, and a
+// filter built from the roots alone would miss it for the same reason the
+// one-level import lint missed `views.ts`.
+if (process.argv.includes('--print-layers')) {
+  const layers = new Set();
+  for (const file of seen.keys()) {
+    const rel = toPosix(relative(ROOT, file));
+    const parts = rel.split('/');
+    if (parts[0] === 'src' && parts.length > 1) layers.add(`src/${parts[1]}`);
+  }
+  console.log([...layers].sort().join('\n'));
+  process.exit(0);
+}
+
 console.log(`phone bundle: clean (${roots.size} roots, ${seen.size} modules reachable)`);

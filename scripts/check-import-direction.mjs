@@ -42,8 +42,12 @@ const FORBIDDEN_MODULES = {
 
 const toPosix = (p) => p.split(sep).join('/');
 
+/** Generated or vendored trees. Nothing here is ours to judge. */
+const SKIP_DIRS = new Set(['node_modules', 'ios', 'android', '.expo', '.next', 'dist', '.git']);
+
 function* walk(dir) {
   for (const entry of readdirSync(dir)) {
+    if (SKIP_DIRS.has(entry)) continue;
     const path = join(dir, entry);
     if (statSync(path).isDirectory()) yield* walk(path);
     else if (entry.endsWith('.ts') || entry.endsWith('.tsx')) yield path;
@@ -112,10 +116,30 @@ for (const [layer, banned] of Object.entries(FORBIDDEN)) {
 // itself to an enumerated scope. This is the third time on this project that a
 // hand-written list of places to look has been short — search the tree, or at
 // minimum re-read the list every time a directory is born.
-for (const dir of ['src/app', 'src/server', 'src/ui', 'mobile/app', 'mobile/src']) {
+// ⚡ **INVERTED 2026-09-10.** This used to iterate a hand-written list of the
+// places screens live, and the comment above told the next reader to "search
+// the tree" — which the code then did not do. An allowlist of places to LOOK
+// goes stale in silence: a new directory simply is not checked, and nothing
+// says so. An exemption list goes stale LOUDLY — a new corpus is swept by
+// default, and anything that genuinely belongs outside the rule has to be named
+// here, deliberately, in a diff somebody reads.
+//
+// Same shape as `validatePolicy`, which is exhaustive by construction off a
+// defaults object's keys rather than off a field list somebody maintains.
+//
+// ⚠️ Measured before adopting: sweeping the whole tree minus `src/core`
+// produced **zero** new violations, so this is identical behaviour today and
+// different behaviour the day a directory is born.
+const MONEY_EXEMPT = [
+  // Where money arithmetic BELONGS, and is tested. `formatCents` lives here.
+  'src/core/',
+];
+
+for (const dir of ['src', 'mobile']) {
   if (!existsSync(join(ROOT, dir))) continue;
   for (const file of walk(join(ROOT, dir))) {
     const rel = toPosix(relative(ROOT, file));
+    if (MONEY_EXEMPT.some((prefix) => rel.startsWith(prefix))) continue;
     const source = readFileSync(file, 'utf8');
     source.split(/\r?\n/).forEach((line, i) => {
       if (MONEY_ARITHMETIC.test(line)) {
@@ -125,6 +149,38 @@ for (const dir of ['src/app', 'src/server', 'src/ui', 'mobile/app', 'mobile/src'
       }
     });
   }
+}
+
+// ⛔ **A LAYER WITH NO RULES MUST NOT BE SILENT.**
+//
+// `src/adapters` existed for the whole life of this gate with no entry in
+// `FORBIDDEN` — named in other layers' forbidden lists, but carrying no rules of
+// its own, so it could have imported `node:sqlite`, `src/cli`, anything. It
+// happened to be EMPTY, so nothing was violated; the gate simply had no opinion,
+// and would not have gained one the day a file appeared.
+//
+// So every directory under `src/` that actually contains source must be
+// declared — restricted below, or listed here as deliberately unrestricted.
+// A new layer now red-gates until somebody decides what it may import, which is
+// a decision worth forcing while the layer has one file rather than forty.
+const UNRESTRICTED = new Set([
+  // The composition layers. They sit at the top of the dependency order and are
+  // expected to reach downward freely; `src/cli` is retired at 5.10 anyway.
+  'src/db',
+  'src/cli',
+  'src/server',
+]);
+
+for (const entry of readdirSync(join(ROOT, 'src'))) {
+  const layer = `src/${entry}`;
+  if (!statSync(join(ROOT, layer)).isDirectory()) continue;
+  if (layer in FORBIDDEN || UNRESTRICTED.has(layer)) continue;
+  // An empty directory is not a layer yet. The rule bites when source arrives.
+  if ([...walk(join(ROOT, layer))].length === 0) continue;
+  failures.push(
+    `${layer} has source but no import rules — add it to FORBIDDEN, or to ` +
+      `UNRESTRICTED if it is deliberately unconstrained`,
+  );
 }
 
 if (failures.length > 0) {
