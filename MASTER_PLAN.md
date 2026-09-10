@@ -119,37 +119,37 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       the app can actually observe — a file was OFFERED elsewhere, not that it
       arrived. ✅ **43/43 on device** — `Installing ExpoSharing (57.0.18)` in the
       pod log, so the native module really was compiled in.
-- [ ] **5.9c** ⚡ **ACTIVE BUILD.** ⛔ **THE GAP BETWEEN RECORDING AND DECIDING.** A sourcing screen:
-      score an opportunity in the field and get the **walk-away price**.
-      ⚠️ Found 2026-09-09 by asking what "ready" means — twelve screens on the
-      phone and none answers *"should I buy this, and at what price?"*. `buy`
-      only assesses a price already chosen. ⚠️ **Before-scan corrected the item
-      2026-09-10:** `src/server/sourcing.ts` already IS this screen's model, so
-      this is reuse like 5.8 — and **B58 measured true**, which is now .0.
-  - [x] **5.9c.0** ✅ **Done 2026-09-10. One gate set (D14).** `scoring/purchase.ts`
-        is the only path that decides a purchase — buy screen, `cli buy` and the
-        on-device scenario all go through it. ⛔ **`assessQuote` DELETED**, not
-        deprecated: it had tests, and a tested export reads as a blessed one.
-        `tests/purchase-parity.test.ts` compares the two doors over a 140-row
-        grid; **planted three ways, all red** (the old rule set → 8 + 69 + 309
-        contradictions). 590 tests. → **B66**.
-  - [x] **5.9c.1** ✅ **Done 2026-09-10.** `mobile/app/sourcing.tsx` renders
-        `evaluateForm` — headline, ceiling + `boundBy`, ordered reasons, failed
-        gates. Nothing recomputed; first button on the home screen, above Buy.
-  - [x] **5.9c.2** ✅ **Done 2026-09-10.** Handoff carries every field plus
-        `opportunityIdFrom(name, eventCount)` — collision-free where the old
-        `aisle-<name>` was not. The asking price travels, not the ceiling: what
-        is recorded is what was paid. ⚡ The SCORED class is now asserted
-        on-device; only QUOTED was, and planted two ways.
-  - [~] **5.9c.3** On-device verification. ⚠️ First run failed at TYPECHECK,
-        not the build: `npm run check` never ran `mobile/tsconfig.json`, so
-        phone screens were only typechecked in CI. Now local, and planted.
-        Re-run in flight. B60's JSX-binding half still open.
+- [x] **5.9c** ✅ **Done 2026-09-10. The phone can DECIDE, not only record.**
+      `mobile/app/sourcing.tsx` answers *"should I buy this, and at what price?"* —
+      ceiling, the rule that set it, ordered reasons — and hands the purchase to
+      `buy` so it measures as SCORED. ⚡ **D14 came out of it:** the two screens
+      gated differently (**B58**, measured: 64 divergences in 96 cases, both
+      directions), so `scoring/purchase.ts` is now the only path that decides and
+      `assessQuote` is deleted. **44/44 on device.** → **B64**–**B68**.
 - [ ] **5.10** Retire `src/cli`, `src/server`, `src/app` — 3,715 lines — once
       the phone covers them. ⛔ Not before, and ⚠️ **not until the fund has
       actually moved**: `cli export` is how it gets onto the phone. `views.ts`
       MOVES rather than goes (**B62**).
-- [ ] **5.11** Tests, and the phase after-scan.
+- [ ] **5.11** ⚡ **ACTIVE BUILD — the Gate 5 phase after-scan.** The only
+      unblocked item left: 5.5 and 5.9 need Jason, and 5.10 must not start until
+      the fund has actually moved. A per-item scan cannot see what only shows up
+      with the whole phase in view.
+  - [ ] **5.11.1** Sweep 5.1→5.9c for the two patterns this phase kept
+        repeating: a **hand-written scope list** that went stale (`paths:`,
+        `typecheck`, `lint:imports`' directory list — three so far, **B67**), and
+        a **control whose two sides come from one source**. Fix or file each.
+  - [ ] **5.11.2** Apply 5.9c's lessons BACKWARDS to already-shipped screens —
+        every surface that gates, classifies or reports, checked for the
+        fails-open shape (**B66**) and for a class asserted in only one
+        direction (the SCORED/QUOTED miss was exactly that).
+  - [ ] **5.11.3** Reconcile the accumulated-deferral ledger: B62–B68 plus
+        everything filed earlier in the phase, each confirmed as still true,
+        still needed, and pointed at a real gate.
+  - [ ] **5.11.4** Gate 5's exit criteria written to the log, and the start-here
+        docs (`CLAUDE.md`, `README.md`) made to match the code.
+  - [ ] **5.11.5** ⛔ **NOT RNTL.** B60's trigger is *"only if a wiring bug
+        actually reaches the device"* and it has not fired — 5.9c's failure was
+        a dropped tag, which `tsc` caught. The gap stays named, not guessed at.
 
 **Exit:** the fund lives on the phone, knows its exact position offline, and the
 desktop is gone.
@@ -403,7 +403,11 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
 - **B68** A score made in the aisle is **not saved** — the phone evaluates and
   hands off, and nothing lands in `opportunities`. Correct for 5.9c (writing
   opportunities is tier 3, still closed) but it is the precondition for **6.5**,
-  whose watchlist has nothing to watch until it exists. → Gate 6.5.
+  whose watchlist has nothing to watch until it exists. ⚠️ **Two consequences
+  to carry:** a decision to WALK AWAY is recorded nowhere, so the system learns
+  only from what was bought; and there are now **two id conventions** for one
+  concept — `sourcing.ts`'s internal `aisle-<slug>` and the recorded
+  `opp-<slug>-NNNN`. Settle both when the record exists. → Gate 6.5.
 - **B66** ⚠️ **`assessPurchase` fails OPEN by construction and nothing detects
   it.** Every `PurchaseCandidate` gate field is optional, and a missing one
   skips its gate silently — which is right for `sellThroughBps` under an

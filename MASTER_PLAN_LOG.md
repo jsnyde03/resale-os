@@ -3279,3 +3279,40 @@ is a genuinely different invocation rather than a duplicate of the root one.
 whose scope was written by hand — a `paths:` filter and a `typecheck` script —
 while the thing it was meant to cover kept growing. B67 is the filter; this was
 the script.
+
+### 5.9c closed — 44/44 on device, and the whole-item after-scan
+
+The re-run passed: **44/44 against expo-sqlite on a real iOS simulator**, up from
+43, the extra case being the SCORED class that had never been asserted.
+
+⛔ **B60's trigger did NOT fire, and it matters that the distinction is kept.**
+Its condition is *"add `@testing-library/react-native` only if a wiring bug
+actually reaches the device"*. 5.9c's failure was a **dropped closing tag** —
+structural JSX, caught by `tsc` before any device saw it — not a binding pointed
+at the wrong state, which is the class a typechecker cannot see. Reading a syntax
+error as the trigger would spend a dependency on evidence that does not support
+it. The gap stays named.
+
+**What only the item-level view showed.** Both of this item's CI-visible failures
+were the same shape, and so was **B67**: a check whose scope is a hand-written
+list, kept next to a thing that keeps growing. Three instances now — the `paths:`
+filter, the `typecheck` script, and `lint:imports`' directory list before them.
+This project already answered the question once, in `lint:phone`, which discovers
+its roots by scanning `mobile/` rather than being told them. The answer just has
+not been applied to the other three.
+
+**B68** grew two consequences worth carrying: nothing records a decision to WALK
+AWAY, so the system can only ever learn from what was bought — the passes, which
+are most of the decisions, leave no trace. And there are now two id conventions
+for one concept, `sourcing.ts`'s internal `aisle-<slug>` and the recorded
+`opp-<slug>-NNNN`. Both settle when an opportunity record actually exists, which
+is 6.5.
+
+### Replenishment — 5.11 is the active build
+
+⚠️ **It is the only unblocked item in Gate 5.** 5.5 needs Jason to move the fund
+and 5.9 needs him to add the repo in Codemagic; **5.10 must not start until the
+fund has actually moved**, because `cli export` is how it gets onto the phone and
+5.10 deletes the CLI. That leaves the phase after-scan, which is mandatory at a
+phase boundary anyway and has real content: two repeating patterns to sweep for,
+and 5.9c's lessons to apply backwards to screens that shipped before them.
