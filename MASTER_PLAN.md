@@ -37,40 +37,35 @@ portability problems. They were things the port made visible.**
 SoldComps to value, own history to accumulate, manual as the fallback that stays
 wired.
 
-⛔ **6.0 goes first, and it is not the API.** Everything the eBay work unlocks
-depends on the aisle screen being usable, and three filed items make it so with
-no external dependency, no key and no quota — while the API half is gated on
-access this project may not get.
+- [x] **6.0** ✅ **Done 2026-09-10. 47/47 on device.** The aisle screen names the
+      FIX and not just the failing gate (**B70**), takes condition and hassle as
+      words anchored so the default reproduces the old score (**B64**, **B71**),
+      and **records every decision including the walk-aways** (**B68**) — so
+      **B3**'s histogram has something to count and **6.5**'s watchlist something
+      to watch. Scores are device-local by decision (**D15**).
 
-- [x] **6.0.1** ✅ **Done 2026-09-10. Closes B70.** The verdict carries `holdFix`
-      and the screen prints it when the hold gate bites: *"against 10 listed you
-      need 48 sold in 90 days to clear the 21-day ceiling."* ⚡ It follows the
-      MODE, so a $500 fund is told 17 rather than 48 — the number an operator
-      needs changes as the bankroll grows. Proven EXACT, not approximate: at N it
-      clears and at N-1 it does not, across five listing counts. Planted (ceil to
-      floor → 3 red).
-- [x] **6.0.2** ✅ **Done 2026-09-10. Closes B64 and B71.** Condition and hassle
-      as WORDS on the sourcing screen, anchored so the default option reproduces
-      today's score exactly. ⛔ **"Not sure" is NULL, not 40%** — the two are the
-      same to `scoreConfidence` and different to the RISK score, and the
-      field-for-field test caught the difference.
-- [x] **6.0.3** ✅ **Done 2026-09-10. Closes B68.** Checking an item RECORDS it —
-      walk-aways included, since they are most of the decisions and nothing else
-      would ever see them. ⚡ **B3**'s rejection histogram now has something to
-      count and **6.5**'s watchlist has something to watch. Read back through a
-      separate reader; planted (save → no-op).
-- [x] **6.0.4** ✅ **Done 2026-09-10. 47/47 against Apple's SQLite**, up from 44
-      — the settings policy write, the tax-profile repair, and the recorded score.
-- [x] **6.0.5** ✅ **Decided and built 2026-09-10 (Jason): scores are
-      DEVICE-LOCAL, said plainly.** The export stays *just the commands and the
-      config*, because that is what makes it verifiable by replay — carrying rows
-      a replay cannot check would spend the guarantee on advisory data. Stated in
-      `portable.ts` where the format is defined, on the **backups screen** where
-      the operator reads it, and in `CLAUDE.md`. ⚡ Pinned by a test on the
-      **serialised JSON**, so growing the format is deliberate; planted.
+- [ ] **6.1** ⚡ **ACTIVE BUILD — the data route (D12).** ⚠️ **The valuable half
+      is gated and may not be winnable**: Marketplace Insights is Limited Release
+      and individual developers are denied, so sold comps — the number that
+      decides — may stay manual. Build so that a refusal costs a field, never the
+      screen.
+  - [ ] **6.1.1** ⏳ **[NEEDS JASON]** an eBay developer account and Browse API
+        keys, and an application for Marketplace Insights. Nothing here can do
+        either, and the answer shapes everything after it.
+  - [ ] **6.1.2** The client behind an ADAPTER, in `src/adapters/` — the layer
+        that has been empty all along. ⚡ It will red-gate on arrival until its
+        import rules are declared, which is 5.11.1's check doing its job.
+  - [ ] **6.1.3** ⛔ **Offline-first, and the API never gates.** A shop with no
+        signal is the normal case: the network FILLS fields and a failure leaves
+        the screen exactly as usable as it is today. The fund must never wait on
+        a vendor to answer whether it may buy something.
+  - [ ] **6.1.4** GTIN lookup, which is what **B69**'s scanner would feed — sealed
+        retail is fungible, so a barcode maps to an exact comp set where a
+        keyword search does not.
+  - [ ] **6.1.5** On-device verification.
 
-**Exit:** the aisle screen answers *"should I buy this, at what price, and if not
-what would fix it"* — and remembers what it was asked.
+**Exit:** the screen fills what it can from eBay, says where every number came
+from, and answers exactly as well as it does today when the network does not.
 
 ---
 

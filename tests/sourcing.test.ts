@@ -330,3 +330,41 @@ describe('condition and hassle, as words', () => {
     expect(scores[3]!).toBeLessThan(scores[0]!);
   });
 });
+
+describe('the id a saved score is filed under', () => {
+  const idOf = (form: SourcingForm) => {
+    const r = evaluateForm(form, fund());
+    if (!r.ok) throw new Error('expected a verdict');
+    return r.input.opportunityId;
+  };
+
+  it('separates two different items that share a name', () => {
+    // ⛔ The defect 6.0.3 created. `aisle-<name-slug>` was harmless while
+    // nothing persisted; once scores are SAVED, `save()` upserts, so the second
+    // "Lego set" silently overwrote the first — undercounting B3's histogram and
+    // losing candidates from 6.5's watchlist.
+    expect(idOf({ ...GOOD, price: '12.00' })).not.toBe(idOf({ ...GOOD, price: '30.00' }));
+  });
+
+  it('files a RE-SCORE of the same item under the same id', () => {
+    // The other half, and the reason this is a digest rather than a counter:
+    // checking the same thing twice is one decision, not two.
+    expect(idOf(GOOD)).toBe(idOf({ ...GOOD }));
+  });
+
+  it('separates items that differ only in a field a name would never show', () => {
+    for (const differing of [
+      { comps: '58.00' },
+      { sold90: '41' },
+      { active: '11' },
+      { condition: 'SEALED' as const },
+      { hassle: 'HEAVY' as const },
+    ]) {
+      expect(idOf({ ...GOOD, ...differing })).not.toBe(idOf(GOOD));
+    }
+  });
+
+  it('stays readable, so a stored row can be recognised', () => {
+    expect(idOf(GOOD)).toMatch(/^aisle-lego-set-[0-9a-f]{8}$/);
+  });
+});

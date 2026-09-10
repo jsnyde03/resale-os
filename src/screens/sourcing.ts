@@ -15,6 +15,9 @@
 import { parseOpportunity, type OpportunityInput } from '../domain/opportunity.js';
 import { evaluateOpportunity, type Evaluation } from '../scoring/evaluate.js';
 import { soldNeededForHold } from '../core/velocity.js';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
+import { canonicalize } from '../db/hash.js';
 import {
   CONDITION_CONFIDENCE_BPS,
   DEFAULT_CONDITION,
@@ -126,6 +129,13 @@ export interface SourcingVerdict {
   readonly policyVersion: string;
 }
 
+const slugOf = (name: string): string =>
+  name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'item';
+
+/** Eight hex of the canonical inputs. Same candidate in, same id out. */
+const digestOf = (draft: unknown): string =>
+  bytesToHex(sha256(new TextEncoder().encode(canonicalize(draft)))).slice(0, 8);
+
 /** Null when nobody said, which is a different fact from "40% certain". */
 function conditionBpsOrNull(condition: Condition | undefined): Bps | null {
   if (condition === undefined || condition === DEFAULT_CONDITION) return null;
@@ -208,8 +218,7 @@ export function evaluateForm(
   // ⚠️ Zero sold in 90 days is not a validation error — it is an answer, and a
   // loud one. It flows through to the sell-through gate and gets rejected with
   // a reason, which is more useful than a form telling someone off.
-  const input = parseOpportunity({
-    opportunityId: `aisle-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 32)}`,
+  const draft = {
     name,
     category,
     source: 'MANUAL',
@@ -236,6 +245,22 @@ export function evaluateForm(
     // field-for-field test against `evaluateOpportunity` caught it.
     conditionConfidenceBps: conditionBpsOrNull(form.condition),
     hassleBps: HASSLE_BPS[form.hassle ?? DEFAULT_HASSLE],
+  };
+
+  // ⛔ **The id is derived from the INPUTS, not from the name.**
+  //
+  // It used to be `aisle-<name-slug>`, which was harmless while nothing was
+  // stored — and became a defect the moment 6.0.3 made scores persist, because
+  // `save()` upserts: two different items called "Lego set" collided and the
+  // second silently overwrote the first. That undercounts B3's histogram and
+  // loses candidates from 6.5's watchlist.
+  //
+  // ⚡ Hashing the inputs gives exactly the semantics wanted: **re-scoring the
+  // same item at the same price updates its row; anything different is a new
+  // decision.** The slug stays in front so the id is still readable.
+  const input = parseOpportunity({
+    ...draft,
+    opportunityId: `aisle-${slugOf(name)}-${digestOf(draft)}`,
   });
 
   const e = evaluateOpportunity(input, state);

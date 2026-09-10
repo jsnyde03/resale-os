@@ -4020,3 +4020,48 @@ red, the shape one and the content one.
 **What this costs, stated honestly:** losing the phone loses the rejection
 histogram (**B3**) and whatever depth **6.5**'s watchlist has accumulated. It
 loses none of the money, none of the rules, and none of the tax position.
+
+### 6.0's after-scan — a defect that 6.0.3 created, found by asking what changed
+
+Making scores persistent gave an old shortcut a consequence it never had. The
+opportunity id was `aisle-<name-slug>`, which was harmless while nothing was
+stored — and `OpportunityRepository.save()` **upserts**. So two different items
+both called "Lego set" collided, and **the second silently overwrote the first**:
+B3's histogram would undercount and 6.5's watchlist would quietly lose
+candidates, with nothing anywhere reporting a problem.
+
+⚡ **The fix derives the id from the INPUTS**, eight hex of a `sha256` over the
+canonical draft, with the slug kept in front so a stored row is still
+recognisable: `aisle-lego-set-f90fc7eb`. That gives exactly the semantics
+wanted — **re-scoring the same item at the same price updates its row, and
+anything different is a new decision** — which a counter or a timestamp would
+not: both would file a re-check as a second decision.
+
+Planted by restoring the name-only id: three of four claims red, and the fourth
+— *a re-score keeps the same id* — correctly stayed green, since name-only
+satisfies it too. **One plant per claim, and a claim the plant cannot reach is a
+claim that plant did not test.**
+
+⚠️ **The general shape is worth keeping**: this was not a bug in the code that
+changed. It was a property somewhere else that only became load-bearing because
+of the change — the same shape as the export suddenly needing to say what it does
+not carry. **Ask what a change makes matter, not only what it touches.**
+
+### Replenishment — 6.1, and its honest risk
+
+The data route is next and **its valuable half may not be winnable**: sold comps
+sit behind Marketplace Insights, which is Limited Release and denies individual
+developers. Browse API access is routine; the number that actually decides is
+not.
+
+So 6.1 is built to survive a refusal. ⛔ **The API never gates** — a shop with no
+signal is the normal case, so the network fills fields and its failure leaves the
+screen exactly as usable as it is today. The fund must never wait on a vendor to
+answer whether it may buy something. And the client goes behind an adapter in
+`src/adapters/`, the layer that has been empty since the beginning and will
+red-gate on arrival until its import rules are declared — 5.11.1's check earning
+its keep a second time.
+
+**6.1.1 needs Jason**: an eBay developer account, Browse keys, and an application
+for Marketplace Insights. Nothing here can do either, and the answer shapes
+everything after it.
