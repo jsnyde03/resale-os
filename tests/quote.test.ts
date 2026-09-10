@@ -17,10 +17,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   quotePurchase,
-  assessQuote,
   landedCostOf,
   purchaseCommandFrom,
 } from '@/core/capital/quote.js';
+// ⛔ The gates come from `scoring/purchase.ts`, never from a quote's own
+// assessment. `assessQuote` was deleted with D14: it applied a weaker rule set
+// than the screen that recommends the purchase, and a tested export reads as a
+// blessed one — which is how a future screen would have picked it up again.
+import { evaluatePurchase } from '@/scoring/purchase.js';
 import { Fund } from './helpers.js';
 
 describe('landed cost is every cent it took to own the thing', () => {
@@ -140,13 +144,14 @@ describe('the quote meets the capital rules', () => {
   // the bankroll, and a candidate is never good or bad on its own.
   it('passes a purchase the bankroll can afford', () => {
     const fund = Fund.withBankroll(50_000);
-    const { quote, assessment } = assessQuote(fund.state, {
+    const { quote, evaluation } = evaluatePurchase(fund.state, {
       category: 'TOYS',
       purchasePriceCents: 1_000,
       expectedGrossCents: 4_000,
       soldLast90Days: 90,
       activeListings: 10,
-    });
+    }, { name: 'Lego set' });
+    const assessment = evaluation.gates;
     // 4000 - (530 + 40) - 500 - 35 = 2895 net, less 1000 landed.
     expect(quote.expectedProfitCents).toBe(1_895);
     expect(assessment.failures.map((f) => f.code)).toEqual([]);
@@ -156,12 +161,13 @@ describe('the quote meets the capital rules', () => {
   // The gate that D4's override exists for, reached through the shared path.
   it('refuses one the bankroll cannot, and names the gate', () => {
     const fund = Fund.withBankroll(5_000);
-    const { assessment } = assessQuote(fund.state, {
+    const { evaluation } = evaluatePurchase(fund.state, {
       category: 'TOYS',
       purchasePriceCents: 4_000,
       soldLast90Days: 60,
       activeListings: 20,
-    });
+    }, { name: 'Lego set' });
+    const assessment = evaluation.gates;
     expect(assessment.passed).toBe(false);
     expect(assessment.failures.map((f) => f.code)).toContain('MAX_PER_ITEM_EXCEEDED');
   });
@@ -253,13 +259,14 @@ describe('the purchase command a quote implies', () => {
 
     it('produces a command the engine accepts, end to end', () => {
       const fund = Fund.withBankroll(5_000);
-      const { quote, assessment } = assessQuote(fund.state, {
+      const { quote, evaluation } = evaluatePurchase(fund.state, {
         category: 'TOYS',
         purchasePriceCents: 4_000,
         expectedGrossCents: 12_000,
         soldLast90Days: 90,
         activeListings: 10,
-      });
+      }, { name: 'Lego set' });
+      const assessment = evaluation.gates;
       expect(assessment.passed).toBe(false);
       const command = purchaseCommandFrom(
         { category: 'TOYS', purchasePriceCents: 4_000, expectedGrossCents: 12_000,

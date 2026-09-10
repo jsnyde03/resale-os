@@ -20,8 +20,9 @@ import type { Bps, Cents } from '../money.js';
 import { applyBps, toBps } from '../money.js';
 import { estimateNetProceeds, feeModel, type FeeModel, type NetProceedsEstimate } from '../fees.js';
 import { estimateFromComps, estimateFromOperator, type VelocityEstimate } from '../velocity.js';
-import { assessPurchase, type ConstraintAssessment, type PurchaseCandidate } from './constraints.js';
-import type { FundState } from './state.js';
+// ⚠️ The CANDIDATE only. This file no longer imports `assessPurchase` at all,
+// so it cannot gate a purchase even by accident — that is `scoring/purchase.ts`.
+import type { PurchaseCandidate } from './constraints.js';
 import type { PurchaseCommand } from './commands.js';
 
 /**
@@ -129,14 +130,22 @@ export function quotePurchase(input: PurchaseQuoteInput): PurchaseQuote {
   };
 }
 
-/** The quote, and what the capital rules make of it. */
-export function assessQuote(state: FundState, input: PurchaseQuoteInput): {
-  readonly quote: PurchaseQuote;
-  readonly assessment: ConstraintAssessment;
-} {
-  const quote = quotePurchase(input);
-  return { quote, assessment: assessPurchase(state, quote.candidate) };
-}
+/**
+ * ⛔ **`assessQuote` was here, and it was deleted with D14 (2026-09-10).**
+ *
+ * It returned `assessPurchase(state, quote.candidate)` — and that candidate
+ * carries velocity confidence and no buy score, so `assessPurchase` silently
+ * skipped a gate and the buy screen ran a weaker rule set than the screen that
+ * recommends the purchase. 64 divergences in 96 cases, in both directions.
+ *
+ * ⚠️ **The gates live in `scoring/purchase.ts` now**, which is the only layer
+ * that can see both the quote and the evaluator — `core` may not import
+ * `domain`. This file still owns the arithmetic: `quotePurchase` prices a
+ * purchase and `purchaseCommandFrom` records one. Neither decides.
+ *
+ * It is deleted rather than deprecated because it had tests, and a tested
+ * export reads as a blessed one.
+ */
 
 export interface PurchaseCommandInput {
   readonly itemId: string;

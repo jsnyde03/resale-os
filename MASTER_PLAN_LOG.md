@@ -3036,3 +3036,219 @@ checking.
 `formatCents`, which would have rendered a file size as `$4.50`. Bytes are not
 money, and the money-arithmetic lint only watches for `Cents / 100` — it would
 never have seen this one.
+
+---
+
+## 2026-09-10 — 5.9c's before-scan: B58 was true, and the fund had two answers
+
+### The item shrank, then grew somewhere else
+
+5.9c was written as "build a sourcing screen", decomposed into five sub-steps
+that collect inputs, compute a ceiling and show reasons. Verifying it against
+the code first — the rule for a pre-authored item — found that
+`src/server/sourcing.ts` **already is that model**: 248 lines built for the
+desktop's `/sourcing` page, with `evaluateForm` producing `maxPrice`, `boundBy`,
+`priceFixable`, the ordered reasons and `headline()`, and `tests/sourcing.test.ts`
+holding it to "compute nothing of your own". Three of the five sub-steps were
+already built. The phone work is rendering it, exactly the shape 5.8 took with
+`views.ts`. → **B65**: it MOVES at 5.10 rather than going, like `views.ts`.
+
+Two smaller drifts: the item named **condition** and **hassle** as inputs and
+neither is one — `sourcing.ts` pins `hassleBps: 2_000` and `compMedianAgeDays:
+45`, and an absent condition takes a pessimistic 40% default. Both move
+confidence, so they are real dials rather than omissions, but they are new
+financial input surface. → **B64**, Gate 6.
+
+### B58, measured
+
+**B58** had been filed as a suspicion: *"check the two agree before 5.10 retires
+the CLI, or the disagreement becomes invisible."* Measuring it rather than
+reading it: a 96-case sweep over sell-through, active listings, comps and NAV
+produced **64 divergences, in both directions**.
+
+```
+sourcing BUY    → buy screen REFUSES   CONFIDENCE_TOO_LOW      (4 cases)
+sourcing REJECT → buy screen ALLOWS    BUY_SCORE_TOO_LOW       (60 cases)
+                                       never runs at all
+```
+
+⚡ **The mechanism is that `assessPurchase` skips any gate whose field is
+`undefined`** (`constraints.ts` 214–247). It is the same assessor on both paths —
+what differs is the evidence handed to it. `assessQuote`'s candidate carries
+**velocity** confidence and **no** buy score; `evaluateOpportunity`'s carries
+**composite** confidence — comps, demand, condition and source, weighted — and a
+buy score. On identical items the two confidence numbers differed by as much as
+**47.5 points** (65.8% vs 100.0%): velocity confidence saturates on sold count
+alone, while the composite is still holding a pessimistic default for every
+signal nobody supplied.
+
+⚠️ **An optional gate is a gate that fails open, and nothing said so.** The
+optionality reads as careful — `sellThroughBps` is deliberately absent for an
+operator estimate so the gate abstains rather than failing an unknown, and that
+is right. But the same mechanism silently drops the buy-score gate for a whole
+surface, and the code cannot tell the two cases apart.
+
+### D14 — one evaluator everywhere
+
+Jason, presented with three reconciliations and the measured cost of each: **one
+evaluator.** Both screens gate through `evaluateOpportunity`, and `assessQuote`'s
+weaker candidate stops being a decision path.
+
+The two arguments that decided it are the project's own. 5.6 built `quote.ts`
+precisely so *"a fund cannot disagree with itself about what it was allowed to
+buy"* — and it turned out to be disagreeing anyway, one layer up. **D11** says
+the fund does not buy until the system is ready, and *ready means the phone can
+decide*; two answers to "may I buy this" is not a decision, it is a coin flip
+that depends on which screen you opened.
+
+⚠️ **This is deliberately stricter on a live fund, and the strictness arrives
+before the first real purchase rather than after.** A buy typed with no comps and
+middling sell-through — 10 sold, 3 active — scores 40% composite confidence
+against BOOTSTRAP's 45% floor, and will now be **refused** where today it records
+silently. The escape is D4's override, which is allowed and may never be silent.
+That is the intended behaviour: the answer to thin evidence is better evidence or
+a written reason, not a quieter gate.
+
+The alternatives, and why they lost: adopting **composite confidence only** would
+have closed the 47.5-point gap and left the buy-score gate off the typed path,
+defensible on the grounds that a buy score ranks candidates and a purchase
+already decided on needs no ranking — but it leaves B58 half-true and undocumented
+in the code. **Carrying the verdict across** — gating only purchases that came
+from the sourcing screen — changes no live behaviour, and keeps two strengths of
+the same gate in one app until 5.10 makes the difference invisible.
+
+### 5.9c.0 — built, and what it cost to prove
+
+`src/scoring/purchase.ts` is the bridge, and the layer is forced rather than
+chosen: `core` may not import `domain`, so the only place that can see both the
+quote and the evaluator is `scoring`. `evaluatePurchase(state, input, identity)`
+quotes the purchase and puts it through the full evaluation. Three callers moved
+onto it — the phone's buy screen, `cli buy`, and `src/db/screen-scenario.ts`,
+which is the on-device control for that screen and would otherwise have proven
+the phone works using rules the phone does not use.
+
+⛔ **`assessQuote` was deleted rather than deprecated.** It had three tests, and
+a tested export reads as a blessed one — leaving it there is how a future screen
+picks it up again. Its tests were migrated to `evaluatePurchase` rather than
+dropped: they asserted that the shared path gates a purchase, which is still
+true and still worth asserting. `quote.ts` no longer imports `assessPurchase` at
+all, so it cannot gate even by accident.
+
+⚡ **Two things the build surfaced that the plan could not have.**
+
+The first: `cli buy` printed the velocity confidence and nothing else, so once
+the composite decided, the command could print *"confidence 100%"* and refuse in
+the same breath. It now prints the demand term and the overall figure against
+its floor, and says when no `--comps=` is why the number is low.
+
+The second: neither screen had anywhere to *put* comps, so under the stricter
+gate the only route past a confidence floor would have been D4's override —
+which turns the escape hatch into the normal path and empties it of meaning. The
+buy screen and `cli buy` both take sold prices now. ⚠️ A bad entry is dropped
+rather than defaulted to zero: a $0.00 comp would drag the median and read as
+evidence.
+
+### The tests, and the plants
+
+`tests/purchase-parity.test.ts`. The control compares two genuinely different
+entry points — the sourcing form a person fills in, and the fields they type into
+the buy screen — over a 140-row grid deliberately dense at the edges where the
+two confidence numbers straddle a mode floor. ⚠️ **A grid of comfortable items
+would have been all green against the broken code.**
+
+⚠️ **One assertion was written vacuous and caught in review.** It compared
+`result.confidenceBps` at both doors, which after the fix is true by
+construction — a round trip through one encoder. It now compares the number the
+GATE used, `results.find(CONFIDENCE_TOO_LOW).actual`, and asserts the loop
+actually compared something, because a loop over an empty grid passes silently.
+
+⛔ **Planted three times, once per claim.** Restoring the pre-D14 rule set inside
+`evaluatePurchase` reproduced the original symptoms exactly — 8 "recommended BUY,
+then refused", 69 "rejected, then recorded clean", 309 gate-name mismatches, and
+the confidence gate comparing 1,500 against 3,125. A second plant moved
+`FIRE_SALE_BPS` by 100 bps and reddened the economics comparison in 96 places. A
+third made the synthetic opportunity id move condition confidence, reddening the
+claim that the marker cannot change a verdict. Each restore was verified back to
+green by reverse edit, never by `git checkout`.
+
+⚠️ **The economics were never wrong**, and that is now pinned: `quotePurchase`
+and `deriveEconomics` agree to the cent across 144 cases. They remain two
+implementations — neither can delegate to the other across the layer boundary —
+so the test is the only thing keeping them together.
+
+### What it leaves open
+
+**B66.** `assessPurchase` fails **open** by construction: every gate field on
+`PurchaseCandidate` is optional and a missing one skips its gate in silence.
+That is correct for `sellThroughBps` under an operator estimate — abstain rather
+than fail an unknown — and it was wrong for the buy score across an entire
+surface. **The code cannot tell the two cases apart, and neither can a reader.**
+`validatePolicy` already solved this class on this project by being exhaustive
+off a defaults object's keys rather than off a hand-written list; the same
+treatment, or a lint, is the fix. Filed to Gate 6 rather than taken here: it is
+a change to how every capital gate is declared, and D14 did not need it.
+
+### 5.9c.1 and 5.9c.2 — the screen, and the handoff
+
+The screen is `mobile/app/sourcing.tsx` and it computes nothing: `evaluateForm`
+is the model the desktop already rendered, and it goes through the same
+`evaluateOpportunity` the buy screen now gates with. It is the first button on
+the home screen, above Buy, because that is the order of the decision — work out
+whether to buy it, then record that you did.
+
+⚠️ **Nothing evaluates until it is asked for.** A verdict recomputed on every
+keystroke would flash "Walk away" at somebody halfway through typing the resale
+price, and that is the one phrase this screen must not say by accident.
+
+The handoff carries every field the sourcing screen already asked for, so nobody
+retypes seven boxes in a shop, plus two things that are not fields. The first is
+`opportunityIdFrom(name, eventCount)` — a new sibling of `itemIdFrom`, minted at
+the handoff rather than at the evaluation. ⚡ **The old `aisle-<name>` form could
+collide**: it was the name alone, so two "Lego set" scores were one id. Minting
+at the handoff cannot, because evaluating changes nothing while every purchase
+increments the event count, so at most one scored item can occupy a position.
+
+The second is the ceiling, carried as **already-formatted text**. A screen does
+no arithmetic on money, and re-deriving the ceiling on the buy screen would be a
+second implementation of the one number the handoff exists to respect.
+
+⚠️ **The asking price travels, not the ceiling.** What gets recorded has to be
+what was actually paid; the ceiling is what to negotiate against and nothing
+more. Prefilling the box with the ceiling would quietly record a haggle that
+never happened.
+
+### The class that was only half asserted
+
+`screen-scenario.ts` had a case pinning that an operator-priced sale reports as
+QUOTED, and **no case for SCORED** — a two-class fixture with one class covered.
+It would have passed just as happily before a scored purchase could exist at all.
+The mirror case now buys through the handoff path, reads the marker back **off
+disk rather than off the engine's cache**, sells, and asserts the accuracy view
+reports `scoredN: 1, quotedN: 0`.
+
+⛔ **Planted twice, because the first plant reddened too early.** Dropping the
+marker from the command failed on the first assertion — "the marker survives the
+write" — which left the accuracy assertions unexercised and therefore unproven.
+The second plant let the marker through and flipped `accuracy.ts` to classify
+everything QUOTED; that reddened `scoredN: expected 1, got 0`. One plant per
+claim, not one per test.
+
+### The path filter, wrong for the third time
+
+⚠️ **`driver-contract-ios.yml`'s `paths:` list did not include `src/scoring/**`,
+`src/domain/**` or `src/server/**`** — all three are executed by the on-device
+screen contract as of 5.8 and 5.9c, and a change to any of them would have
+produced no run while looking like a green one. The file's own comment warns
+about exactly this, having been written when `src/ui/**` was found missing.
+
+⛔ **It has now been wrong three times, and the reason is structural: the list is
+written by hand while the closure is computed.** `npm run lint:phone` discovers
+its roots by scanning `mobile/` precisely because every hand-written list of
+places to look on this project has come up short. A YAML path filter cannot run
+a script, so the fix is to generate it or to trigger broadly and gate inside the
+job. Filed as **B67** rather than solved here.
+
+**B68** is the other thing the build surfaced: a score made in the aisle is not
+saved anywhere. That is correct for 5.9c — writing opportunities is tier 3 and
+still closed — but **6.5's watchlist has nothing to watch until it exists**, so
+the two are the same piece of work seen from different ends.

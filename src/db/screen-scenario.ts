@@ -21,7 +21,8 @@ import { FundStore } from './store.js';
 import { migrateWith } from './migrate-core.js';
 import { reconcile } from './replay.js';
 import { computeMetrics } from '../core/capital/metrics.js';
-import { assessQuote, purchaseCommandFrom } from '../core/capital/quote.js';
+import { purchaseCommandFrom } from '../core/capital/quote.js';
+import { evaluatePurchase } from '../scoring/purchase.js';
 import { itemIdFrom } from '../core/ids.js';
 import { adjustModel, reverseModel, sellModel, spendModel } from '../ui/forms.js';
 import { profitReport } from './reporting.js';
@@ -72,7 +73,15 @@ function funded(db: Db, cents: number): FundStore {
 /** What the buy screen does, minus the typing. */
 function buy(
   store: FundStore,
-  fields: { name: string; category: string; price: number; resale: number; sold: number },
+  fields: {
+    name: string;
+    category: string;
+    price: number;
+    resale: number;
+    sold: number;
+    /** Set only when the sourcing screen produced the numbers (5.9c.2). */
+    opportunityId?: string;
+  },
   override?: { reason: string },
 ): { itemId: string; failures: string[] } {
   const input = {
@@ -82,14 +91,21 @@ function buy(
     soldLast90Days: fields.sold,
     activeListings: 10,
   };
-  const { quote, assessment } = assessQuote(store.state(), input);
-  const failures = assessment.failures.map((f) => f.code);
+  // ⛔ D14: the same gates the buy screen and `cli buy` run. This helper is the
+  // on-device control for that screen, so running a weaker rule set here would
+  // prove the phone works using rules the phone does not use.
+  const { quote, evaluation } = evaluatePurchase(store.state(), input, {
+    name: fields.name,
+    ...(fields.opportunityId !== undefined ? { opportunityId: fields.opportunityId } : {}),
+  });
+  const failures = evaluation.gates.failures.map((f) => f.code);
   const itemId = itemIdFrom(fields.name, store.state().eventCount);
   store.commit(
     purchaseCommandFrom(input, quote, {
       itemId,
       name: fields.name,
       occurredAt: T0,
+      ...(fields.opportunityId !== undefined ? { opportunityId: fields.opportunityId } : {}),
       ...(override ? { override: { gates: failures, reason: override.reason } } : {}),
     }),
   );
@@ -150,6 +166,42 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
       const item = store.derivedState().items[itemId];
       eq(item?.overrideReason, 'seller would not split the lot', 'the reason, read off disk');
       ok((item?.overrodeGates ?? []).includes('MAX_PER_ITEM_EXCEEDED'), 'the gate it overruled');
+    },
+  },
+  {
+    // ⛔ 5.9c.2, and the mirror of the QUOTED case below. A two-class fixture
+    // with only one class asserted proves half of nothing: the QUOTED case
+    // passed just as happily before a scored purchase could exist at all.
+    name: 'buy: a purchase handed over by the sourcing screen is measured as SCORED',
+    run: (db) => {
+      const store = funded(db, 50_000);
+      const { itemId } = buy(store, {
+        name: 'Lego set',
+        category: 'TOYS',
+        price: 1_000,
+        resale: 4_000,
+        sold: 90,
+        opportunityId: 'opp-lego-set-0003',
+      });
+
+      // Off disk, not off the engine's cache — the marker has to survive being
+      // written and read back, which is the half a round trip cannot see.
+      const item = store.derivedState().items[itemId];
+      eq(item?.opportunityId, 'opp-lego-set-0003', 'the marker survives the write');
+
+      store.commit(
+        sellModel(store.state().items[itemId]!, {
+          gross: '40.00',
+          fee: '5.70',
+          postage: '5.00',
+          packaging: '0.35',
+        }).command(T30)!,
+      );
+
+      const view = dashboardView(store);
+      eq(view.accuracy.n, 1, 'one measurable sale');
+      eq(view.accuracy.scoredN, 1, 'the scorer produced this expectation');
+      eq(view.accuracy.quotedN, 0, 'and it must not be pooled with a hand estimate');
     },
   },
   {

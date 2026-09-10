@@ -133,10 +133,13 @@ function Position() {
       <Button label="Backups" onPress={() => router.push('/backups')} />
 
       <View style={{ gap: 10 }}>
+        {/* ⚡ Above Buy, and deliberately. The order on this screen is the order
+            of the decision: work out whether to buy it, then record that you
+            did. Twelve screens recorded; none decided. */}
+        <Button label="Should I buy this" onPress={() => router.push('/sourcing')} tone="primary" />
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <View style={{ flex: 1 }}>
-            <Button label="Buy" onPress={() => router.push('/buy')} tone="primary" />
-          </View>
+            <Button label="Buy" onPress={() => router.push('/buy')} />
           <View style={{ flex: 1 }}>
             <Button label="Sell" onPress={() => router.push('/sell')} />
           </View>

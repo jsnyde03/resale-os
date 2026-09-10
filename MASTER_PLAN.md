@@ -123,16 +123,25 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       score an opportunity in the field and get the **walk-away price**.
       ⚠️ Found 2026-09-09 by asking what "ready" means — twelve screens on the
       phone and none answers *"should I buy this, and at what price?"*. `buy`
-      only assesses a price already chosen.
-  - [ ] **5.9c.1** Enter what is in front of you: asking price, comps, category,
-        condition, hassle. The same inputs `parseOpportunity` already takes.
-  - [ ] **5.9c.2** Show `maxPriceCents` **and `boundBy`** — the number to stop
-        at, and which rule set it, because that is the one to argue with.
-  - [ ] **5.9c.3** The recommendation and its ordered reasons, headline first.
-  - [ ] **5.9c.4** Hand it to the buy screen at the price actually paid, so a
-        scored purchase records its `opportunityId` and lands in accuracy as
-        SCORED rather than QUOTED.
-  - [ ] **5.9c.5** On-device verification.
+      only assesses a price already chosen. ⚠️ **Before-scan corrected the item
+      2026-09-10:** `src/server/sourcing.ts` already IS this screen's model, so
+      this is reuse like 5.8 — and **B58 measured true**, which is now .0.
+  - [x] **5.9c.0** ✅ **Done 2026-09-10. One gate set (D14).** `scoring/purchase.ts`
+        is the only path that decides a purchase — buy screen, `cli buy` and the
+        on-device scenario all go through it. ⛔ **`assessQuote` DELETED**, not
+        deprecated: it had tests, and a tested export reads as a blessed one.
+        `tests/purchase-parity.test.ts` compares the two doors over a 140-row
+        grid; **planted three ways, all red** (the old rule set → 8 + 69 + 309
+        contradictions). 590 tests. → **B66**.
+  - [x] **5.9c.1** ✅ **Done 2026-09-10.** `mobile/app/sourcing.tsx` renders
+        `evaluateForm` — headline, ceiling + `boundBy`, ordered reasons, failed
+        gates. Nothing recomputed; first button on the home screen, above Buy.
+  - [x] **5.9c.2** ✅ **Done 2026-09-10.** Handoff carries every field plus
+        `opportunityIdFrom(name, eventCount)` — collision-free where the old
+        `aisle-<name>` was not. The asking price travels, not the ceiling: what
+        is recorded is what was paid. ⚡ The SCORED class is now asserted
+        on-device; only QUOTED was, and planted two ways.
+  - [ ] **5.9c.3** On-device verification, and B60's JSX-binding half.
 - [ ] **5.10** Retire `src/cli`, `src/server`, `src/app` — 3,715 lines — once
       the phone covers them. ⛔ Not before, and ⚠️ **not until the fund has
       actually moved**: `cli export` is how it gets onto the phone. `views.ts`
@@ -168,6 +177,7 @@ desktop is gone.
 | # | Decision | State |
 |---|---|---|
 | D1 | What the tax reserve covers | ✅ **Incremental annual tax, 2026-09-08.** SE tax + federal brackets + QBI + state. ⚠️ Income tax abstains until a `TaxProfile` is set — **D7** |
+| D14 | Which gate set decides a purchase, given the two paths disagree | ✅ **One evaluator everywhere — 2026-09-10.** `evaluateOpportunity` gates every purchase, typed or scored; `assessQuote`'s candidate stops being a decision path. ⚠️ **Deliberately stricter on the live fund:** a buy typed with no comps and middling sell-through now needs **D4**'s override with a reason. Measured first — 64 divergences in 96 cases, both directions (**B58**) |
 | D13 | How far the app goes in online drops | ⛔ **Monitoring and alerting IN; checkout automation OUT — 2026-09-09.** Being first to KNOW is clean and is most of the edge; automating checkout violates retailer terms, and the penalty is order cancellations, account bans and flagged payment methods. **For a fund that is a capital event** — risking the accounts and payment rails the whole operation runs on, to win one console. ⛔ Nothing that defeats anti-bot systems: no CAPTCHA solving, fingerprint spoofing, proxy rotation or multiple accounts. ⚡ And the strategy points the same way: online drops are where the competition is scripts; **in-store allocation is where it is people, and Jason is in stores all day** |
 | D12 | How the app values what it finds | ✅ **Browse API to find, SoldComps to value, own history to accumulate, manual as fallback — 2026-09-09.** ⛔ Sold comps are gated (Marketplace Insights is Limited Release and individual devs are denied; the logged-out sold search hit a login wall Aug 2026), and **without them the 45% confidence gate refuses nearly every purchase** — so this is a precondition, not an enhancement. Start on the free tier (100/mo); **Jason: "9 bucks is nothing"**, so Starter (2,000/mo) is pre-approved when it bites. ⚠️ The resellers work around eBay and the direction of travel is tightening — the manual path stays wired |
 | D11 | When the fund starts buying | ⛔ **Not until the system is ready, and never arbitrarily** (Jason 2026-09-09): *"It doesn't make sense to arbitrarily buy something."* A purchase this system cannot justify is the exact thing it exists to prevent, so "exercise it with a real buy" is not a reason. **Ready means the phone can decide, not just record** — 5.9c |
@@ -370,11 +380,36 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   risk pointed the other way — after 5.10 the scorer is the rare path, so a
   report that ignores the prediction the operator actually decided from is
   blind, not conservative. Built in 5.6.7.
-- **B58** `src/core/capital/quote.ts` was extracted out of `cli buy` so the
-  phone and the CLI price a purchase identically. ⚠️ The CLI's `score` and
-  `buy --from` paths still compute economics through `evaluateOpportunity`;
-  check the two agree before **5.10** retires the CLI, or the disagreement
-  becomes invisible. → Gate 5.
+- **B58** ⛔ **MEASURED 2026-09-09 and THEY DO NOT AGREE — promoted into 5.9c.**
+  `assessQuote` (buy screen) and `evaluateOpportunity` (sourcing) reach the same
+  `assessPurchase`, which skips any gate whose field is `undefined`: the quote
+  candidate carries **velocity** confidence and **no** buy score, the evaluation
+  carries **composite** confidence and one. 64 divergences in a 96-case sweep,
+  **both directions** — BUY then `CONFIDENCE_TOO_LOW`, and REJECT then allowed.
+  → decided in 5.9c.0.
+- **B64** No screen takes **condition** or **hassle**; both fall to the schema
+  defaults (`hassleBps` 2,000, condition a pessimistic 40%). Both move
+  confidence, so they are real dials — but they are new financial input
+  surface. → Gate 6.
+- **B67** ⛔ **The iOS lane's `paths:` filter went stale twice more in one
+  item** — 5.8 put `src/server/views.ts` on the device and 5.9c put
+  `src/scoring/purchase.ts` there, and neither triggered a run. Fixed by hand
+  again, which is the third time. `lint:phone` DISCOVERS the closure by scanning
+  `mobile/`; a YAML path list cannot, so the fix is to generate the filter or to
+  trigger broadly and gate inside the job. → Gate 5/6.
+- **B68** A score made in the aisle is **not saved** — the phone evaluates and
+  hands off, and nothing lands in `opportunities`. Correct for 5.9c (writing
+  opportunities is tier 3, still closed) but it is the precondition for **6.5**,
+  whose watchlist has nothing to watch until it exists. → Gate 6.5.
+- **B66** ⚠️ **`assessPurchase` fails OPEN by construction and nothing detects
+  it.** Every `PurchaseCandidate` gate field is optional, and a missing one
+  skips its gate silently — which is right for `sellThroughBps` under an
+  operator estimate (abstain, do not fail an unknown) and was wrong for the
+  buy score for a whole surface (**B58**). The two cases are indistinguishable
+  in the code. `validatePolicy` solved the same class by being exhaustive off a
+  defaults object's keys; this wants the same treatment, or a lint. → Gate 6.
+- **B65** `src/server/sourcing.ts` **MOVES rather than goes** at 5.10, exactly
+  like `views.ts` (**B62**) — the phone renders it.
 - **B57** The app has no icon — a white square on the home screen. Cosmetic,
   and only visible because a CI screenshot caught it. → before any TestFlight
   build (**5.9**).

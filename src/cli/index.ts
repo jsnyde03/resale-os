@@ -16,7 +16,8 @@ import { EngineError } from '../core/capital/engine.js';
 import { InvariantViolation } from '../core/ledger/invariants.js';
 import { computeMetrics } from '../core/capital/metrics.js';
 import { maxAffordableLandedCost } from '../core/capital/constraints.js';
-import { assessQuote, purchaseCommandFrom } from '../core/capital/quote.js';
+import { purchaseCommandFrom } from '../core/capital/quote.js';
+import { evaluatePurchase } from '../scoring/purchase.js';
 import { applyBps, formatCents, parseDollars, toBps } from '../core/money.js';
 import { daysBetween } from '../core/ids.js';
 import { estimateNetProceeds, feeModel, grossNeededForNet } from '../core/fees.js';
@@ -262,6 +263,8 @@ function main(): void {
       --resale=32          the GROSS price you expect to sell at, before fees
       --sold=45 --active=5 comp counts; the hold time is DERIVED from these
       [--days=7]           a hand estimate instead - carries low confidence
+      [--comps=38,39,40]   sold prices you looked up; the biggest term in
+      [--comp-age=20]      confidence, and the honest way past its floor
       [--shipping=] [--tax=] [--travel=] [--marketplace=EBAY] [--est-postage=]
       [--force --reason="why you overruled the gates"]
   sell --id=X --gross=30 [--fee=] [--payment=] [--postage=] [--packaging=] [--days=5]
@@ -410,7 +413,19 @@ Global: --db=path  --at=ISO-timestamp`);
             ? { soldLast90Days: int(args, 'sold'), activeListings: int(args, 'active', 0) }
             : { operatorDaysEstimate: int(args, 'days', 7) }),
         };
-        const { quote, assessment } = assessQuote(store.state(), quoteInput);
+        // ⛔ D14: the gates are `scoring/purchase.ts`, and they are the SAME
+        // gates `score` runs. `assessQuote`'s assessment used to decide here,
+        // and it is a weaker rule set — it carries velocity confidence and no
+        // buy score, so `assessPurchase` silently skipped a gate. Measured:
+        // 64 divergences in 96 cases, both directions (**B58**).
+        const { quote, evaluation } = evaluatePurchase(store.state(), quoteInput, {
+          name: args.flags.name ?? req(args, 'id'),
+          ...(args.flags.comps
+            ? { compPricesCents: args.flags.comps.split(',').map((c) => parseDollars(c)) }
+            : {}),
+          ...(args.flags['comp-age'] ? { compMedianAgeDays: int(args, 'comp-age', 45) } : {}),
+        });
+        const assessment = evaluation.gates;
         const landed = quote.landedCostCents;
         const velocity = quote.velocity;
         const expectedDaysToSale = velocity.expectedDaysToSale;
@@ -419,20 +434,30 @@ Global: --db=path  --at=ISO-timestamp`);
         const estimate = quote.estimate;
         const expectedProfit = quote.expectedProfitCents;
 
+        // ⚠️ Two different confidences, and printing only the first was how
+        // this command could report 100% while the gate refused at 66%. The
+        // velocity figure is the DEMAND term; what decides is the composite
+        // over comps, demand, condition and source.
         if (velocity.source === 'COMPS') {
           console.log(
             `${velocity.soldLast90Days} sold / ${velocity.activeListings} active  ->  ` +
               `${(velocity.sellThroughBps / 100).toFixed(0)}% sell-through, ` +
               `~${expectedDaysToSale}d to sell (p90 ${velocity.expectedDaysP90}d), ` +
-              `confidence ${(velocity.confidenceBps / 100).toFixed(0)}%`,
+              `demand confidence ${(velocity.confidenceBps / 100).toFixed(0)}%`,
           );
         } else {
           console.log(
             `!  no comps given: using your ${expectedDaysToSale}d estimate at ` +
-              `${(velocity.confidenceBps / 100).toFixed(0)}% confidence. ` +
+              `${(velocity.confidenceBps / 100).toFixed(0)}% demand confidence. ` +
               `Pass --sold= --active= to derive it instead.`,
           );
         }
+        console.log(
+          `overall confidence ${(evaluation.result.confidenceBps / 100).toFixed(0)}% ` +
+            `vs a ${(evaluation.metrics.modePolicy.minConfidenceBps / 100).toFixed(0)}% floor ` +
+            `in ${evaluation.metrics.mode}` +
+            (args.flags.comps ? '' : '  (no --comps= given, which holds it down)'),
+        );
         console.log(
           `${formatCents(expectedGrossCents)} gross on ${model.marketplace}` +
             `  -  fees ${formatCents(estimate.marketplaceFeeCents)}` +

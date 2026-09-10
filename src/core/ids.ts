@@ -32,6 +32,24 @@ export function itemIdFrom(name: string, eventCount: number): string {
 }
 
 /**
+ * The id a SCORED purchase carries.
+ *
+ * ⛔ **Its presence is a claim**: `accuracy.ts` reads `opportunityId` to tell a
+ * scorer's prediction (SCORED) from a person's estimate (QUOTED), so it is set
+ * only when the sourcing screen actually produced the numbers. A typed buy has
+ * none, and `evaluatePurchase`'s internal placeholder never reaches a command.
+ *
+ * ⚠️ **Minted at the handoff, not at the evaluation.** Evaluating two items
+ * without buying either leaves the ledger where it was, so both would take the
+ * same event count — but at most one of them can then be the next purchase, and
+ * the next increments it. Two recorded purchases can never share an id.
+ * The earlier `aisle-<name>` form could: it was the name alone.
+ */
+export function opportunityIdFrom(name: string, eventCount: number): string {
+  return `opp-${itemIdFrom(name, eventCount)}`;
+}
+
+/**
  * Whole days between two ISO timestamps, floored at zero.
  *
  * ⛔ **Derived, never typed.** `daysToSale` feeds the prediction-accuracy

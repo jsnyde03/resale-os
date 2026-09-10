@@ -1,12 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Link, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 
-import {
-  assessQuote,
-  purchaseCommandFrom,
-  type PurchaseQuoteInput,
-} from '../../src/core/capital/quote.js';
+import { purchaseCommandFrom, type PurchaseQuoteInput } from '../../src/core/capital/quote.js';
+import { evaluatePurchase } from '../../src/scoring/purchase.js';
 import { formatCents } from '../../src/core/money.js';
 import { itemIdFrom } from '../../src/core/ids.js';
 import { refusalText, useFund } from '../src/fund/FundProvider.js';
@@ -24,21 +21,51 @@ import { Field, centsOrNothing, countOrNothing } from '../src/ui/fields.js';
  * ⛔ **The arithmetic is `core/capital/quote.ts`, shared with the CLI.** None
  * of it is reimplemented here — this screen collects numbers, shows what the
  * shared code makes of them, and records the answer.
+ *
+ * ⛔ **The GATES are `scoring/purchase.ts`, shared with the sourcing screen
+ * (D14).** Until 2026-09-10 this screen ran `assessQuote`, whose candidate
+ * carried velocity confidence and no buy score — a weaker rule set than the
+ * screen that recommends the purchase, measurably so in both directions
+ * (**B58**). A fund with two answers to "may I buy this" has none.
  */
 
 export default function Buy() {
   const { state, commit } = useFund();
   const router = useRouter();
 
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
-  const [price, setPrice] = useState('');
-  const [resale, setResale] = useState('');
-  const [sold, setSold] = useState('');
-  const [active, setActive] = useState('');
+  // ⚡ 5.9c.2: arriving from the sourcing screen. Everything it already asked
+  // for is carried over, so nobody retypes seven fields in a shop.
+  //
+  // ⛔ `opp` is the claim that a scorer produced this expectation — it is passed
+  // to the command only when it actually came from the sourcing screen. A typed
+  // buy has none, and `evaluatePurchase`'s internal placeholder is not it.
+  const handoff = useLocalSearchParams<{
+    name?: string;
+    category?: string;
+    price?: string;
+    resale?: string;
+    sold?: string;
+    active?: string;
+    comps?: string;
+    opp?: string;
+    ceiling?: string;
+  }>();
+
+  const [name, setName] = useState(handoff.name ?? '');
+  const [category, setCategory] = useState(handoff.category ?? '');
+  // ⚠️ Prefilled with what they were ASKING, because that is the starting point
+  // of the negotiation, not the end of it. Whatever is in this box when it is
+  // recorded is what the fund believes it paid.
+  const [price, setPrice] = useState(handoff.price ?? '');
+  const [resale, setResale] = useState(handoff.resale ?? '');
+  const [sold, setSold] = useState(handoff.sold ?? '');
+  const [active, setActive] = useState(handoff.active ?? '');
   const [days, setDays] = useState('');
   const [shipping, setShipping] = useState('');
-  const [detail, setDetail] = useState(false);
+  const [comps, setComps] = useState(handoff.comps ?? '');
+  // Opened when there is carried detail to show, so the arrival is not a form
+  // that looks half-empty while holding six answers behind a button.
+  const [detail, setDetail] = useState(handoff.sold !== undefined);
 
   const [reason, setReason] = useState('');
   const [askingReason, setAskingReason] = useState(false);
@@ -46,6 +73,19 @@ export default function Buy() {
 
   const priceCents = centsOrNothing(price);
   const soldCount = countOrNothing(sold);
+
+  // ⚠️ Comps are the largest single term in confidence (40%), and without them
+  // it holds a deliberately pessimistic default. A bad entry is DROPPED rather
+  // than defaulted to zero: a comp of $0.00 would drag the median and read as
+  // evidence. Empty stays empty, which is honest.
+  const compCents = useMemo(
+    () =>
+      comps
+        .split(',')
+        .map((c) => centsOrNothing(c))
+        .filter((c): c is number => c !== undefined),
+    [comps],
+  );
 
   const priced = useMemo(() => {
     if (priceCents === undefined || category.trim() === '') return null;
@@ -62,13 +102,21 @@ export default function Buy() {
         ? { soldLast90Days: soldCount, activeListings: countOrNothing(active) ?? 0 }
         : { operatorDaysEstimate: countOrNothing(days) ?? 7 }),
     };
-    return { input, ...assessQuote(state, input) };
-  }, [state, category, priceCents, shipping, resale, soldCount, active, days]);
+    // ⛔ No `opportunityId`. This purchase was typed, not scored, and claiming
+    // otherwise would file a guess in the accuracy report as a prediction.
+    return {
+      input,
+      ...evaluatePurchase(state, input, {
+        name: name.trim() || category.trim().toUpperCase(),
+        compPricesCents: compCents,
+      }),
+    };
+  }, [state, name, category, priceCents, shipping, resale, soldCount, active, days, compCents]);
 
   function record(override: boolean) {
     if (!priced || priceCents === undefined) return;
     setRefusal(null);
-    const failures = priced.assessment.failures.map((f) => f.code);
+    const failures = priced.evaluation.gates.failures.map((f) => f.code);
     // ⛔ The command is built by the same code the CLI uses. What the engine
     // hashes must not depend on which surface recorded the buy.
     const outcome = commit(
@@ -76,6 +124,9 @@ export default function Buy() {
         itemId: itemIdFrom(name || category, state.eventCount),
         name: name.trim() || category.trim().toUpperCase(),
         occurredAt: new Date().toISOString(),
+        // ⛔ Only when it really came from the sourcing screen. Setting it on a
+        // typed buy would file a guess in the accuracy report as a prediction.
+        ...(handoff.opp !== undefined ? { opportunityId: handoff.opp } : {}),
         // D4: allowed, never silent, and recorded on the purchase itself so
         // nothing can separate the override from the buy it excuses.
         ...(override ? { override: { gates: failures, reason: reason.trim() } } : {}),
@@ -88,8 +139,8 @@ export default function Buy() {
     setRefusal(refusalText(outcome));
   }
 
-  const passed = priced?.assessment.passed ?? false;
-  const failures = priced?.assessment.failures ?? [];
+  const passed = priced?.evaluation.gates.passed ?? false;
+  const failures = priced?.evaluation.gates.failures ?? [];
 
   return (
     <KeyboardAvoidingView
@@ -99,6 +150,16 @@ export default function Buy() {
       <ScrollView keyboardShouldPersistTaps="handled">
         <View style={{ padding: 20, paddingTop: 76, paddingBottom: 64, gap: 16 }}>
           <H1>Buy</H1>
+
+          {handoff.ceiling !== undefined ? (
+            // ⚠️ Carried as text, already formatted. A screen does no arithmetic
+            // on money, and re-deriving the ceiling here would be a second
+            // implementation of the one number this hand-off exists to respect.
+            <Muted>
+              Scored on the last screen, which said to pay no more than {handoff.ceiling}. This
+              purchase will be recorded as scored.
+            </Muted>
+          ) : null}
 
           <Field label="What is it" value={name} onChangeText={setName} placeholder="Lego Millennium Falcon" autoCapitalize="words" />
           <Field
@@ -146,6 +207,14 @@ export default function Buy() {
                 keyboardType="number-pad"
                 hint="Used only when there are no comps."
               />
+              <Field
+                label="Sold prices you looked up"
+                value={comps}
+                onChangeText={setComps}
+                placeholder="58.00, 61.00, 60.00"
+                keyboardType="decimal-pad"
+                hint="Comma separated. The biggest term in confidence — without them it stays deliberately low, and the confidence gate is real."
+              />
             </>
           ) : (
             <Button label="More detail" onPress={() => setDetail(true)} />
@@ -180,6 +249,19 @@ export default function Buy() {
                 label="If it has to be dumped"
                 value={`-${formatCents(priced.quote.modeledDownsideCents)}`}
                 tone="dim"
+              />
+              {/* ⚠️ Shown because it is usually the gate that bites. It is a
+                  fact about the EVIDENCE, not about the item: it rises when
+                  you look comps up, never because the deal looks good. */}
+              <Row
+                label="Confidence"
+                value={`${(priced.evaluation.result.confidenceBps / 100).toFixed(0)}%`}
+                tone={
+                  priced.evaluation.result.confidenceBps >=
+                  priced.evaluation.metrics.modePolicy.minConfidenceBps
+                    ? 'dim'
+                    : 'warn'
+                }
               />
               {priced.quote.grossWasAssumed ? (
                 <Muted>No sale price given, so a 3× flip is assumed.</Muted>

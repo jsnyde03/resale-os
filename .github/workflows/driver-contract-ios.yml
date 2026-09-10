@@ -35,6 +35,17 @@ on:
       # screen contract executes. An enumerated path list is a list of the
       # directories that existed when someone last thought about it.
       - 'src/ui/**'
+      # ⚠️ AND AGAIN, 2026-09-10 — the note above was written about `src/ui`
+      # and then this list went stale the same way twice more in one item.
+      # 5.8 put `src/server/views.ts` on the device and 5.9c put
+      # `src/scoring/purchase.ts` (and `src/domain` behind it) there, so all
+      # three are executed by the on-device screen contract and none of them
+      # triggered a run. ⛔ The list keeps being wrong because it is written by
+      # hand while the closure is computed: `npm run lint:phone` DISCOVERS the
+      # roots by scanning `mobile/`, and this cannot. → B67.
+      - 'src/scoring/**'
+      - 'src/domain/**'
+      - 'src/server/**'
       - 'mobile/**'
       - 'tests/driver-node.test.ts'
       - 'tests/engine-scenario-node.test.ts'
