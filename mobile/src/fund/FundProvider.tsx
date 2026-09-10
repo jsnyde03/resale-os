@@ -26,6 +26,9 @@ import type { Command } from '../../../src/core/capital/commands.js';
 import type { FundState } from '../../../src/core/capital/state.js';
 import type { Policy } from '../../../src/core/capital/policy.js';
 import type { TaxProfile } from '../../../src/core/tax/profile.js';
+import type { OpportunityInput } from '../../../src/domain/opportunity.js';
+import type { Evaluation } from '../../../src/scoring/evaluate.js';
+import { OpportunityRepository } from '../../../src/db/repositories/opportunities.js';
 import { computeMetrics, type CapitalMetrics } from '../../../src/core/capital/metrics.js';
 import { EngineError } from '../../../src/core/capital/engine.js';
 import { InvariantViolation } from '../../../src/core/ledger/invariants.js';
@@ -120,6 +123,16 @@ export interface Fund {
    */
   readonly setPolicy: (policy: Policy) => ConfigOutcome;
   readonly setTaxProfile: (profile: TaxProfile) => ConfigOutcome;
+  /**
+   * ⚡ **B68.** Record a scored opportunity. Not a ledger event and not config —
+   * an analytic row, so it moves no money and the hash chain does not know it
+   * happened. It is what **B3**'s rejection histogram counts and what **6.5**'s
+   * watchlist watches, and until now nothing wrote one from the phone.
+   *
+   * ⚠️ **Not covered by the backup**, which carries commands and config only.
+   * Scoring history dies with the device. Filed as **6.0.5**.
+   */
+  readonly saveOpportunity: (input: OpportunityInput, evaluation: Evaluation) => ConfigOutcome;
   /** Re-read after something wrote outside `commit` — an import, a restore. */
   readonly refresh: () => void;
 }
@@ -188,6 +201,16 @@ export function FundProvider({
           // backup carries `config`, and a rule change nobody backed up is a
           // rule change that dies with the phone.
           writeDeviceBackup(store);
+          return { ok: true };
+        } catch (err) {
+          return { ok: false, refusal: err instanceof Error ? err.message : String(err) };
+        } finally {
+          refresh();
+        }
+      },
+      saveOpportunity: (input: OpportunityInput, evaluation: Evaluation): ConfigOutcome => {
+        try {
+          new OpportunityRepository(store.db).save(input, evaluation, new Date().toISOString());
           return { ok: true };
         } catch (err) {
           return { ok: false, refusal: err instanceof Error ? err.message : String(err) };

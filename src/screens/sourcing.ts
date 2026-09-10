@@ -12,8 +12,8 @@
  * on its own. A form field for it would be a field that quietly cannot work.
  */
 
-import { parseOpportunity } from '../domain/opportunity.js';
-import { evaluateOpportunity } from '../scoring/evaluate.js';
+import { parseOpportunity, type OpportunityInput } from '../domain/opportunity.js';
+import { evaluateOpportunity, type Evaluation } from '../scoring/evaluate.js';
 import { soldNeededForHold } from '../core/velocity.js';
 import {
   CONDITION_CONFIDENCE_BPS,
@@ -163,7 +163,19 @@ const isProblem = (v: unknown): v is SourcingProblem =>
 export function evaluateForm(
   form: SourcingForm,
   state: FundState,
-): { ok: true; verdict: SourcingVerdict } | { ok: false; problems: readonly SourcingProblem[] } {
+):
+  | {
+      ok: true;
+      verdict: SourcingVerdict;
+      /**
+       * ⚡ The pieces `OpportunityRepository.save()` needs, handed back so the
+       * caller can RECORD the decision (**B68**). The model stays pure — it does
+       * not write, and it does not decide when to.
+       */
+      input: OpportunityInput;
+      evaluation: Evaluation;
+    }
+  | { ok: false; problems: readonly SourcingProblem[] } {
   const problems: SourcingProblem[] = [];
 
   const name = form.name.trim();
@@ -254,6 +266,8 @@ export function evaluateForm(
 
   return {
     ok: true,
+    input,
+    evaluation: e,
     verdict: {
       name,
       recommendation: e.result.recommendation,

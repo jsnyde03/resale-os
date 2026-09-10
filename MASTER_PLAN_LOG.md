@@ -3913,3 +3913,44 @@ to send. ⚡ **The lesson is the one this project keeps relearning from a new
 angle:** a control whose two sides come from one source cannot fail — and here
 the two sides became one source *as a result of the change being tested*, which
 is a way for a test to rot that reading it would never reveal.
+
+### 6.0.3 — checking is recording
+
+Pressing **Check it** now saves the scored opportunity. Closes **B68**.
+
+⚡ **The walk-aways are the point.** A REJECT is most of what an operator does in
+a day, and until now every one of them vanished the moment the screen was
+closed. **B3**'s rejection histogram — *which gate is actually binding* — had
+nothing to count, and **6.5**'s watchlist had nothing to watch. The on-device
+case deliberately scores a candidate that FAILS and asserts the refusal is what
+gets stored, with the policy version that produced it.
+
+⛔ **The score is stored, never recomputed.** That was already the rule for the
+feed and it survives the feed: re-running today's policy over an old row would
+show a number that was never the reason for any decision.
+
+The screen changed shape to make this honest. The verdict used to recompute from
+a `useMemo` on every keystroke; it is now evaluated once, held, and **retracted
+the moment any field is edited**. Saving inside a memo would have written a row
+per keystroke, and a stale verdict on screen next to edited inputs is a different
+kind of lie.
+
+⚠️ **Read back through a SEPARATE reader**, not the object that wrote it, and
+asserted to move no money. Planted by making `save` a no-op: *"the score should
+be on disk"*.
+
+### ⚠️ 6.0.5 — and the thing this immediately created
+
+**Scored opportunities are not in the backup.** `exportLedger` carries the
+COMMANDS and the config, because that is all a fund is — everything else is
+derived. But the `opportunities` table is neither, and it is **not derivable**:
+it records what was decided, when, under which policy version. So from today the
+phone accumulates decision history that no backup preserves, while the money it
+holds is fully protected.
+
+That is a genuine fork in the design and it is filed as a **[DECISION]** rather
+than answered quietly: either the export grows to carry them — a
+`LEDGER_EXPORT_VERSION` bump, with an import that tolerates an older file — or
+scores are honestly device-local and the app says so. **The first is more work
+and makes the export no longer "just the commands", which is the property that
+makes it verifiable by replay.** Worth Jason's call, not mine.

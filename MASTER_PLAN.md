@@ -171,10 +171,17 @@ access this project may not get.
       today's score exactly. ⛔ **"Not sure" is NULL, not 40%** — the two are the
       same to `scoreConfidence` and different to the RISK score, and the
       field-for-field test caught the difference.
-- [ ] **6.0.3** Save the score (**B68**). Nothing records an aisle decision, so
-      **B3**'s rejection histogram has nothing to count and **6.5**'s watchlist
-      has nothing to watch. It is the precondition for both.
+- [x] **6.0.3** ✅ **Done 2026-09-10. Closes B68.** Checking an item RECORDS it —
+      walk-aways included, since they are most of the decisions and nothing else
+      would ever see them. ⚡ **B3**'s rejection histogram now has something to
+      count and **6.5**'s watchlist has something to watch. Read back through a
+      separate reader; planted (save → no-op).
 - [ ] **6.0.4** On-device verification.
+- [ ] **6.0.5** ⚠️ **Scored opportunities are NOT in the backup.** `exportLedger`
+      carries commands and config; the `opportunities` table is neither, so
+      scoring history dies with the phone while the money survives. Either extend
+      the export (a `LEDGER_EXPORT_VERSION` bump, and the import must tolerate an
+      older file) or state plainly that scores are device-local. **[DECISION]**
 
 **Exit:** the aisle screen answers *"should I buy this, at what price, and if not
 what would fix it"* — and remembers what it was asked.
@@ -427,14 +434,7 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   the data available. → Gate 6, AFTER D12's data route.
 - ~~**B70**~~ ✅ **Closed 2026-09-10 in 6.0.1.**
 - ~~**B71**~~ ✅ **Closed 2026-09-10 in 6.0.2.**
-- **B68** A score made in the aisle is **not saved** — the phone evaluates and
-  hands off, and nothing lands in `opportunities`. Correct for 5.9c (writing
-  opportunities is tier 3, still closed) but it is the precondition for **6.5**,
-  whose watchlist has nothing to watch until it exists. ⚠️ **Two consequences
-  to carry:** a decision to WALK AWAY is recorded nowhere, so the system learns
-  only from what was bought; and there are now **two id conventions** for one
-  concept — `sourcing.ts`'s internal `aisle-<slug>` and the recorded
-  `opp-<slug>-NNNN`. Settle both when the record exists. → Gate 6.5.
+- ~~**B68**~~ ✅ **Closed 2026-09-10 in 6.0.3.** ⚠️ The backup half is **6.0.5**.
 - **B66** ⚠️ **`assessPurchase` fails OPEN by construction and nothing detects
   it.** Every `PurchaseCandidate` gate field is optional, and a missing one
   skips its gate silently — which is right for `sellThroughBps` under an

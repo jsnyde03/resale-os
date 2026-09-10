@@ -26,6 +26,8 @@ import { evaluatePurchase } from '../scoring/purchase.js';
 import { itemIdFrom } from '../core/ids.js';
 import { adjustModel, reverseModel, sellModel, spendModel } from '../ui/forms.js';
 import { policyEdit, policyFieldsFrom, taxEdit, taxFieldsFrom } from '../ui/settings.js';
+import { evaluateForm } from '../screens/sourcing.js';
+import { OpportunityReader, OpportunityRepository } from './repositories/opportunities.js';
 import { profitReport } from './reporting.js';
 import { makeVerifiedBackup } from './backup-portable.js';
 import { dashboardView } from '../screens/views.js';
@@ -262,6 +264,41 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
       // The refusal half, through the same model the screen uses.
       const bare = taxEdit({ ...fields, stateRatePercent: '7.15', stateRateBasis: '' });
       ok(bare.next === null, 'a non-zero rate with no basis is refused');
+    },
+  },
+  {
+    // ⚡ 6.0.3 / B68. Until now the phone scored an opportunity and threw the
+    // score away. B3's rejection histogram had nothing to count and 6.5's
+    // watchlist had nothing to watch.
+    name: 'sourcing: a scored opportunity is recorded, and a REJECT is recorded too',
+    run: (db) => {
+      const store = funded(db, 50_000);
+
+      // A candidate that fails, which is the case that matters: walk-aways are
+      // most of the decisions, and nothing else will ever see them.
+      const slow = evaluateForm(
+        { name: 'slow lot', category: 'TOYS', price: '12.00', resale: '60.00', sold90: '2', active: '40' },
+        store.state(),
+      );
+      ok(slow.ok, 'the form should parse');
+      if (!slow.ok) return;
+      eq(slow.verdict.recommendation, 'REJECT', 'this candidate should be refused');
+      new OpportunityRepository(db).save(slow.input, slow.evaluation, T0);
+
+      // ⚠️ Read back through a SEPARATE reader over the same database, not
+      // through the object that wrote it.
+      const row = new OpportunityReader(db).get(slow.input.opportunityId);
+      ok(row !== undefined, 'the score should be on disk');
+      eq(row?.recommendation, 'REJECT', 'the verdict is stored, not recomputed');
+      eq(row?.policy_version, slow.evaluation.policyVersion, 'and the rules that produced it');
+      ok((row?.buy_score ?? -1) >= 0, 'with the score it was given');
+
+      // ⛔ Recording a score moves no money and records no event.
+      eq(store.derivedState().balances.LIQUID, 50_000, 'a score moves no money');
+
+      // The histogram B3 wants now has something to count.
+      const hist = new OpportunityReader(db).rejectionHistogram();
+      ok(hist.length > 0, 'the binding gate is now countable');
     },
   },
   {

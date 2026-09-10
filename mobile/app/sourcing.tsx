@@ -73,7 +73,7 @@ function Chips<T extends string>({
 }
 
 export default function Sourcing() {
-  const { state } = useFund();
+  const { state, saveOpportunity } = useFund();
   const router = useRouter();
 
   const [name, setName] = useState('');
@@ -85,7 +85,8 @@ export default function Sourcing() {
   const [comps, setComps] = useState('');
   const [condition, setCondition] = useState<Condition>(DEFAULT_CONDITION);
   const [hassle, setHassle] = useState<Hassle>(DEFAULT_HASSLE);
-  const [checked, setChecked] = useState(false);
+  const [result, setResult] = useState<ReturnType<typeof evaluateForm> | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const form: SourcingForm = useMemo(
     () => ({
@@ -102,16 +103,36 @@ export default function Sourcing() {
     [name, category, price, resale, sold, active, comps, condition, hassle],
   );
 
-  // ⚠️ Nothing is evaluated until it is asked for. A verdict that recomputed on
-  // every keystroke would flicker "Walk away" at somebody halfway through
-  // typing the resale price, and that is the one word this screen must not say
-  // by accident.
-  const result = useMemo(() => (checked ? evaluateForm(form, state) : null), [checked, form, state]);
+  // ⚠️ Nothing is evaluated until it is asked for, and the answer is HELD
+  // rather than recomputed. A verdict that re-ran on every keystroke would
+  // flicker "Walk away" at somebody halfway through typing the resale price,
+  // and that is the one word this screen must not say by accident.
+  //
+  // ⚡ B68: checking is also RECORDING. The decision is the thing worth keeping
+  // — the walk-aways most of all, since they are most of the decisions and
+  // nothing else will ever see them.
+  function check() {
+    const r = evaluateForm(form, state);
+    setResult(r);
+    if (r.ok) {
+      const out = saveOpportunity(r.input, r.evaluation);
+      setSaveError(out.ok ? null : out.refusal);
+    }
+  }
+
   const verdict = result?.ok === true ? result.verdict : null;
   const problems = result?.ok === false ? result.problems : [];
 
   const problemFor = (field: keyof SourcingForm) =>
     problems.find((p) => p.field === field)?.message;
+
+  /** Editing anything retracts the answer, so a stale verdict cannot be read. */
+  const edit =
+    <T,>(set: (v: T) => void) =>
+    (v: T) => {
+      set(v);
+      setResult(null);
+    };
 
   return (
     <KeyboardAvoidingView
@@ -125,7 +146,7 @@ export default function Sourcing() {
           <Field
             label="What is it"
             value={name}
-            onChangeText={setName}
+            onChangeText={edit(setName)}
             placeholder="Lego Millennium Falcon"
             autoCapitalize="words"
             invalid={problemFor('name') !== undefined}
@@ -133,7 +154,7 @@ export default function Sourcing() {
           <Field
             label="Category"
             value={category}
-            onChangeText={setCategory}
+            onChangeText={edit(setCategory)}
             placeholder="TOYS"
             hint="Concentration is capped per category, so this is a gate, not a label."
             invalid={problemFor('category') !== undefined}
@@ -141,7 +162,7 @@ export default function Sourcing() {
           <Field
             label="What they want for it"
             value={price}
-            onChangeText={setPrice}
+            onChangeText={edit(setPrice)}
             placeholder="12.00"
             keyboardType="decimal-pad"
             invalid={problemFor('price') !== undefined}
@@ -149,7 +170,7 @@ export default function Sourcing() {
           <Field
             label="What it sells for"
             value={resale}
-            onChangeText={setResale}
+            onChangeText={edit(setResale)}
             placeholder="60.00"
             keyboardType="decimal-pad"
             hint="Gross, before fees and postage."
@@ -158,7 +179,7 @@ export default function Sourcing() {
           <Field
             label="Sold in 90 days"
             value={sold}
-            onChangeText={setSold}
+            onChangeText={edit(setSold)}
             placeholder="40"
             keyboardType="number-pad"
             hint="From an eBay sold search. The hold time is DERIVED from this — it is not something you can type."
@@ -167,7 +188,7 @@ export default function Sourcing() {
           <Field
             label="Listed right now"
             value={active}
-            onChangeText={setActive}
+            onChangeText={edit(setActive)}
             placeholder="10"
             keyboardType="number-pad"
             invalid={problemFor('active') !== undefined}
@@ -175,7 +196,7 @@ export default function Sourcing() {
           <Field
             label="Sold prices"
             value={comps}
-            onChangeText={setComps}
+            onChangeText={edit(setComps)}
             placeholder="58.00, 61.00, 60.00"
             keyboardType="decimal-pad"
             hint="Comma separated, optional. The biggest single term in confidence — and confidence caps the score."
@@ -189,17 +210,17 @@ export default function Sourcing() {
             options={CONDITIONS}
             labels={CONDITION_LABELS}
             value={condition}
-            onChange={setCondition}
+            onChange={edit(setCondition)}
           />
           <Chips
             label="Shipping it"
             options={HASSLES}
             labels={HASSLE_LABELS}
             value={hassle}
-            onChange={setHassle}
+            onChange={edit(setHassle)}
           />
 
-          <Button label="Check it" onPress={() => setChecked(true)} tone="primary" />
+          <Button label="Check it" onPress={check} tone="primary" />
 
           {problems.length > 0 ? (
             <Card style={{ borderWidth: 1, borderColor: C.warn }}>
