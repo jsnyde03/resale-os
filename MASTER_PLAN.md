@@ -80,37 +80,37 @@ from, and answers exactly as well as it does today when the network does not.
 **Exit:** the fund can answer *"why is nothing passing?"* from its own record
 instead of from a hunch.
 
-### Gate 6.5 — NOT YET, OR NEVER?
+### Gate 6.5 — NOT YET, OR NEVER? ✅ **DONE 2026-09-10, 50/50 on device**
 
-⚡ **ACTIVE BUILD**, and the before-scan **corrected it**. It was filed as *"the
-watchlist that unlocks"*, on the premise that a refused item is waiting for the
-bankroll. **Measured 2026-09-10: mostly it is not.** Three of four refused
-candidates never become a buy at **any** NAV up to $500,000 — hold time, margin
-and sell-through do not care how rich the fund is. The genuinely useful answer is
-the one nobody asked for: **put it down, it will never be a buy.**
+⚡ **The before-scan disproved the premise.** Filed as *"the watchlist that
+unlocks"*; measured, most refusals never clear at **any** bankroll, so the
+valuable answer is *"put it down"* and the watchlist is the leftover. The unlock
+is **not monotonic** — GROWTH is stricter — so it scans rather than bisects, and
+the screen warns when growing would LOSE a buy. Detail in the log.
 
-⛔ **And the obvious algorithm is wrong.** The unlock is **NOT MONOTONIC**: a
-$12 → $30 item is a BUY at $490 and is REFUSED at $500, because GROWTH raises the
-minimum profit from $8 to $15. **Growing the fund can make an item stop being
-buyable** — intended, counterintuitive, and fatal to a binary search.
+---
 
-- [x] **6.5.1** ✅ **Done 2026-09-10.** `src/screens/unlock.ts` — NOW / AT $X /
-      NEVER, by SCANNING 21 bankrolls, dense around the mode switch. ⛔ The
-      hypothetical fund moves a BALANCE; the first version spread a
-      `hypotheticalNavCents` field and cast it, which typechecked while every
-      hypothetical evaluated at the real bankroll.
-- [x] **6.5.2** ✅ **Done 2026-09-10.** *"Not yet — this becomes a buy at $150"*
-      or *"Put it down — no bankroll makes this a buy."*
-- [x] **6.5.3** ✅ **Done 2026-09-10.** Nearest threshold first, against today's
-      NAV. ⛔ **Buyable and never-buyable are both left off** — one is a decision,
-      the other a closed one; the closed ones are COUNTED, never listed. ⚠️ It
-      recomputes and says so, and flags a row scored under older rules.
-- [x] **6.5.4** ✅ **Done 2026-09-10.** *"This stops being a buy above $500"* —
-      measured, not theorised: GROWTH lifts the profit floor $8 → $15.
-- [ ] **6.5.5** On-device verification.
+### Gate 6.6 — A GATE THAT ABSTAINS MUST SAY SO (B66)
 
-**Exit:** a refusal comes with its own expiry date, or with the news that it has
-none.
+⚡ **ACTIVE BUILD**, and it is the structural class behind this session's biggest
+find. `assessPurchase` **skips any gate whose field is `undefined`** — which is
+correct for `sellThroughBps` under an operator estimate (abstain rather than fail
+an unknown) and was catastrophic for the buy score across a whole surface
+(**B58**, 64 divergences). **The code cannot tell the two cases apart, and
+neither can a reader.**
+
+- [ ] **6.6.1** Split the candidate's gate fields into **required** and
+      **deliberately-abstaining**, the second carrying its reason. Absent-and-
+      required becomes an error, not a skipped gate.
+- [ ] **6.6.2** Exhaustive **by construction**, off a declared object's keys — the
+      shape `validatePolicy` already uses, after a hand-written field list let
+      `minSellThroughBps` through as `NaN` and it failed closed by luck.
+- [ ] **6.6.3** A control that plants an under-populated candidate and proves the
+      gate refuses to run rather than passing quietly.
+- [ ] **6.6.4** On-device verification.
+
+**Exit:** a gate that does not run says why, and one that should have run cannot
+be skipped by omission.
 
 ---
 
@@ -349,6 +349,13 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   reported as the RUNNER; the result deadline is 180s. ⚠️ **Watch whether it
   recurs** — one flake is an anecdote, and a gate that fails randomly stops being
   read.
+- **B76** ⚠️ **The watchlist recomputes 21 evaluations per saved row.** Measured
+  2026-09-10 on desktop: **62 ms at 10 rows, 91 ms at 50, 277 ms at 200** — fine
+  at the scale the fund is at, noticeable on a phone at the cap. ⚠️ **And the
+  cap is a silent truncation**: `list({ limit: 200 })` drops row 201 without
+  saying so, which is the class this project keeps being bitten by. Cache by
+  `(input, policy version, NAV)` or page it, and make the cap speak. → when the
+  list gets long, not before.
 - **B74** ⚠️ **SoldComps: `totalItems` is the count on the CURRENT PAGE, not a
   grand total.** Reading it as the sold count returns the page size — a plausible
   wrong number, which is the worst kind. The real count needs paginating until

@@ -4210,3 +4210,39 @@ a local `fmt` doing `cents / 100` for the headline, under a comment saying this
 file may not do arithmetic on money. `formatCents` exists for exactly that.
 Fixed before running the gate, which is luck rather than discipline — the gate is
 what makes it not matter.
+
+### 6.5 closed — 50/50 on device, and what the after-scan measured
+
+Two new on-device cases: a refusal that expires versus one that does not, and a
+watchlist that keeps one of three.
+
+⚠️ **The cost was measured rather than worried about.** The watchlist runs 21
+evaluations per saved row — 62 ms at 10 rows, 91 ms at 50, **277 ms at 200** on
+desktop. At the scale this fund is at that is invisible; at the 200 cap on a
+phone it would be felt. Filed as **B76** with the numbers, **not optimised**:
+caching by `(input, policy version, NAV)` is the obvious fix and there is no
+evidence yet that it is needed.
+
+⚠️ **The 200 is a silent truncation**, which is the more interesting half. `list({
+limit: 200 })` drops row 201 without saying so — the same shape as every other
+quiet omission this project has been bitten by, and the reason `unreadableRows`
+exists two screens over. It should speak when it truncates.
+
+### Replenishment — 6.6, and why it is this
+
+**B66 is the structural class behind the largest defect of the session.**
+`assessPurchase` skips any gate whose field is `undefined`. That is *correct* for
+`sellThroughBps` under an operator estimate — abstain rather than fail an unknown
+— and it was catastrophic for the buy score across an entire surface, which is
+D14/B58: 64 divergences, and 583 tests passing through all of it.
+
+⛔ **The two cases are indistinguishable in the code, and to a reader.** One is a
+considered decision and the other is an omission, and they are written
+identically. That is not a bug to be fixed once; it is a shape that will produce
+the same defect again the next time a candidate is built somewhere new — and
+`evaluatePurchase` exists precisely because it already did.
+
+The fix has a precedent in this codebase: `validatePolicy` is exhaustive **by
+construction**, driven off a defaults object's keys, after a hand-written field
+list let `minSellThroughBps` through as `undefined`, reach a gate as `NaN`, and
+print *"vs a NaN% minimum"* — failing closed by luck.
