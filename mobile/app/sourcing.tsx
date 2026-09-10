@@ -363,7 +363,11 @@ export default function Sourcing() {
             </>
           ) : null}
 
-          <Link href="/" style={{ color: C.faint, paddingTop: 8 }}>
+          {/* ⚡ B3, reachable from where the question is asked. */}
+          <Link href="/rejections" style={{ color: C.faint, paddingTop: 8 }}>
+            what is stopping me buying anything? →
+          </Link>
+          <Link href="/" style={{ color: C.faint }}>
             ← back
           </Link>
         </View>

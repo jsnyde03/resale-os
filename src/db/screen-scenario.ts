@@ -27,6 +27,7 @@ import { itemIdFrom } from '../core/ids.js';
 import { adjustModel, reverseModel, sellModel, spendModel } from '../ui/forms.js';
 import { policyEdit, policyFieldsFrom, taxEdit, taxFieldsFrom } from '../ui/settings.js';
 import { evaluateForm } from '../screens/sourcing.js';
+import { rejectionsView } from '../screens/rejections.js';
 import { OpportunityReader, OpportunityRepository } from './repositories/opportunities.js';
 import { profitReport } from './reporting.js';
 import { makeVerifiedBackup } from './backup-portable.js';
@@ -298,7 +299,53 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
 
       // The histogram B3 wants now has something to count.
       const hist = new OpportunityReader(db).rejectionHistogram();
-      ok(hist.length > 0, 'the binding gate is now countable');
+      ok(hist.codes.length > 0, 'the binding gate is now countable');
+      eq(hist.rejectedRows, 1, 'one refusal on record');
+      // ⛔ A refusal that yields no code is a broken reader, and on a chart it
+      // looks exactly like a fund that refuses nothing.
+      eq(hist.unreadableRows, 0, 'and it was readable');
+    },
+  },
+  {
+    // ⚡ 6.2 / B3, end to end on the device: score several candidates, then ask
+    // the record which gate is actually binding.
+    name: 'rejections: the record answers which gate is binding, and stays honest about n',
+    run: (db) => {
+      const store = funded(db, 50_000);
+      const repo = new OpportunityRepository(db);
+
+      // Six refusals, all slow movers — the shape a clearance rack produces.
+      for (let i = 0; i < 6; i += 1) {
+        const r = evaluateForm(
+          {
+            name: `slow ${i}`,
+            category: 'TOYS',
+            price: '12.00',
+            resale: '60.00',
+            sold90: '2',
+            active: String(30 + i),
+          },
+          store.state(),
+        );
+        ok(r.ok, 'the form should parse');
+        if (r.ok) repo.save(r.input, r.evaluation, T0);
+      }
+
+      const view = rejectionsView(new OpportunityReader(db).rejectionHistogram());
+      eq(view.rejectedRows, 6, 'six refusals on record');
+      eq(view.unreadableRows, 0, 'and every one of them readable');
+      ok(view.readable, 'the reader works');
+      ok(view.conclusive, 'six is enough to call a pattern');
+      // ⛔ All four gates fire on every one of these, so they TIE at six. The
+      // instrument must say that rather than picking the alphabetically-first
+      // one and calling it the binding gate.
+      ok(view.rows.some((r) => r.code === 'HOLD_TOO_LONG' && r.n === 6), 'hold time refused all six');
+      ok(view.headline.includes('the same'), 'a tie is reported as a tie');
+      ok(view.headline.includes('takes too long to sell'), 'and hold time is named in it');
+
+      // ⛔ And the honest half: below the threshold it must decline to conclude.
+      const thin = rejectionsView({ codes: [{ code: 'HOLD_TOO_LONG', n: 2 }], rejectedRows: 2, unreadableRows: 0 });
+      ok(!thin.conclusive, 'two refusals is not a pattern');
     },
   },
   {

@@ -33,7 +33,7 @@ portability problems. They were things the port made visible.**
 
 ### Gate 6 — SOURCING: THE APP FINDS AND RECOMMENDS
 
-⚡ **ACTIVE BUILD.** The data route is settled (**D12**): Browse API to find,
+The data route is settled (**D12**): Browse API to find,
 SoldComps to value, own history to accumulate, manual as the fallback that stays
 wired.
 
@@ -44,14 +44,14 @@ wired.
       **B3**'s histogram has something to count and **6.5**'s watchlist something
       to watch. Scores are device-local by decision (**D15**).
 
-- [ ] **6.1** ⚡ **ACTIVE BUILD — the data route (D12).** ⚠️ **The valuable half
+- [~] **6.1** ⏳ **BLOCKED on eBay account approval — the data route (D12).** ⚠️ **The valuable half
       is gated and may not be winnable**: Marketplace Insights is Limited Release
       and individual developers are denied, so sold comps — the number that
       decides — may stay manual. Build so that a refusal costs a field, never the
       screen.
-  - [ ] **6.1.1** ⏳ **[NEEDS JASON]** an eBay developer account and Browse API
-        keys, and an application for Marketplace Insights. Nothing here can do
-        either, and the answer shapes everything after it.
+  - [~] **6.1.1** ⏳ **Submitted 2026-09-10, awaiting eBay approval (~1 business
+        day).** Nothing else in 6.1 can start until the keyset exists, so the
+        active build moves to **6.2** for the wait.
   - [ ] **6.1.2** The client behind an ADAPTER, in `src/adapters/` — the layer
         that has been empty all along. ⚡ It will red-gate on arrival until its
         import rules are declared, which is 5.11.1's check doing its job.
@@ -66,6 +66,19 @@ wired.
 
 **Exit:** the screen fills what it can from eBay, says where every number came
 from, and answers exactly as well as it does today when the network does not.
+
+- [x] **6.2** ✅ **Done 2026-09-10. Closes B3.** *What is stopping you* — the
+      binding gate, from the record. ⚡ **The codes are stored STRUCTURALLY now**;
+      the histogram used to regex-parse them out of prose, so a reworded reason
+      would have emptied the chart in silence (older rows still fall back).
+      ⛔ It carries a **denominator**: refusals that yield no code are reported as
+      a **bug**, because an empty chart and a broken reader are the same picture.
+      ⚠️ And it **reports a tie as a tie** — the first measured case had four gates
+      firing on all six candidates, and naming the alphabetically-first one hid
+      the only dial that moves. Found by a case failing, not by reading.
+
+**Exit:** the fund can answer *"why is nothing passing?"* from its own record
+instead of from a hunch.
 
 ---
 
@@ -129,10 +142,8 @@ being "done".
 
 Filed, not forgotten. Nothing here is in a gate until it is promoted.
 
-- **B3** Rejection-code histogram — **which gate is actually binding**, over real
-  decisions. ⚠️ Re-pointed 2026-09-10: it was specified on the deleted dashboard,
-  and the surface is now the phone. Needs **B68** first (nothing records a score).
-  → Gate 6.
+- ~~**B3**~~ ✅ **Closed 2026-09-10 in 6.2**, on the phone, once **B68** gave it
+  something to count.
 - **B4** Prediction-accuracy calibration loop (expected vs actual days and
   proceeds feeding back into confidence). → Gate 6.
 - **B5** Period-close event for reserve true-ups (monthly). → post-Gate 4.
@@ -298,6 +309,13 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   whole `allocation` block — owner split and the set-aside NAV threshold. ⚡
   **That block is what D2 needs**, and D2 is due at $100 NAV, which is four to
   six flips away. → before D2 is answered.
+- **B74** ⚠️ **SoldComps: `totalItems` is the count on the CURRENT PAGE, not a
+  grand total.** Reading it as the sold count returns the page size — a plausible
+  wrong number, which is the worst kind. The real count needs paginating until
+  `hasNextPage` is false, and each page costs quota. ⚡ **A page is 240**, and the
+  clearance rule needs `sold ≥ 4.3 × (active + 1)`, so one request settles almost
+  every real case: an exact count when `hasNextPage` is false, otherwise a floor
+  of 240 that clears any realistic ceiling. → **6.1.2**, before a line is written.
 - **B69** ⚡ **Barcode scanning in the aisle** (Jason, 2026-09-10). The SCAN is
   the easy part — `expo-camera` does it offline, one screen. ⛔ **But a barcode
   is a product identity, not a price**, and the sourcing screen's binding fields

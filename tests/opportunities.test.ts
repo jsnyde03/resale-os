@@ -154,17 +154,56 @@ describe('the rejection histogram says which gate is binding', () => {
     save(store, opp({ opportunityId: 'rich', askingPriceCents: 4_000 }));
 
     const hist = store.opportunities().rejectionHistogram();
-    const codes = Object.fromEntries(hist.map((h) => [h.code, h.n]));
+    const codes = Object.fromEntries(hist.codes.map((h) => [h.code, h.n]));
     expect(codes.HOLD_TOO_LONG).toBe(2);
     expect(codes.MAX_PER_ITEM_EXCEEDED).toBe(1);
     // Ordered most-frequent first, which is the point of having it.
-    expect(hist[0]!.n).toBeGreaterThanOrEqual(hist[hist.length - 1]!.n);
+    expect(hist.codes[0]!.n).toBeGreaterThanOrEqual(hist.codes[hist.codes.length - 1]!.n);
+    // ⛔ The denominator. Three refusals on record, all readable — without this
+    // an empty chart and a broken reader are the same picture.
+    expect(hist.rejectedRows).toBe(3);
+    expect(hist.unreadableRows).toBe(0);
   });
 
-  it('is empty when nothing has been rejected', () => {
+  it('is empty when nothing has been rejected, and says the denominator is zero', () => {
     const store = freshStore();
     save(store, opp());
-    expect(store.opportunities().rejectionHistogram()).toEqual([]);
+    const hist = store.opportunities().rejectionHistogram();
+    expect(hist.codes).toEqual([]);
+    // ⛔ The distinction the denominator exists for: nothing refused, versus
+    // refusals that could not be read. Both draw an empty chart.
+    expect(hist.rejectedRows).toBe(0);
+    expect(hist.unreadableRows).toBe(0);
+  });
+
+  it('reports an unreadable refusal instead of drawing an empty chart', () => {
+    // ⚠️ A row refused with neither structured gates nor parseable prose. Before
+    // the denominator this was indistinguishable from "nothing was refused",
+    // and the histogram regex-parsed prose, so a reworded reason would have
+    // produced exactly this in silence.
+    const store = freshStore();
+    save(store, opp({ opportunityId: 'slow1', soldLast90Days: 6, activeListings: 20 }));
+    store.db.run(
+      "UPDATE opportunities SET score_breakdown_json = '{}', reasoning_json = '[\"no code here\"]'",
+    );
+
+    const hist = store.opportunities().rejectionHistogram();
+    expect(hist.codes).toEqual([]);
+    expect(hist.rejectedRows).toBe(1);
+    expect(hist.unreadableRows).toBe(1);
+  });
+
+  it('still counts rows written before the codes were stored structurally', () => {
+    // ⚡ Backwards compatibility is the reason the prose fallback survives: rows
+    // scored on the phone before 6.2 have no `gates` key, and dropping them
+    // would quietly discard real decisions.
+    const store = freshStore();
+    save(store, opp({ opportunityId: 'slow1', soldLast90Days: 6, activeListings: 20 }));
+    store.db.run("UPDATE opportunities SET score_breakdown_json = '{}'");
+
+    const hist = store.opportunities().rejectionHistogram();
+    expect(hist.codes.map((c) => c.code)).toContain('HOLD_TOO_LONG');
+    expect(hist.unreadableRows).toBe(0);
   });
 });
 

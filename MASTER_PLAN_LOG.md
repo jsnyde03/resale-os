@@ -4065,3 +4065,44 @@ its keep a second time.
 **6.1.1 needs Jason**: an eBay developer account, Browse keys, and an application
 for Marketplace Insights. Nothing here can do either, and the answer shapes
 everything after it.
+
+## 2026-09-10 — 6.2: which gate is actually binding (B3), built during a wait
+
+6.1 is blocked on eBay approving the developer account, so the active build
+moved to the thing that needed no key and had just become possible: **B3 could
+not be built until 6.0.3 recorded a refusal.** The histogram counts walk-aways,
+and until this morning every walk-away vanished when the screen closed.
+
+**Three defects fixed on the way, none of them in the feature as specified.**
+
+⛔ **The codes were not stored.** They existed only inside the prose reasons, and
+`rejectionHistogram` regex-parsed them back out with `/^([A-Z_]+) —/`. A reworded
+reason would have emptied the chart **in silence**. They are written structurally
+now, into the `score_breakdown_json` blob so no migration was needed — and the
+prose fallback survives, because rows scored before today have no `gates` key and
+dropping them would discard real decisions. ⚡ Planted by making the regex never
+match: only the fallback test reddened, which is what proves the two paths are
+independently exercised rather than one masking the other.
+
+⛔ **An empty chart and a broken reader draw the same picture.** The histogram
+now returns a **denominator** — refusals on record, and how many yielded no code
+— and a refusal that cannot be read is reported as *"this is a bug, not a clean
+run."* Without it, the most alarming possible state renders as the most reassuring
+one.
+
+⛔ **A tie must not be reported as a winner**, and this one was found by the
+on-device case failing rather than by reading anything. Six slow candidates
+failed hold time, confidence, sell-through **and** buy score — every one of them,
+so all four counted six, and the sort broke the tie **alphabetically**. The
+headline read *"Most of what you look at scores too low overall"*: true, useless,
+and it hid the only dial that moves. ⚡ **A genuinely bad candidate is not bad in
+one way**, so the headline now says *"All 6 of 6 refusals failed the same 4
+rules"* and lists them.
+
+⚠️ **My own assertion was the thing that was wrong** — I asserted hold time would
+rank first, and the honest fix was to stop asking for a rank at all. It is the
+second time today a test failure corrected an expectation rather than a defect,
+and both times the expectation was mine.
+
+The screen also prints the clearance rule when hold time leads, so the answer to
+*"why is nothing passing"* arrives with the number that would change it.

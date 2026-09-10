@@ -98,21 +98,65 @@ function listOpportunities(db: ReadOnlyDb, filter: OpportunityFilter = {}): Oppo
   }
 
 
-function rejectionHistogram(db: ReadOnlyDb): { code: string; n: number }[] {
-    const counts = new Map<string, number>();
-    for (const row of db.all<{ reasoning_json: string | null }>(
-      "SELECT reasoning_json FROM opportunities WHERE recommendation = 'REJECT'",
-    )) {
-      if (!row.reasoning_json) continue;
-      for (const reason of JSON.parse(row.reasoning_json) as string[]) {
-        const match = /^([A-Z_]+) —/.exec(reason);
-        if (match) counts.set(match[1]!, (counts.get(match[1]!) ?? 0) + 1);
+export interface RejectionHistogram {
+  readonly codes: readonly { readonly code: string; readonly n: number }[];
+  /** Refusals on record. The denominator — without it a chart is a shape. */
+  readonly rejectedRows: number;
+  /**
+   * ⚠️ Rows that were refused and yielded no code. **`rejectedRows > 0` with
+   * `codes` empty is a BROKEN READER, not a fund that refuses nothing**, and the
+   * two look identical on a chart. Surfacing the count is what tells them apart.
+   */
+  readonly unreadableRows: number;
+}
+
+function rejectionHistogram(db: ReadOnlyDb): RejectionHistogram {
+  const counts = new Map<string, number>();
+  let rejectedRows = 0;
+  let unreadableRows = 0;
+
+  for (const row of db.all<{ reasoning_json: string | null; score_breakdown_json: string | null }>(
+    "SELECT reasoning_json, score_breakdown_json FROM opportunities WHERE recommendation = 'REJECT'",
+  )) {
+    rejectedRows += 1;
+    const before = counts.size === 0 ? -1 : 0;
+    let found = 0;
+
+    // Structured first. Rows written before 6.2 do not have it.
+    if (row.score_breakdown_json) {
+      const parsed = JSON.parse(row.score_breakdown_json) as { gates?: unknown };
+      if (Array.isArray(parsed.gates)) {
+        for (const code of parsed.gates as string[]) {
+          counts.set(code, (counts.get(code) ?? 0) + 1);
+          found += 1;
+        }
       }
     }
-    return [...counts.entries()]
-      .map(([code, n]) => ({ code, n }))
-      .sort((a, b) => b.n - a.n || a.code.localeCompare(b.code));
+
+    // ⚠️ Fall back to the prose for older rows, rather than dropping decisions
+    // that were correctly recorded under the previous shape.
+    if (found === 0 && row.reasoning_json) {
+      for (const reason of JSON.parse(row.reasoning_json) as string[]) {
+        const match = /^([A-Z_]+) —/.exec(reason);
+        if (match) {
+          counts.set(match[1]!, (counts.get(match[1]!) ?? 0) + 1);
+          found += 1;
+        }
+      }
+    }
+
+    if (found === 0) unreadableRows += 1;
+    void before;
   }
+
+  return {
+    codes: [...counts.entries()]
+      .map(([code, n]) => ({ code, n }))
+      .sort((a, b) => b.n - a.n || a.code.localeCompare(b.code)),
+    rejectedRows,
+    unreadableRows,
+  };
+}
 
 /**
  * The reading half, so the dashboard can show opportunities without being
@@ -135,7 +179,7 @@ export class OpportunityReader {
     return listOpportunities(this.#db, filter);
   }
 
-  rejectionHistogram(): { code: string; n: number }[] {
+  rejectionHistogram(): RejectionHistogram {
     return rejectionHistogram(this.#db);
   }
 }
@@ -234,7 +278,16 @@ export class OpportunityRepository {
         e.price.boundBy,
         e.result.recommendation,
         JSON.stringify(e.result.reasons),
-        JSON.stringify({ buy: e.buy, risk: e.risk, confidence: e.confidence }),
+        // ⚡ 6.2: the failed gate CODES, stored structurally. They used to exist
+        // only inside the prose reasons, and the histogram regex-parsed them back
+        // out — so a change to how a reason reads would have emptied the chart in
+        // silence. No migration: this column is already a JSON blob.
+        JSON.stringify({
+          buy: e.buy,
+          risk: e.risk,
+          confidence: e.confidence,
+          gates: e.gates.failures.map((f) => f.code),
+        }),
         now,
         e.policyVersion,
         // A PURCHASED opportunity keeps that status through a re-score; nothing
@@ -275,7 +328,7 @@ export class OpportunityRepository {
   }
 
   /** How often each rejection reason fires — which gate is actually binding. */
-  rejectionHistogram(): { code: string; n: number }[] {
+  rejectionHistogram(): RejectionHistogram {
     return rejectionHistogram(this.#db);
   }
 }
