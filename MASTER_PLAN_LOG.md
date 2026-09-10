@@ -3954,3 +3954,16 @@ than answered quietly: either the export grows to carry them — a
 scores are honestly device-local and the app says so. **The first is more work
 and makes the export no longer "just the commands", which is the property that
 makes it verifiable by replay.** Worth Jason's call, not mine.
+
+### ⚠️ A process cost I created and then measured
+
+Pushing after every sub-item queued a device run per commit, and the lane is a
+~15-minute macOS job on a serialised runner. By 6.0.3 there were **four runs in
+flight at once**, each verifying a tree that the next commit had already
+replaced, and the only one that mattered — HEAD — was last in the queue.
+
+The superseded four were cancelled and the rule is now in `CLAUDE.md` beside the
+Codemagic one it generalises: **batch the pushes, or cancel what they supersede.**
+⚠️ It is the same principle already recorded for build minutes, applied to a lane
+that did not exist when that lesson was learned — which is how most of this
+project's repeat defects have looked.

@@ -214,6 +214,13 @@ Break any of these and the product stops being what it is.
   Python `\b` put four literal 0x08 bytes into a regex, which then matched
   nothing; `lint:bytes` named the file and byte the moment it ran, but I had
   been running `lint:imports` alone. A gate you skip is a gate you do not have.
+- ⚠️ **BATCH the device lane; it triggers on every push.** `driver-contract-ios`
+  is a ~15-minute **macOS** job, the runner is serialised, and pushing per
+  sub-item queues a run for every commit — each one verifying a tree the next
+  commit has already replaced. Measured 2026-09-10: **four redundant runs in
+  flight at once**, and the only one that mattered was last in the queue. Push
+  when there is enough to justify the cycle, or cancel the superseded ones. The
+  same rule as Codemagic, and the same reason.
 - ⛔ **A list of WHERE TO LOOK goes stale in silence; a list of WHAT IS SAFE TO
   READ fails safe.** Five instances of the first: `lint:imports`' screen
   directories, the iOS lane's `paths:` filter (**three times**), and
