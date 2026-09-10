@@ -14,7 +14,7 @@
 
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -214,5 +214,73 @@ describe('a sale records how long it was actually held', () => {
     expect(rows).toContain('held-01');
     // itemId, expected days (from the velocity model), then ACTUAL days.
     expect(rows).toMatch(/held-01\s+\d+\s+0\s/);
+  }, CLI_TIMEOUT);
+});
+
+describe('a retired ledger refuses to become a second head', () => {
+  /**
+   * ⛔ The fund reached the phone on 2026-09-10 and two databases have shared
+   * one history since. Append-only over a hash chain means a single event on
+   * either side diverges them permanently, and `importLedger` refuses a
+   * mismatched chain BY DESIGN — so nothing can merge them afterwards.
+   *
+   * ⚠️ Its own directory and its own ledger. The suite above shares a database
+   * across cases, and a marker dropped on it would leak into whatever runs next.
+   */
+  let retiredDir: string;
+  let retiredDb: string;
+
+  function retiredCli(...args: string[]): Run {
+    const result = spawnSync(
+      process.execPath,
+      ['--import', 'tsx', 'src/cli/index.ts', ...args, `--db=${retiredDb}`],
+      { encoding: 'utf8', cwd: process.cwd() },
+    );
+    const stdout = result.stdout ?? '';
+    const stderr = result.stderr ?? '';
+    return { status: result.status ?? -1, stdout, stderr, all: stdout + stderr };
+  }
+
+  beforeAll(() => {
+    retiredDir = mkdtempSync(join(tmpdir(), 'resale-retired-'));
+    retiredDb = join(retiredDir, 'retired.db');
+    expect(retiredCli('contribute', '--amount=50.00').status).toBe(0);
+    writeFileSync(`${retiredDb}.retired`, 'moved to the phone', 'utf8');
+  }, CLI_TIMEOUT);
+
+  afterAll(() => {
+    rmSync(retiredDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+  });
+
+  it('refuses a write, and says why rather than just failing', () => {
+    const r = retiredCli('contribute', '--amount=10.00');
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('RETIRED');
+    expect(r.stderr).toContain('fork');
+  }, CLI_TIMEOUT);
+
+  it('leaves the ledger untouched when it refuses', () => {
+    // ⚠️ The assertion that matters. A guard that printed the refusal AFTER
+    // the write would pass the test above and lose the fund.
+    const r = retiredCli('status');
+    expect(r.stdout).toContain('$50.00');
+    expect(r.stdout).not.toContain('$60.00');
+  }, CLI_TIMEOUT);
+
+  it('still allows the reads that are the recovery path', () => {
+    // ⚠️ Until a backup has left the phone this database is the fund's only
+    // other copy. Refusing `verify` and `export` would trade a fork risk for a
+    // loss risk.
+    expect(retiredCli('status').status).toBe(0);
+    expect(retiredCli('verify').status).toBe(0);
+    expect(retiredCli('export', `--to=${join(retiredDir, 'out.json')}`).status).toBe(0);
+  }, CLI_TIMEOUT);
+
+  it('refuses a command nobody thought of, because the list names what may RUN', () => {
+    // ⛔ The direction the omission falls. A banned-command list would admit
+    // every command added after it was written; this refuses them.
+    const r = retiredCli('policy', 'adopt-defaults');
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('RETIRED');
   }, CLI_TIMEOUT);
 });

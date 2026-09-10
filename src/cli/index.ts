@@ -11,7 +11,7 @@ import { openFundStore } from '../db/open-store.js';
 import { DEFAULT_DB_PATH } from '../db/driver.js';
 import { reconcile } from '../db/replay.js';
 import { exportLedger, importLedger, LedgerTransferError, type LedgerExport } from '../db/portable.js';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { EngineError } from '../core/capital/engine.js';
 import { InvariantViolation } from '../core/ledger/invariants.js';
 import { computeMetrics } from '../core/capital/metrics.js';
@@ -245,6 +245,52 @@ function autoBackup(store: FundStore, dbPath: string, now: string): void {
   }
 }
 
+/**
+ * ⛔ **A RETIRED LEDGER IS A SECOND HEAD, AND THIS STOPS IT BECOMING ONE.**
+ *
+ * The fund reached the phone on 2026-09-10, and from that instant two databases
+ * shared one 55-event history. The ledger is append-only over a hash chain, so
+ * a single recorded event on either side diverges them at that point **forever**
+ * — and `importLedger` refuses a mismatched chain *by design*, which means the
+ * one tool built to move a fund between machines is exactly the tool that cannot
+ * repair a fork. The safety property and the hazard are the same property.
+ *
+ * ⚠️ **Reads stay open on purpose.** Until a backup has actually left the phone,
+ * this database is the fund's only other copy and destroying it would trade a
+ * fork risk for a loss risk. `verify` and `export` are the recovery path.
+ *
+ * ⛔ **The allowlist names what may RUN, not what is forbidden.** A list of
+ * banned commands admits every command nobody thought of; this refuses them.
+ * Same lesson as 5.11.1 — the omission has to fall toward *not permitting*.
+ *
+ * ⚠️ **The marker is a FILE beside the database, deliberately not a `config`
+ * row.** `exportLedger` carries the whole `config` table and `importLedger`
+ * writes every key, so a row would travel to the phone and retire the live fund
+ * on arrival.
+ */
+const READ_ONLY_COMMANDS = new Set(['help', '--help', 'status', 'verify', 'ledger', 'items', 'export']);
+
+export function retiredMarkerFor(dbPath: string): string {
+  return `${dbPath}.retired`;
+}
+
+function refuseIfRetired(dbPath: string, command: string): void {
+  if (!existsSync(retiredMarkerFor(dbPath))) return;
+  if (READ_ONLY_COMMANDS.has(command)) return;
+
+  console.error(`This ledger is RETIRED. The fund lives on the phone.`);
+  console.error('');
+  console.error(`  ${dbPath}`);
+  console.error('');
+  console.error('Recording anything here would fork the chain: both databases share a');
+  console.error('history, the ledger is append-only, and a fork cannot be merged — an');
+  console.error('import compares every regenerated hash and refuses a mismatch.');
+  console.error('');
+  console.error(`Still allowed: ${[...READ_ONLY_COMMANDS].filter((c) => c !== '--help').join(', ')}.`);
+  console.error(`To undo this deliberately, delete ${retiredMarkerFor(dbPath)}.`);
+  process.exit(1);
+}
+
 function main(): void {
   const [, , command = 'help', ...rest] = process.argv;
   const args = parseArgs(rest);
@@ -311,6 +357,8 @@ function main(): void {
 Global: --db=path  --at=ISO-timestamp`);
     return;
   }
+
+  refuseIfRetired(dbPath, command);
 
   const store = openFundStore(dbPath, systemClock);
 

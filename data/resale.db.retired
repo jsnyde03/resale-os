@@ -1,0 +1,14 @@
+This ledger is RETIRED. The fund lives on the phone.
+
+Moved 2026-09-10: 55 events exported, transferred and imported on device,
+every regenerated hash compared against the exported one.
+
+Recording anything here would FORK the chain. Both databases share a history,
+the ledger is append-only over a hash chain, and a fork cannot be merged —
+importLedger compares every hash and refuses a mismatch by design.
+
+Reads are still allowed (status, verify, ledger, items, export) because until
+a backup has actually left the phone, data/resale.db is the fund's only other
+copy. Deleting it would trade a fork risk for a loss risk.
+
+Delete this file to undo, deliberately.

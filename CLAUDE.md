@@ -50,10 +50,25 @@ database, never like an artifact.
 the import all run on the device: **43/43 against Apple's SQLite** in
 `.github/workflows/driver-contract-ios.yml`.
 
+⛔ **THE DESKTOP LEDGER IS RETIRED AND REFUSES TO WRITE (2026-09-10).** The fund
+moved to the phone, and from that instant two databases shared one 55-event
+history. Append-only over a hash chain means **one event on either side forks
+them forever**, and `importLedger` refuses a mismatched chain *by design* — so
+the one tool built to move a fund is exactly the tool that cannot repair a fork.
+**The safety property and the hazard are the same property.**
+
+`data/resale.db.retired` is the marker. Writes exit 1; `status`, `verify`,
+`ledger`, `items` and `export` still run, because **until a backup has actually
+left the phone this database is the fund's only other copy** — deleting it would
+trade a fork risk for a loss risk. ⚠️ **The marker is a FILE, deliberately not a
+`config` row:** `exportLedger` carries the whole config table and `importLedger`
+writes every key, so a row would have travelled and retired the live fund on
+arrival. ⛔ **The allowlist names what may RUN**, so a command added later is
+refused rather than admitted.
+
 ⛔ **The desktop is being RETIRED, not maintained.** `src/cli`, `src/server` and
-`src/app` go at 5.10 — but not until the fund has actually moved, because
-`cli export` is how it gets onto the phone. ⚠️ **`src/server/views.ts` MOVES
-rather than goes** — the app is built on it (**B62**).
+`src/app` go at 5.10. ⚠️ **`src/server/views.ts` (**B62**) and
+`src/server/sourcing.ts` (**B65**) MOVE rather than go** — the phone renders both.
 
 See `MASTER_PLAN.md` for the decomposed active item; it is the queue, this is
 orientation.

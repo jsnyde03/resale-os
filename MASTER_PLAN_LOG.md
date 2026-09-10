@@ -3456,3 +3456,46 @@ its remaining sub-steps live here rather than on the plan:
   "four gates", "43/43" and "Gate 5 nearly done".
 - **5.11.5** ⛔ **NOT RNTL.** B60's trigger is *"only if a wiring bug actually
   reaches the device"* and it has not fired.
+
+### 5.10.1 — the fork is shut
+
+`data/resale.db` now refuses to record anything. Writes exit 1, reads still run,
+and the live ledger sits at the 55 events it had when the fund left.
+
+**Three decisions inside a small guard.**
+
+⚠️ **The marker is a FILE beside the database, not a `config` row.** A row was
+the obvious place — until `exportLedger` is read: it carries the **whole**
+config table, and `importLedger` writes **every** key. A `retired` row would have
+travelled with the next export and **retired the live fund on arrival**. The
+trap is that this would have looked correct in every test on this machine.
+
+⚠️ **Reads stay open, deliberately.** Until a backup has actually left the phone,
+this database is the fund's only other copy; `verify` and `export` are the
+recovery path. Retiring it is about stopping a *fork*, not about destroying the
+last thing that could restore the fund. Locking reads too would trade a fork
+risk for a loss risk, which is a worse trade.
+
+⛔ **The allowlist names what may RUN.** A banned-command list admits every
+command nobody thought of; this refuses them. Same lesson as 5.11.1 — what
+matters is which way the omission falls — and it is asserted directly: `policy
+adopt-defaults` is refused without ever being named.
+
+**Planted twice, because the four claims are not one claim.** Removing the guard
+reddened three, *including* "leaves the ledger untouched", which is the one that
+proves the guard runs **before** the write rather than printing a refusal after
+it. That left "reads still work" green — correctly, since with no guard reads
+obviously work — so it got its own plant: ignoring the allowlist reddened exactly
+that claim and no other.
+
+⚠️ **The suite gets its own ledger and its own temp directory.** The existing CLI
+suite shares one database across cases; a retirement marker dropped on it would
+have leaked into whatever ran next in file order.
+
+⛔ **And I broke the project's own rule getting here.** The test was written
+through a Python heredoc and `\n` inside a string literal became a **real
+newline**, producing an unterminated string. `CLAUDE.md` already says it, from
+three prior incidents: *writing about escape sequences through a Python script
+puts control bytes in the file — use a raw string, or the Edit tool.* The
+transform error caught it instantly, which is the cheap end of that failure; the
+`\b`-in-a-regex version cost a build.

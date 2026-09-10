@@ -123,10 +123,13 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
       `assessQuote` is deleted. **44/44 on device.** → **B64**–**B68**.
 - [ ] **5.10** ⚡ **ACTIVE BUILD — retire the desktop.** ~3,715 lines. Unblocked
       2026-09-10 when the fund reached the phone.
-  - [ ] **5.10.1** ⛔ **STOP THE FORK, before anything else.** Two ledgers now
-        share one 55-event history and the desktop still accepts writes; append-only
-        plus a hash chain means a fork cannot be merged, and `portable.ts` refuses a
-        mismatched import BY DESIGN. The desktop must refuse to write.
+  - [x] **5.10.1** ✅ **Done 2026-09-10. The fork is shut.** `data/resale.db` is
+        retired by a marker FILE beside it — not a `config` row, which would have
+        travelled with an export and retired the phone on arrival. Writes exit 1;
+        `status`, `verify`, `ledger`, `items` and `export` still run, because until
+        a backup leaves the phone this is the fund's only other copy. ⚡ The list
+        names what may RUN, so a command nobody thought of is refused. Planted
+        twice (guard removed → 3 red; allowlist ignored → reads red).
   - [ ] **5.10.2** ⏳ **[NEEDS JASON] A backup must actually LEAVE the phone**
         before the deletion in .4. Today the desktop db and its OneDrive copies are
         the safety net; retiring them makes the phone the fund's only home. 5.9b
