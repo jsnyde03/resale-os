@@ -140,6 +140,7 @@ function Position() {
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <View style={{ flex: 1 }}>
             <Button label="Buy" onPress={() => router.push('/buy')} />
+          </View>
           <View style={{ flex: 1 }}>
             <Button label="Sell" onPress={() => router.push('/sell')} />
           </View>

@@ -90,7 +90,7 @@ jobs:
         working-directory: mobile
         run: npm install --legacy-peer-deps
 
-      - name: Typecheck both halves
+      - name: Typecheck every half (node, web, phone)
         run: |
           npm install --legacy-peer-deps
           npm run typecheck

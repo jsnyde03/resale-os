@@ -141,7 +141,10 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
         `aisle-<name>` was not. The asking price travels, not the ceiling: what
         is recorded is what was paid. ⚡ The SCORED class is now asserted
         on-device; only QUOTED was, and planted two ways.
-  - [ ] **5.9c.3** On-device verification, and B60's JSX-binding half.
+  - [~] **5.9c.3** On-device verification. ⚠️ First run failed at TYPECHECK,
+        not the build: `npm run check` never ran `mobile/tsconfig.json`, so
+        phone screens were only typechecked in CI. Now local, and planted.
+        Re-run in flight. B60's JSX-binding half still open.
 - [ ] **5.10** Retire `src/cli`, `src/server`, `src/app` — 3,715 lines — once
       the phone covers them. ⛔ Not before, and ⚠️ **not until the fund has
       actually moved**: `cli export` is how it gets onto the phone. `views.ts`

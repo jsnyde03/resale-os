@@ -3252,3 +3252,30 @@ job. Filed as **B67** rather than solved here.
 saved anywhere. That is correct for 5.9c — writing opportunities is tier 3 and
 still closed — but **6.5's watchlist has nothing to watch until it exists**, so
 the two are the same piece of work seen from different ends.
+
+### The gate that was not local — and cost a 15-minute cycle to find
+
+The first device run of 5.9c failed. ⚠️ **"Failed" is a step, not a phase**: the
+step was *Typecheck*, not the build, and the error was mine — a dropped
+`</View>` in `mobile/app/index.tsx` while moving the Buy button down to make room
+for the sourcing button.
+
+⛔ **The point is not the typo. It is that `npm run check` could not see it.**
+`npm run typecheck` ran the root config and `tsconfig.web.json` and **never
+`mobile/tsconfig.json`**, so every phone screen was typechecked only in CI, on a
+macOS runner, fifteen minutes away. CI had the step all along (`cd mobile && npx
+tsc --noEmit`); the local command did not, and the local command is what gets run
+between edits. A gate that only exists downstream is a gate you do not have while
+you are working.
+
+`npm run typecheck` now runs all three configs. ⚡ **Planted**: restoring the
+exact dropped tag reddens it locally with the identical `TS17008` CI produced,
+and the restore returns to green. The CI step is renamed from "Typecheck both
+halves" to "every half (node, web, phone)", and its own `cd mobile` check is
+deliberately KEPT — it runs mobile's own `tsc` from mobile's own directory, which
+is a genuinely different invocation rather than a duplicate of the root one.
+
+⚠️ **Both of this item's two CI-visible failures were the same shape**: a check
+whose scope was written by hand — a `paths:` filter and a `typecheck` script —
+while the thing it was meant to cover kept growing. B67 is the filter; this was
+the script.
