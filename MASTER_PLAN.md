@@ -404,9 +404,25 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   is **D12**, and sold comps are the gated half of D12. ⚡ **The offline-first
   win is different and better: scan → OWN HISTORY.** A UPC is a stable key, so
   the third leg of D12 — "own history to accumulate" — works on the device with
-  no network and gets better every flip. ⚠️ Much resale stock has no usable
-  barcode (vintage, used, lots, bundles), so this widens the easy cases rather
-  than replacing manual entry. → Gate 6, sequenced AFTER D12's data route.
+  no network and gets better every flip. ⚠️ **Scoped to RETAIL CLEARANCE by Jason, 2026-09-10** — Walmart
+  racks, not thrift. That **removes** the no-barcode caveat (new retail is fully
+  barcoded) and **improves** the data route: sealed product is fungible, so a
+  GTIN maps to an exact comp set and Browse API's `gtin` filter beats keyword
+  search. ⚡ **But the deciding number is sell-through, which is D12's gated
+  half** — measured 2026-09-10: clearance flips clear profit and ROI easily and
+  are refused on HOLD_TOO_LONG. The scan makes the query clean; it does not make
+  the data available. → Gate 6, AFTER D12's data route.
+- **B70** ⚡ **The sourcing screen names the failing gate but not the fix.**
+  `soldNeededForHold(targetDays, active)` exists in `src/core/velocity.ts` and is
+  **CLI-only** — the phone says HOLD_TOO_LONG without saying that 10 active
+  listings need 48 sold/90d to clear BOOTSTRAP's 21-day ceiling. That number IS
+  the sourcing rule for retail arbitrage, and it is one line of already-tested
+  core. Top candidate to fold into the next screen work. → Gate 6.
+- **B71** ⚠️ **Condition is a real dial and retail clearance is where it bites.**
+  Sealed new stock deserves high condition confidence; it currently takes the
+  pessimistic 40% default (**B64**), which drags the composite against D14's
+  stricter gate. The one case where confidence should legitimately be high is
+  the case being sourced. → Gate 6, with **B64**.
 - **B68** A score made in the aisle is **not saved** — the phone evaluates and
   hands off, and nothing lands in `opportunities`. Correct for 5.9c (writing
   opportunities is tier 3, still closed) but it is the precondition for **6.5**,
