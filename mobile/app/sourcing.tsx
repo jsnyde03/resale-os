@@ -1,9 +1,19 @@
 import { useMemo, useState } from 'react';
 import { Link, useRouter } from 'expo-router';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { evaluateForm, headline, type SourcingForm } from '../../src/screens/sourcing.js';
 import { opportunityIdFrom } from '../../src/core/ids.js';
+import {
+  CONDITIONS,
+  CONDITION_LABELS,
+  DEFAULT_CONDITION,
+  DEFAULT_HASSLE,
+  HASSLES,
+  HASSLE_LABELS,
+  type Condition,
+  type Hassle,
+} from '../../src/screens/condition.js';
 import { useFund } from '../src/fund/FundProvider.js';
 import { Button, C, Card, H1, Muted, Row } from '../src/ui/theme.js';
 import { Field } from '../src/ui/fields.js';
@@ -24,6 +34,44 @@ import { Field } from '../src/ui/fields.js';
  * price $12.40" alone is not actionable; "the per-item cap" is something you can
  * argue with, wait out, or fund.
  */
+/** A row of single-choice chips. Local, because only this screen has any. */
+function Chips<T extends string>({
+  label,
+  options,
+  labels,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: readonly T[];
+  labels: Readonly<Record<T, string>>;
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <View style={{ gap: 8 }}>
+      <Text style={{ color: C.dim, fontSize: 13 }}>{label}</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {options.map((o) => (
+          <Pressable
+            key={o}
+            onPress={() => onChange(o)}
+            style={{
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: value === o ? C.text : C.line,
+            }}
+          >
+            <Text style={{ color: value === o ? C.text : C.dim, fontSize: 13 }}>{labels[o]}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export default function Sourcing() {
   const { state } = useFund();
   const router = useRouter();
@@ -35,6 +83,8 @@ export default function Sourcing() {
   const [sold, setSold] = useState('');
   const [active, setActive] = useState('');
   const [comps, setComps] = useState('');
+  const [condition, setCondition] = useState<Condition>(DEFAULT_CONDITION);
+  const [hassle, setHassle] = useState<Hassle>(DEFAULT_HASSLE);
   const [checked, setChecked] = useState(false);
 
   const form: SourcingForm = useMemo(
@@ -46,8 +96,10 @@ export default function Sourcing() {
       sold90: sold,
       active,
       ...(comps.trim() === '' ? {} : { comps }),
+      condition,
+      hassle,
     }),
-    [name, category, price, resale, sold, active, comps],
+    [name, category, price, resale, sold, active, comps, condition, hassle],
   );
 
   // ⚠️ Nothing is evaluated until it is asked for. A verdict that recomputed on
@@ -128,6 +180,23 @@ export default function Sourcing() {
             keyboardType="decimal-pad"
             hint="Comma separated, optional. The biggest single term in confidence — and confidence caps the score."
             invalid={problemFor('comps') !== undefined}
+          />
+
+          {/* ⚡ B71. Words, not basis points — and "Not sure" is the default, so
+              the operator who skips this gets exactly the old behaviour. */}
+          <Chips
+            label="Condition"
+            options={CONDITIONS}
+            labels={CONDITION_LABELS}
+            value={condition}
+            onChange={setCondition}
+          />
+          <Chips
+            label="Shipping it"
+            options={HASSLES}
+            labels={HASSLE_LABELS}
+            value={hassle}
+            onChange={setHassle}
           />
 
           <Button label="Check it" onPress={() => setChecked(true)} tone="primary" />

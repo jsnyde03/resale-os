@@ -265,3 +265,68 @@ describe('the screen names the FIX, not just the failing gate', () => {
     }
   });
 });
+
+describe('condition and hassle, as words', () => {
+  // ⛔ The claim that matters most: adding these fields must not silently
+  // re-score anything. The middle option has to BE the old default.
+  it('scores identically when they are omitted or set to the default', () => {
+    // ⚠️ This compared two `evaluateForm` calls and was VACUOUS — once both
+    // options took the same path it could not fail, and it did not notice that
+    // an explicit 4,000 moved the RISK score by a point where `null` did not.
+    // The field-for-field test below caught that. So it compares against the
+    // evaluator DIRECTLY, with the fields the form used to send.
+    const explicit = ok({ ...GOOD, condition: 'UNKNOWN', hassle: 'NORMAL' });
+    const direct = evaluateOpportunity(
+      parseOpportunity({
+        opportunityId: 'aisle-lego-set',
+        name: 'Lego set',
+        category: 'TOYS',
+        askingPriceCents: 1_200,
+        expectedGrossCents: 6_000,
+        soldLast90Days: 40,
+        activeListings: 10,
+        compPricesCents: [5_800, 6_100, 6_000],
+        compMedianAgeDays: 45,
+        hassleBps: 2_000,
+      }),
+      fund(),
+    );
+    expect(explicit.confidenceBps).toBe(direct.result.confidenceBps);
+    expect(explicit.buyScore).toBe(direct.result.buyScore);
+    expect(explicit.riskScore).toBe(direct.result.riskScore);
+    expect(explicit.recommendation).toBe(direct.result.recommendation);
+  });
+
+  it('raises confidence for a sealed item, because you can see what it is', () => {
+    // ⚡ B71: the case being sourced is the one where the pessimistic default
+    // was most often wrong. Confidence is data quality, not optimism — nothing
+    // about the PRICE changes.
+    const sealed = ok({ ...GOOD, condition: 'SEALED' });
+    const unknown = ok({ ...GOOD, condition: 'UNKNOWN' });
+    expect(sealed.confidenceBps).toBeGreaterThan(unknown.confidenceBps);
+    expect(sealed.expectedProfit.cents).toBe(unknown.expectedProfit.cents);
+    expect(sealed.maxPrice.cents).toBe(unknown.maxPrice.cents);
+  });
+
+  it('lowers the buy score for an awkward parcel at the same margin', () => {
+    const easy = ok({ ...GOOD, hassle: 'EASY' });
+    const heavy = ok({ ...GOOD, hassle: 'HEAVY' });
+    expect(heavy.buyScore).toBeLessThan(easy.buyScore);
+    expect(heavy.expectedProfit.cents).toBe(easy.expectedProfit.cents);
+  });
+
+  it('moves monotonically across each scale', () => {
+    // A scale where two steps score the same is a scale with a dead option on
+    // it, and the operator cannot tell which one that is.
+    const conf = (['UNKNOWN', 'USED_CHECKED', 'LIKE_NEW', 'SEALED'] as const).map(
+      (c) => ok({ ...GOOD, condition: c }).confidenceBps,
+    );
+    for (let i = 1; i < conf.length; i += 1) expect(conf[i]!).toBeGreaterThan(conf[i - 1]!);
+
+    const scores = (['EASY', 'NORMAL', 'AWKWARD', 'HEAVY'] as const).map(
+      (h) => ok({ ...GOOD, hassle: h }).buyScore,
+    );
+    for (let i = 1; i < scores.length; i += 1) expect(scores[i]!).toBeLessThanOrEqual(scores[i - 1]!);
+    expect(scores[3]!).toBeLessThan(scores[0]!);
+  });
+});

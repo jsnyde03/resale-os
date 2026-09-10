@@ -166,10 +166,11 @@ access this project may not get.
       needs changes as the bankroll grows. Proven EXACT, not approximate: at N it
       clears and at N-1 it does not, across five listing counts. Planted (ceil to
       floor → 3 red).
-- [ ] **6.0.2** Condition and hassle become inputs (**B64**, **B71**). Sealed
-      retail deserves high condition confidence and currently takes a pessimistic
-      40% default, which drags the composite against D14's stricter gate — the one
-      case where confidence should legitimately be high is the case being sourced.
+- [x] **6.0.2** ✅ **Done 2026-09-10. Closes B64 and B71.** Condition and hassle
+      as WORDS on the sourcing screen, anchored so the default option reproduces
+      today's score exactly. ⛔ **"Not sure" is NULL, not 40%** — the two are the
+      same to `scoreConfidence` and different to the RISK score, and the
+      field-for-field test caught the difference.
 - [ ] **6.0.3** Save the score (**B68**). Nothing records an aisle decision, so
       **B3**'s rejection histogram has nothing to count and **6.5**'s watchlist
       has nothing to watch. It is the precondition for both.
@@ -383,10 +384,7 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   blind, not conservative. Built in 5.6.7.
 - ~~**B58**~~ ✅ **Closed 2026-09-10 by D14 in 5.9c.** One gate set; `assessQuote`
   deleted; `tests/purchase-parity.test.ts` compares the two doors.
-- **B64** No screen takes **condition** or **hassle**; both fall to the schema
-  defaults (`hassleBps` 2,000, condition a pessimistic 40%). Both move
-  confidence, so they are real dials — but they are new financial input
-  surface. → Gate 6.
+- ~~**B64**~~ ✅ **Closed 2026-09-10 in 6.0.2.**
 - ~~**B67**~~ ✅ **Closed 2026-09-10 in 5.11.1.** Not by generating the YAML —
   by making it ANSWER to the discovered closure. `check-phone-bundle.mjs
   --print-layers` emits the layers the phone reaches; `tests/ci-scope.test.ts`
@@ -428,11 +426,7 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   are refused on HOLD_TOO_LONG. The scan makes the query clean; it does not make
   the data available. → Gate 6, AFTER D12's data route.
 - ~~**B70**~~ ✅ **Closed 2026-09-10 in 6.0.1.**
-- **B71** ⚠️ **Condition is a real dial and retail clearance is where it bites.**
-  Sealed new stock deserves high condition confidence; it currently takes the
-  pessimistic 40% default (**B64**), which drags the composite against D14's
-  stricter gate. The one case where confidence should legitimately be high is
-  the case being sourced. → Gate 6, with **B64**.
+- ~~**B71**~~ ✅ **Closed 2026-09-10 in 6.0.2.**
 - **B68** A score made in the aisle is **not saved** — the phone evaluates and
   hands off, and nothing lands in `opportunities`. Correct for 5.9c (writing
   opportunities is tier 3, still closed) but it is the precondition for **6.5**,

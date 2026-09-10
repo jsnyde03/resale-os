@@ -3877,3 +3877,39 @@ asserted a 21-day ceiling against a fixture that is a **$500** fund — which is
 GROWTH, and 60 days. The test failed with *"expected 60 to be 21"*, and the fix
 was the expectation, not the code. It became the second case: the number must
 follow the mode, and now both are pinned.
+
+### 6.0.2 — condition and hassle, and a vacuous test of my own
+
+`src/screens/condition.ts` turns two judgement calls into words: **Sealed /
+Like new / Used, checked / Not sure**, and **Envelope / Normal box / Bulky or
+fragile / Heavy or oversize**. Closes **B64** and **B71**.
+
+⚠️ **The scales are anchored, not invented.** Each passes through the value the
+system already used, so the default option reproduces today's score exactly and
+nothing moves underneath the operator. Everything above and below is a stated
+opinion about evidence quality, in one file, changeable in one place. ⛔
+Confidence is data quality, never optimism — `SEALED` scores high because you can
+see what the thing is, not because it is worth more, and the test asserts the
+expected profit and the price ceiling are **unchanged** by it.
+
+### ⛔ "Not sure" is NULL, and my own test could not have told me
+
+The first version mapped `UNKNOWN` to 4,000 — the same number
+`CONFIDENCE_DEFAULTS.conditionBps` uses when nothing is supplied — and I wrote a
+test asserting that omitting the field and choosing "Not sure" score identically.
+**It passed, and it was vacuous**: once both options went through the same line,
+the two calls were the same code path and the assertion could not fail.
+
+The **existing** field-for-field test against `evaluateOpportunity` failed
+instead, with *"expected 24 to be 23"*. The reason is a real distinction:
+`scoreConfidence` treats an explicit 4,000 and an absent value alike, but the
+**risk score inverts the field**, where `null` means *no information* and 4,000
+means *40% certain*. Those are different facts and the risk score is right to
+tell them apart.
+
+So "Not sure" passes `null`, and the vacuous test was replaced with one that
+compares against the evaluator **directly**, built from the fields the form used
+to send. ⚡ **The lesson is the one this project keeps relearning from a new
+angle:** a control whose two sides come from one source cannot fail — and here
+the two sides became one source *as a result of the change being tested*, which
+is a way for a test to rot that reading it would never reveal.

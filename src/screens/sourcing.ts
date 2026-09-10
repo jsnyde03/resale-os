@@ -15,6 +15,14 @@
 import { parseOpportunity } from '../domain/opportunity.js';
 import { evaluateOpportunity } from '../scoring/evaluate.js';
 import { soldNeededForHold } from '../core/velocity.js';
+import {
+  CONDITION_CONFIDENCE_BPS,
+  DEFAULT_CONDITION,
+  DEFAULT_HASSLE,
+  HASSLE_BPS,
+  type Condition,
+  type Hassle,
+} from './condition.js';
 import { formatCents } from '../core/money.js';
 import type { Bps, Cents } from '../core/money.js';
 import type { FundState } from '../core/capital/state.js';
@@ -35,6 +43,12 @@ export interface SourcingForm {
   readonly active: string;
   /** Optional: a few sold prices, comma separated. Raises confidence. */
   readonly comps?: string;
+  /**
+   * ⚠️ Both optional, and both default to the value the system ALREADY used —
+   * so a form that omits them scores exactly as it did before (B64, B71).
+   */
+  readonly condition?: Condition;
+  readonly hassle?: Hassle;
 }
 
 export interface SourcingProblem {
@@ -110,6 +124,12 @@ export interface SourcingVerdict {
     readonly ceilingDays: number;
   };
   readonly policyVersion: string;
+}
+
+/** Null when nobody said, which is a different fact from "40% certain". */
+function conditionBpsOrNull(condition: Condition | undefined): Bps | null {
+  if (condition === undefined || condition === DEFAULT_CONDITION) return null;
+  return CONDITION_CONFIDENCE_BPS[condition];
 }
 
 function dollars(raw: string, field: keyof SourcingForm, label: string): Cents | SourcingProblem {
@@ -194,7 +214,16 @@ export function evaluateForm(
     operatorDaysEstimate: null,
     compPricesCents: comps,
     compMedianAgeDays: 45,
-    hassleBps: 2_000,
+    // ⚡ B71. Sealed retail stock is the thing you are MOST certain about, and
+    // it was being scored at the pessimistic 40% used for "nobody said" — which
+    // only started costing buys when D14 made confidence decisive.
+    // ⛔ "Not sure" is NULL, not 4,000. `scoreConfidence` treats the two alike —
+    // both land on the pessimistic default — but the RISK score inverts this
+    // field, and `null` there means "no information" while 4,000 means "40%
+    // certain". Setting it explicitly moved the risk score by a point and the
+    // field-for-field test against `evaluateOpportunity` caught it.
+    conditionConfidenceBps: conditionBpsOrNull(form.condition),
+    hassleBps: HASSLE_BPS[form.hassle ?? DEFAULT_HASSLE],
   });
 
   const e = evaluateOpportunity(input, state);
