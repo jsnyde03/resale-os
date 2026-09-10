@@ -117,8 +117,9 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
 - [x] **5.9b** ✅ **Done 2026-09-09.** A backups screen with a share sheet:
       `expo-sharing`, the newest copy first, and wording that claims only what
       the app can actually observe — a file was OFFERED elsewhere, not that it
-      arrived. ⏳ Lane validating the native module.
-- [ ] **5.9c** ⛔ **THE GAP BETWEEN RECORDING AND DECIDING.** A sourcing screen:
+      arrived. ✅ **43/43 on device** — `Installing ExpoSharing (57.0.18)` in the
+      pod log, so the native module really was compiled in.
+- [ ] **5.9c** ⚡ **ACTIVE BUILD.** ⛔ **THE GAP BETWEEN RECORDING AND DECIDING.** A sourcing screen:
       score an opportunity in the field and get the **walk-away price**.
       ⚠️ Found 2026-09-09 by asking what "ready" means — twelve screens on the
       phone and none answers *"should I buy this, and at what price?"*. `buy`

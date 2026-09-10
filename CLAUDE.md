@@ -36,18 +36,28 @@ force-pushing does not take it back: **GitHub keeps the objects, fetchable by
 SHA.** Measured twice on this project. Write "the operator's county", never the
 county. Same for `C:/Users/<name>/...` paths.
 
-**Gates 1–3 are closed.** The ledger is correct and tamper-evident; the system
-scores opportunities and recommends purchases with reasons; it reports its own
-prediction accuracy and backs itself up. **Gate 4 (dashboard) is the active
-build** — see `MASTER_PLAN.md`, which carries the decomposed sub-steps.
+**Gates 1–4 are closed. Gate 5 — THE PHONE IS THE SYSTEM — is nearly done**
+(2026-09-09). The ledger, the engine, every write and read screen, backups and
+the import all run on the device: **43/43 against Apple's SQLite** in
+`.github/workflows/driver-contract-ios.yml`.
+
+⛔ **The desktop is being RETIRED, not maintained.** `src/cli`, `src/server` and
+`src/app` go at 5.10 — but not until the fund has actually moved, because
+`cli export` is how it gets onto the phone. ⚠️ **`src/server/views.ts` MOVES
+rather than goes** — the app is built on it (**B62**).
+
+See `MASTER_PLAN.md` for the decomposed active item; it is the queue, this is
+orientation.
 
 ### What needs a human, not a session
 
 | | |
 |---|---|
-| **B32** | Confirm OneDrive is genuinely signed in and syncing. The folder was empty apart from `desktop.ini`, so backups are *configured* but their sync has never been observed. A backup that never leaves the disk is the failure this prevents. |
-| **B26** | Verify the operator's state and local rates against the tax authority's published table. They were recalled, not looked up, and `stateRateBasis` says so. |
-| **D2** | The owner split (20/10/70 of after-tax profit) is still a default nobody has confirmed. |
+| **Move the fund** | `cli export`, get the JSON onto the phone, import it. ⚡ **Everything above is machinery until this happens** — the phone holds an empty ledger today. |
+| **Codemagic** | Add the repo and point it at the `AppleConnect` group. `codemagic.yaml` is written; the first run is the validation pass. |
+| **Two repos** | Delete `resale-os-prescrub-2` and `resale-os-prescrub-private`. Both are private, both still hold the scrubbed tax profile, and the CLI token cannot delete. The history is bundled and restore-verified in the OneDrive backups folder. |
+| **B26** | Verify the operator's state and local rates against the published table. Half closed — the local rate is confirmed; the state marginal is not. |
+| **D2** | The owner split (20/10/70) is still a default. Not live below $100 NAV, and the fund is at $50 — four to six flips away. |
 
 ### The one thing a new session should not re-litigate
 
@@ -56,11 +66,18 @@ build** — see `MASTER_PLAN.md`, which carries the decomposed sub-steps.
 category-neutral. Books were considered and moved to Growth mode — they are a
 margin play needing hold tolerance a $50 fund does not have. Backlog **B28**.
 
-### Four gates run on every check
+### Five gates run on every check
 
 ```
-npm run check    # source bytes · import direction · typecheck · 463 tests
+npm run check    # source bytes · import direction · PHONE BUNDLE · typecheck · 583 tests
 ```
+
+⚡ **`lint:phone` walks the import graph** from every `src/` module the phone
+actually imports and fails if anything on that closure reaches a `node:*`
+builtin. The one-level import lint could not see it: `views.ts` was two hops
+from dragging the desktop SQLite driver into the bundle. Its roots are
+DISCOVERED by scanning `mobile/`, never listed — every hand-written list of
+places to look on this project has come up short.
 
 Each was **planted against and verified to red**, then the restore verified to
 green. A control that has never been planted is not a control.

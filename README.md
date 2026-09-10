@@ -10,7 +10,9 @@ boundaries as the bankroll grows.
 
 **Status:** Gates 1 to 4 complete — deterministic capital engine and ledger,
 plus opportunity scoring, a ranked feed, prediction accuracy and verified
-backups. 445 tests green. Gates 1-4 are complete; Gate 5 (eBay ingestion) is the active build.
+backups. **Gate 5 — the phone is the system — is nearly done:** the engine, the
+ledger, every screen and the backups run on the device, verified 43/43 against
+Apple's SQLite in CI. 583 tests green.
 
 **Live since 2026-09-08 on a real $50 bankroll.** BOOTSTRAP mode: $20 max per
 item, 21-day hold ceiling, $8 minimum profit — and **nothing is set aside until
@@ -41,7 +43,7 @@ Requires Node >= 22.5 (for the built-in `node:sqlite` — there is nothing to co
 
 ```bash
 npm install
-npm run check          # four gates: bytes, imports, types, 445 tests
+npm run check          # five gates: bytes, imports, phone bundle, types, 583 tests
 ```
 
 Run a real fund:
@@ -325,10 +327,12 @@ src/core/      PURE deterministic engine — money, ledger, capital, constraints
 src/core/tax/  annual tax model: SE tax, brackets, QBI, the incremental reserve
 src/scoring/   Buy Score, Risk Score, confidence, max price, recommendation
 src/db/        driver, migrations, store, replay, hash chain
-src/adapters/  source adapters (eBay, manual, CSV)          [Gate 5]
-src/market/    scarcity, demand, momentum, radar            [Gate 6]
-src/cli/       the operator interface until the dashboard exists
-tests/         445 tests; financial logic weighted heaviest
+src/ui/        pure form models the write screens are made of
+src/adapters/  source adapters (eBay, manual, CSV)          [Gate 6]
+src/market/    scarcity, demand, momentum, radar            [Gate 7]
+src/cli/       the operator interface — retired at 5.10
+mobile/        the Expo app; the engine is imported from src/, unchanged
+tests/         583 tests; financial logic weighted heaviest
 ```
 
 A visually impressive dashboard with incorrect bankroll math is unacceptable, so
