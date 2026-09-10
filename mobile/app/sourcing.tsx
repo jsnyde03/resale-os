@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useRouter } from 'expo-router';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 
-import { evaluateForm, headline, type SourcingForm } from '../../src/server/sourcing.js';
+import { evaluateForm, headline, type SourcingForm } from '../../src/screens/sourcing.js';
 import { opportunityIdFrom } from '../../src/core/ids.js';
 import { useFund } from '../src/fund/FundProvider.js';
 import { Button, C, Card, H1, Muted, Row } from '../src/ui/theme.js';
@@ -16,7 +16,7 @@ import { Field } from '../src/ui/fields.js';
  * to. Nothing answered the question you ask while holding the object, and D11
  * says the fund does not start buying until the phone can *decide*.
  *
- * ⛔ **It computes nothing.** `src/server/sourcing.ts` is the model — the same
+ * ⛔ **It computes nothing.** `src/screens/sourcing.ts` is the model — the same
  * one the desktop rendered — and it goes through the same `evaluateOpportunity`
  * the buy screen now gates with (D14). This file is typography and a keyboard.
  *

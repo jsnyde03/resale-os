@@ -12,8 +12,8 @@
  * `src/core`. Anything that needs computing is computed there.
  */
 
-import type { DashboardView } from './views.js';
-import type { Money } from './views.js';
+import type { DashboardView } from '../screens/views.js';
+import type { Money } from '../screens/views.js';
 
 /** How hard a line shouts. `alarm` is reserved for "this ledger is wrong". */
 export type Tone = 'normal' | 'muted' | 'notice' | 'alarm';

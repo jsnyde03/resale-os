@@ -18,7 +18,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { evaluateForm, type SourcingForm } from '@/server/sourcing.js';
+import { evaluateForm, type SourcingForm } from '@/screens/sourcing.js';
 import { evaluatePurchase } from '@/scoring/purchase.js';
 import { quotePurchase, type PurchaseQuoteInput } from '@/core/capital/quote.js';
 import { deriveEconomics, parseOpportunity } from '@/domain/opportunity.js';

@@ -1,6 +1,6 @@
 import { withStore } from '../../server/store.js';
-import { evaluateForm, headline } from '../../server/sourcing.js';
-import type { SourcingForm, SourcingVerdict } from '../../server/sourcing.js';
+import { evaluateForm, headline } from '../../screens/sourcing.js';
+import type { SourcingForm, SourcingVerdict } from '../../screens/sourcing.js';
 
 export const dynamic = 'force-dynamic';
 

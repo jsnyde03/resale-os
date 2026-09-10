@@ -13,7 +13,7 @@
 import type { LedgerReader } from '../db/store.js';
 import type { ItemRecord } from '../core/capital/state.js';
 import { holdsCapital } from '../core/capital/state.js';
-import { money, type Money } from './views.js';
+import { money, type Money } from '../screens/views.js';
 
 const MS_PER_DAY = 86_400_000;
 

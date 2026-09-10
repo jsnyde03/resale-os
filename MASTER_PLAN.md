@@ -134,9 +134,13 @@ move unchanged**. `node:sqlite` is imported in exactly one file, which
         before the deletion in .4. Today the desktop db and its OneDrive copies are
         the safety net; retiring them makes the phone the fund's only home. 5.9b
         built the share sheet and can only observe that a file was *offered*.
-  - [ ] **5.10.3** Move `views.ts` (**B62**) and `sourcing.ts` (**B65**) out of
-        `src/server` — the phone renders both. A new layer red-gates until declared,
-        which is 5.11.1's undeclared-layer check doing its job.
+  - [x] **5.10.3** ✅ **Done 2026-09-10.** `views.ts` and `sourcing.ts` are now
+        `src/screens/` — screen MODELS, decided outside the `.tsx` so they can be
+        tested where there is no browser and no device. Closes **B62** and **B65**.
+        ⚡ **Both new gates fired on cue:** the undeclared-layer check demanded rules
+        for `src/screens`, and `ci-scope` caught it missing from the lane's `paths:`
+        filter — B67's exact failure mode, found by a control rather than by a
+        person, one hour after that control was written.
   - [ ] **5.10.4** Delete `src/cli`, `src/app` and what is left of `src/server`.
         ⛔ Gated on .1, .2 and .3.
   - [ ] **5.10.5** Prune what only they used — Next config and deps,
@@ -364,11 +368,8 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   at 55 events and linear forever. Add a limit/offset read when the ledger is
   big enough to notice — not before, and the ledger screen already caps what it
   DRAWS. → post-Gate 5.
-- **B62** ⚠️ **5.10 plans to retire `src/server`, and `views.ts` must NOT go
-  with it** — the phone now depends on it. Move it to `src/ui/` (beside the
-  form models) when the retirement happens, rather than deleting a read model
-  the app is built on. Filed at 5.8's switch-in, before the retirement can get
-  it wrong. → 5.10.
+- ~~**B62**~~ ✅ **Closed 2026-09-10 in 5.10.3.** `views.ts` is now
+  `src/screens/views.ts` — it moved rather than went, as filed.
 - ~~**B61**~~ ⚡ **Promoted to 5.9b, 2026-09-09** — the lane is green, so a
   native module can be validated.
 - **B60** ⚙️ **Half closed 2026-09-09** (Jason: *both — contract now, RNTL
@@ -441,8 +442,7 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   buy score for a whole surface (**B58**). The two cases are indistinguishable
   in the code. `validatePolicy` solved the same class by being exhaustive off a
   defaults object's keys; this wants the same treatment, or a lint. → Gate 6.
-- **B65** `src/server/sourcing.ts` **MOVES rather than goes** at 5.10, exactly
-  like `views.ts` (**B62**) — the phone renders it.
+- ~~**B65**~~ ✅ **Closed 2026-09-10 in 5.10.3**, alongside **B62**.
 - **B57** The app has no icon — a white square on the home screen. Cosmetic,
   and only visible because a CI screenshot caught it. → before any TestFlight
   build (**5.9**).

@@ -22,7 +22,7 @@ import { join } from 'node:path';
 import { FundStore } from '@/db/store.js';
 import { openDb } from '@/db/driver.js';
 import { migrate } from '@/db/migrate.js';
-import { dashboardView } from '@/server/views.js';
+import { dashboardView } from '@/screens/views.js';
 import { primaryScreen, backupFooter } from '@/server/screens.js';
 import type { PrimaryScreen } from '@/server/screens.js';
 import { DEFAULT_POLICY } from '@/core/capital/policy.js';

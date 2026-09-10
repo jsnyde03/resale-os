@@ -1,5 +1,5 @@
 import { withStore } from '../server/store.js';
-import { dashboardView } from '../server/views.js';
+import { dashboardView } from '../screens/views.js';
 import { primaryScreen } from '../server/screens.js';
 import type { ScreenBanner, ScreenRow, ScreenSection, Tone } from '../server/screens.js';
 

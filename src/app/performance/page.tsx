@@ -1,5 +1,5 @@
 import { withStore } from '../../server/store.js';
-import { dashboardView } from '../../server/views.js';
+import { dashboardView } from '../../screens/views.js';
 
 export const dynamic = 'force-dynamic';
 

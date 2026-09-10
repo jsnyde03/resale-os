@@ -14,7 +14,7 @@
 import type { LedgerReader } from '../db/store.js';
 import type { OpportunityRow, OpportunityFilter } from '../db/repositories/opportunities.js';
 import type { Bps } from '../core/money.js';
-import { money, type Money } from './views.js';
+import { money, type Money } from '../screens/views.js';
 
 export interface FeedRow {
   readonly id: string;

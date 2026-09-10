@@ -29,6 +29,14 @@ const FORBIDDEN = {
   // reaching the store would make a screen able to write without going through
   // the one place that refreshes every other screen.
   'src/ui': ['src/db', 'src/cli', 'src/server', 'src/app'],
+  // 5.10.3. The screen MODELS — what a screen renders, decided outside the
+  // `.tsx` so it can be tested where there is no browser and no device.
+  // They may read downward (`db` included: `views.ts` needs the store's
+  // reader types and the reporting queries), never sideways into a
+  // surface. ⛔ `src/server` and `src/app` are BOTH being deleted at
+  // 5.10.4, and an import of either would quietly re-tether the phone to
+  // the desktop it is replacing.
+  'src/screens': ['src/cli', 'src/server', 'src/app'],
 };
 
 /** Modules the pure layers may not touch, however they are reached. */

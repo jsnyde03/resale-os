@@ -2,14 +2,14 @@ import { useMemo, useState } from 'react';
 import { Link } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { accuracyView, profitView, taxView } from '../../src/server/views.js';
+import { accuracyView, profitView, taxView } from '../../src/screens/views.js';
 import { useFund } from '../src/fund/FundProvider.js';
 import { C, Card, H1, Muted, Row } from '../src/ui/theme.js';
 
 /**
  * Profit, accuracy and tax.
  *
- * ⛔ **Every number here comes from `src/server/views.ts`** — the read model
+ * ⛔ **Every number here comes from `src/screens/views.ts`** — the read model
  * the Gate 4 dashboard used, imported unchanged. Not ported, not
  * reimplemented: a second implementation of "what did this fund earn" is how
  * two screens end up both looking right and disagreeing.

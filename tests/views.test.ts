@@ -27,7 +27,7 @@ import {
   taxView,
   accuracyView,
   money,
-} from '@/server/views.js';
+} from '@/screens/views.js';
 import { WITH_JOB, T0 } from './helpers.js';
 
 function fixedClock(): () => string {

@@ -27,7 +27,7 @@ import { itemIdFrom } from '../core/ids.js';
 import { adjustModel, reverseModel, sellModel, spendModel } from '../ui/forms.js';
 import { profitReport } from './reporting.js';
 import { makeVerifiedBackup } from './backup-portable.js';
-import { dashboardView } from '../server/views.js';
+import { dashboardView } from '../screens/views.js';
 import { importLedger, type LedgerExport } from './portable.js';
 import type { TaxProfile } from '../core/tax/profile.js';
 import type { ScenarioCase } from './engine-scenario.js';

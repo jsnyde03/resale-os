@@ -43,6 +43,11 @@ on:
       # triggered a run. ⛔ The list keeps being wrong because it is written by
       # hand while the closure is computed: `npm run lint:phone` DISCOVERS the
       # roots by scanning `mobile/`, and this cannot. → B67.
+      # ⚡ `src/screens/**` was added by the GATE, not by memory: 5.10.3 moved
+      # views.ts and sourcing.ts here and `tests/ci-scope.test.ts` went red the
+      # same minute. Third time this filter went stale; first time something
+      # other than a person noticed.
+      - 'src/screens/**'
       - 'src/scoring/**'
       - 'src/domain/**'
       - 'src/server/**'

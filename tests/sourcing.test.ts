@@ -11,12 +11,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { evaluateForm, headline } from '@/server/sourcing.js';
+import { evaluateForm, headline } from '@/screens/sourcing.js';
 import { evaluateOpportunity } from '@/scoring/evaluate.js';
 import { parseOpportunity } from '@/domain/opportunity.js';
 import { Fund, WITH_JOB, T0 } from './helpers.js';
 import { DEFAULT_POLICY } from '@/core/capital/policy.js';
-import type { SourcingForm } from '@/server/sourcing.js';
+import type { SourcingForm } from '@/screens/sourcing.js';
 
 /** A fund with room to buy. */
 const fund = (cents = 50_000) => Fund.withBankroll(cents, DEFAULT_POLICY, WITH_JOB).state;

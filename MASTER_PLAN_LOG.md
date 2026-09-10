@@ -3499,3 +3499,41 @@ three prior incidents: *writing about escape sequences through a Python script
 puts control bytes in the file — use a raw string, or the Edit tool.* The
 transform error caught it instantly, which is the cheap end of that failure; the
 `\b`-in-a-regex version cost a build.
+
+### 5.10.3 — the two files that outlive the desktop
+
+`src/server/views.ts` and `src/server/sourcing.ts` are now `src/screens/`.
+B62 and B65 closed. The name carries the principle this project already had and
+had only ever applied to one file: **the screen's decisions live outside the
+`.tsx`**, because that is where they can be tested when there is no browser and
+no device. Both survive because the phone renders them; the other six files in
+`src/server` — auth, binding, feed, inventory, screens, store — are web-only and
+die at 5.10.4.
+
+They moved to the same directory depth, so their own relative imports were
+untouched. `sourcing.ts` needed only `money` from `views.ts`, so the pair is
+self-contained and reaches nothing else in `src/server`.
+
+### ⚡ Both new gates fired on cue, and one of them earned its keep in an hour
+
+**The undeclared-layer check** — written earlier the same day in 5.11.1, after
+finding `src/adapters` had existed with no rules — demanded that `src/screens`
+declare what it may import before the build could go green. That is the check
+working exactly as designed: a new layer red-gates while it has two files rather
+than forty.
+
+**And `tests/ci-scope.test.ts` caught B67's failure mode by itself.** The moment
+the files landed in a new directory, `src/screens` was on the phone's transitive
+closure and absent from the lane's `paths:` filter — meaning a change to the
+sourcing screen's model would not have triggered a device run, while showing
+green. **That filter has now gone stale three times; this is the first time
+something other than a person noticed**, and it was one hour after the control
+was written.
+
+⚠️ **My own site list undercounted, again.** Grepping for who imported the moved
+files matched the path shape `server/views` and missed the **sibling** imports —
+`feed.ts`, `inventory.ts` and `screens.ts` each import `'./views.js'`, four
+references in three files, invisible to that pattern. Typecheck named all four
+immediately. Same lesson as the `truncated-search-hides-a-class` and
+`audit-site-lists-undercount` cases: **the enumeration is the thing that fails,
+not the fix** — search for the symbol, not for the path you expect.
