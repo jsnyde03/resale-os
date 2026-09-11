@@ -5410,3 +5410,40 @@ survives the audit:
 ⚠️ **Worth recording that the answer was "no change".** A backlog entry asking
 for an audit is satisfied by doing the audit, and reporting nothing is a result —
 the failure mode is finding something to change so the item looks worked.
+
+### 6.9.5 — N/A, and verified rather than assumed
+
+All five changed files are Vitest-only temp-directory tests. **None is in the
+iOS lane's `paths:` filter, and the push triggered no run** — checked, not
+assumed. That is correct: the device executes the contracts in `src/db/`, not
+anything in `tests/`.
+
+⚠️ **Worth distinguishing from the four times that filter was genuinely stale.**
+There, code the device RUNS was missing from the list and a green meant "did not
+run". Here the code is not on the device path at all. ⛔ Spending a 20-minute
+macOS job to "verify" files it never executes would be theatre, and a sub-step
+answered honestly with "not applicable" is worth more than one answered with a
+green tick that means nothing.
+
+### Gate 6.9's after-scan, and the replenishment
+
+⚡ **The pattern from 6.6-6.8 held a fourth time, in a new direction.** Those
+three had a backlog entry whose stated FIX was wrong. 6.9's fix was right — and
+**half its scope turned out to need no work at all**, because 5.5.1 had already
+done it. ⛔ **A backlog entry also goes stale in the direction of being already
+solved**, and the switch-in scan is what separates "still true" from "was true".
+
+**Next active build: 6.10 (B88)** — promoted the same day it was filed, which
+is unusual and deliberate. It is a correctness gap in an instrument the operator
+READS: 6.2's rejection histogram counts stored codes, and it is currently mixing
+pre- and post-6.1.0 rule sets while reporting a single number.
+
+⚠️ **6.10.1 carries the lesson from today's stale-list count.** The rules
+identity must be DERIVED from `CONSTRAINT_CODES`, not maintained by hand — a
+version string somebody must remember to bump is an enumerated list with one
+entry, and this project has watched that shape fail five times.
+
+⚠️ **Still needing Jason, and now overdue: B57**, the app icon. Its trigger read
+*"before any TestFlight build"* and the first publish was 2026-09-10. Verified:
+no `icon` key in `mobile/app.json`, no assets directory — the fund is a white
+square on the home screen. The plumbing is twenty minutes; the picture is his.

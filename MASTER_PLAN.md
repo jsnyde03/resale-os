@@ -112,38 +112,50 @@ lacked. Planted three ways including the control. Detail in the log.
 
 ---
 
-### Gate 6.9 — HANDLES CLOSED INSIDE A TRY, AND PINNED MIGRATION NAMES (B55) ⚡ **ACTIVE BUILD**
+### Gate 6.9 — A LEAKED HANDLE WAS REPLACING REAL FAILURES ✅ **DONE 2026-09-11**
 
-⛔ **Seven sites close a database handle inside the TRY body**, measured
-2026-09-11: `migration-rebuild.test.ts:136`, `reporting.test.ts:160/171/208/232/247`,
-`views.test.ts:156`. **If an assertion between the open and the close fails, the
-close never runs**, the handle leaks, and `rmSync` throws EBUSY over the top of
-the real failure — which is what cost an hour in 5.5.1.
-
-⚠️ **The mitigation is why nobody noticed:** `rmSync` carries `maxRetries: 5`,
-which hides the leak rather than removing it.
-
-- [x] **6.9.1** ✅ **Done 2026-09-11.** All seven closes moved into a `finally`.
-- [x] **6.9.2** ✅ **Done 2026-09-11, and the bug is PROVEN not argued.** Same
-      planted failure, two shapes: in the old one the `AssertionError` **never
-      appears** — `EBUSY: resource busy or locked` replaces it outright; in the
-      new one it surfaces cleanly.
-- [x] **6.9.3** ✅ **Done 2026-09-11.** ⛔ **`maxRetries: 5` did not save the old
-      shape** — five retries lose to a leaked handle. Kept for what it plausibly
-      IS for (Windows releasing a lock lazily after a *clean* close), with that
-      written down once and pointed at from the rest, so nobody reads it as leak
-      cover again.
-- [x] **6.9.4** ✅ **Audited 2026-09-11 — no change needed, and that is the
-      finding.** 5.5.1 already fixed the one genuinely stale list; the remaining
-      pins are a named constant for *the* rebuild migration, plus an exhaustive
-      set assertion that is SUPPOSED to fail when a new self-managed migration
-      appears.
-- [ ] **6.9.5** On-device verification.
-
-**Exit:** a failing assertion in a temp-directory test reports itself, and a
-migration added tomorrow does not break a test that was never about it.
+⚡ **Closes B55, and the bug was proven rather than argued.** The same planted
+failure in both shapes: old, the `AssertionError` **never appears** and
+`EBUSY` replaces it; new, it surfaces cleanly. Seven closes moved into a
+`finally`. ⛔ `maxRetries: 5` did not save the old shape and now says so.
+⚡ **6.9.4 audited to "no change needed"** — 5.5.1 had already fixed the one
+stale list. Detail in the log.
 
 ---
+
+### Gate 6.10 — STALENESS IS BLIND TO RULE CHANGES (B88) ⚡ **ACTIVE BUILD**
+
+⛔ **`Policy.version` versions the NUMBERS, not the RULES**, and
+`watchlist.ts:89` detects staleness from it alone. Today proved the gap: 6.1.0
+added a constraint code and 6.6 changed how every gate is evaluated, both with
+`Policy.version` untouched at `2026-09-08.5`. **A score recorded yesterday reads
+as scored under today's rules.**
+
+⚠️ **The instrument that suffers is 6.2's rejection histogram** — it counts
+STORED codes, so it mixes rule sets and under-counts the new one. That chart
+answers *"why is nothing passing?"*, so a silent mix is the wrong kind of wrong.
+
+- [ ] **6.10.1** A rules identity derived from the CODE — a short hash over
+      `CONSTRAINT_CODES` and the evaluator's shape. ⛔ **Not a hand-maintained
+      version string**: this project has watched an enumerated list go stale five
+      times, and a number somebody must remember to bump is that same list with
+      one entry.
+- [ ] **6.10.2** Store it with each score, beside `policy_version`.
+      ⚠️ **A migration adds a column, and every existing row has none** — an
+      absent identity must read as *"unknown, treat as stale"*, never as a match.
+- [ ] **6.10.3** Staleness reads BOTH. ⛔ And the histogram must say when it is
+      mixing rule sets rather than silently averaging them.
+- [ ] **6.10.4** Plant both directions: changing the code's rules must mark old
+      scores stale, **and** the control — an unchanged rule set must not mark
+      everything stale, which would make the flag useless.
+- [ ] **6.10.5** On-device verification — this one IS on the device path.
+
+**Exit:** a stored verdict can be told apart from one today's rules would give,
+and the histogram never silently mixes the two.
+
+---
+
+## Queue---
 
 ## Queue---
 
@@ -163,7 +175,8 @@ migration added tomorrow does not break a test that was never about it.
 | 6.6 | **A gate that abstains must say so** (**B66**) | ✅ **Done 2026-09-11**, 52/52 on device |
 | 6.7 | **The allocation block** (**B73**) — owner split and set-aside threshold; **unblocks D2** | ✅ **Done 2026-09-11**, 53/53 on device |
 | 6.8 | **A test may not assert on the cache** (**B54**) | ✅ **Done 2026-09-11**, 53/53 on device |
-| 6.9 | **Handles closed inside a try, and pinned migration names** (**B55**) | ⚡ **ACTIVE BUILD** |
+| 6.9 | **A leaked handle was replacing real failures** (**B55**) | ✅ **Done 2026-09-11** |
+| 6.10 | **Staleness is blind to rule changes** (**B88**) | ⚡ **ACTIVE BUILD** |
 | 7 | **Radar over the fund's OWN HISTORY** — scarcity, demand, momentum, confidence, from what the operator has actually seen. ⛔ Not market-wide; that premise died with **D16** | ⏸️ **PARKED until there is history** (**D17**) |
 | 7.5 | **Drop intel** — dated retail drops, monitoring and alerting. ⛔ Checkout automation is OUT, see **D13** | Open |
 | 8 | *(architecture only until 1–7 are reliable)* authorization states, drop intel, autonomy | Not started, not startable |
@@ -437,23 +450,7 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   carry it, so removing it is a config migration, and this repo's rule is that a
   repair path must not depend on the broken thing. → when a policy migration is
   needed for another reason.
-- **B88** ⛔ **`Policy.version` VERSIONS THE NUMBERS, NOT THE RULES — and
-  staleness is detected from it alone.** `watchlist.ts:89` is
-  `c.policyVersion !== state.policy.version`, so a stored score is "current"
-  whenever the stored config matches. ⚠️ **Today proved that is not enough**:
-  6.1.0 added `VELOCITY_COUNTS_UNBOUNDED` and 6.6 changed how every gate is
-  evaluated, both with `Policy.version` untouched at `2026-09-08.5`. **Scores
-  recorded before today therefore read as scored under today's rules, and were
-  not.** ⚡ Worst concrete effect: **6.2's rejection histogram** mixes pre- and
-  post-6.1.0 rows and under-counts the new code — the chart is the instrument for
-  *"why is nothing passing?"*, so a silent mix is the wrong kind of wrong.
-  ⛔ **Bumping `Policy.version` is the wrong fix** — it is stored config, and a
-  code change does not rewrite a stored row. The fix is to record a rules
-  identity derived from the CODE (a hash of `CONSTRAINT_CODES` plus the
-  evaluator's shape) alongside each score, so staleness covers rules as well as
-  numbers. ⚠️ **The live fund has zero purchases but may hold scored
-  walk-aways**, which is exactly what the histogram counts. → before the
-  histogram is trusted for a decision.
+- ~~**B88**~~ ⚡ **Promoted to Gate 6.10, 2026-09-11**, the day it was filed — the histogram is the instrument for *"why is nothing passing?"* and it is currently mixing rule sets.
 - **B81** ⚠️ **One more page would turn some B77 refusals back into decisions.**
   ACTIVE caps at 200/page, so an item with 250 active is refused for being a
   floor when **one extra request** would have the true count. ⛔ Not general:
