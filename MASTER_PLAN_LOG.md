@@ -4415,3 +4415,27 @@ evaluate them later rather than rewrite then.
 gates, the scoring and the screens never knew where a number came from; only the
 route did. That is what the layering was for, and this is the first time it has
 been tested by an outside decision rather than by a refactor.
+
+### ⛔ `.env.local` did not cover `.env.local~`
+
+Creating `mobile/.env.local` for the SoldComps key surfaced an untracked
+`mobile/.env.local~` sitting beside it — an editor backup, **empty this time**.
+
+The gitignore pattern `.env.local` does not match it. Tested the neighbours and
+none were covered either: `.env.local.bak`, `.env.production`, `*.swp`. **Four
+paths a key could have reached a public commit through**, and the only reason
+this one was harmless is that the editor happened to write zero bytes.
+
+⚠️ **B56 cost this project an entire repository for exactly this class** — a
+secret reaching a path nobody had thought to ignore, with GitHub keeping the
+object fetchable by SHA afterwards. The lesson was recorded as *"anything
+published from here gets a whole-tree sweep, not a directory list"*, and the
+gitignore was still an enumerated list of the forms someone had imagined.
+
+Now `.env`, `.env.*` with `.env.local.example` negated back in, plus `*~`,
+`*.swp` and `*.swo` anywhere — **a swap file of a secret is a secret.** Verified
+across eight variants rather than asserted: seven ignored, and the example file
+still tracked, which is the one that has to stay.
+
+⚡ **The same shape as the morning's other finds**, one level down: a list of the
+cases someone enumerated, standing in for the property they meant.

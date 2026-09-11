@@ -2,8 +2,18 @@ node_modules/
 dist/
 coverage/
 *.log
+# ⛔ EVERY env form, not just the one anyone thought of. Found 2026-09-11: an
+# editor left `mobile/.env.local~` beside the key file and `.env.local` does NOT
+# match it — nor `.bak`, `.swp`, or `.env.production`. The file was empty that
+# time. B56 cost this project a whole repository for the same class, and the
+# pattern that catches it has to be the one nobody has to remember.
 .env
-.env.local
+.env.*
+!.env.local.example
+# Editor backups, anywhere. A swap file of a secret is a secret.
+*~
+*.swp
+*.swo
 data/*.db
 data/backups/
 # ⛔ A LEDGER EXPORT carries `config`, and config carries `tax_profile`. The
