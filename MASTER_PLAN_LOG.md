@@ -6013,3 +6013,75 @@ at all if the app is force-quit, while a restock window is often minutes. Three
 answers exist (foreground-only and honest; an always-on box that pushes; a
 vendor that already does restock alerts and the app only judges the buy) and
 **none is recommended yet** — (b) is unpriced and (c) unresearched.
+
+## 2026-09-11 — D20 research: the restock monitor is not ours to build
+
+Jason pushed back on the D20 framing: *"My gig apps send out alerts all the
+time. We should be able to find a workaround."*
+
+⚡ **He is right that a workaround exists, and the gig apps show its shape — but
+they show the opposite of what they look like.** Spark and DoorDash do not poll
+in the background; their backends know an offer exists and **push** to the
+device. The phone is the receiver. Which means the question was never "how does
+the phone monitor" but "who does the monitoring, and how does the alert reach
+me".
+
+### The alert half is free and solved
+
+The Expo Push Service takes one POST to `exp.host`, charges nothing per
+notification and has no volume cap. The fund already has the Apple Developer
+account, and iOS-only means no Firebase. ⛔ **Nothing about notification is a
+cost or an engineering problem.**
+
+### ⛔ The monitoring half is an arms race this fund has already declined
+
+Bots poll individual listings about **once every 6.5 seconds** and outnumber
+humans roughly **10 to 1**; Walmart rate-limits repeated inventory hits; Shopify
+drops block monitors outright. The tools that work run **locally, from
+residential IPs, with anti-detection**. A datacenter cron — GitHub Actions,
+Cloudflare Workers — is exactly the traffic that gets blocked, and the standard
+fix is proxy rotation, which **D13 already forbids by name**.
+
+### The two free vendors are opposites, and neither is both
+
+| | TYPA | PageCrawl |
+|---|---|---|
+| cost | free | free tier |
+| coverage | 100+ retailers; Pokémon TCG, Pop Mart, Jellycat, **Jordans**, **GPUs** | any public product page; Walmart, Target, Best Buy named |
+| speed | claims *"well under a minute"* | **220 checks a MONTH** on free — ~7 a day, all monitors combined |
+| reaches us | ⛔ **its own app + Discord only. No webhook, no email** | ✅ webhook on every tier |
+
+⛔ **So the fast one cannot talk to us and the one that can talk to us is too
+slow.** That is not a gap to engineer around: it means the alert should not come
+to resale-os at all. Installing TYPA solves notification; the app's job starts
+the moment the alert arrives.
+
+⚠️ **Every latency figure above is the vendor's own marketing claim**, taken
+from their own pages, and unverifiable without standing in front of a real
+restock. Recorded as a claim, not a measurement.
+
+### First-party notify-me is weaker than it sounds
+
+**LEGO.com** has an official back-in-stock email and it is **one-time only** —
+miss it and you re-subscribe. **Best Buy**'s Notify covers shipping availability,
+not in-store pickup and not open-box, and is inconsistent by product. They are
+worth switching on and worth nothing to rely on.
+
+### ⚡ The reframe, which is the actual finding
+
+**A restock is a drop with an unknown date.** Same product, same retailer, same
+price you would pay, same comparable-based valuation — minus the date. Gate 7.6
+is therefore **not a monitor**. It is making the judgement instant when someone
+else's alert fires: a pre-valued list of things you would buy at price X, so the
+answer is already computed when you have thirty seconds.
+
+⚠️ `drops.drop_date` is `NOT NULL` with a GLOB, on the reasoning that *a drop
+with no date is a rumour*. That reasoning is right for drops and wrong for
+restocks, so 7.6 needs either a nullable date with a kind discriminator or its
+own table. **Do not quietly relax the CHECK** — it is load-bearing for the dated
+half.
+
+### What needs Jason, not a session
+
+**Install TYPA (free) and report whether it actually covers his verticals.** No
+amount of reading its marketing answers that, and the decision turns on it.
