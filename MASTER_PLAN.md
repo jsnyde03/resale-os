@@ -171,8 +171,8 @@ buying.
       `mobile/app/drops.tsx` — add a drop, value it against the comparable's
       market, remove it. ⛔ **The table stores no verdict**, which is what
       settled the id question: a drop is in the future, so the screen
-      recomputes. 774 tests (+17), and a 56th device case that has not run on
-      hardware.
+      recomputes. 774 tests (+17), and a 56th device case — **56/56 on the
+      lane, confirmed by name**.
 - [ ] **7.5.5** ⛔ **BLOCKED — the switch-in scan found no reachable source.**
       Per vertical: **cards** has the one properly-documented free API with a
       `releaseDate` field (pokemontcg.io) and it returned **502 then 500 when

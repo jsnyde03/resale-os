@@ -99,9 +99,9 @@ export is not a document — it is the ledger plus the profile.** Treat it like 
 database, never like an artifact.
 
 **The ledger, the engine, every write and read screen, the sourcing screen,
-backups, the import, the DATA ROUTE and the SCAN all run on the device: 55/55
-against Apple's SQLite** — ⚠️ **and the lane now carries a 56th, 7.5.4's drops
-case, which has never run on hardware**, in
+backups, the import, the DATA ROUTE, the SCAN and the DROPS all run on the
+device: 56/56 against Apple's SQLite, confirmed by name** (run 34631425815,
+2026-09-11 — the scan and drops cases both named in the verdict) in
 `.github/workflows/driver-contract-ios.yml`. The app ships via Codemagic to
 TestFlight.
 
@@ -133,7 +133,7 @@ orientation.
 | | |
 |---|---|
 | ⏳ **The $25 CONTRIBUTION** | **D3, decided 2026-09-11: the bankroll goes $50 → $75.** ⛔ **Measured: at $50 the fund can buy NOTHING** — a $40 purchase with excellent evidence is refused by three capital gates, ceiling $20 against a $24.51 modelled downside. **$50 is the only bankroll where that is true**; at $75 the same rules permit a $30 buy returning $26.71. ⚡ **No code ships with this** — it is a ledger event on the phone. Every figure here saying $50 stays true until it lands. |
-| ⏳ **The deploy** | Codemagic → TestFlight. **28+ commits** of the app's own code since the 2026-09-10 publish: the whole data route, the scanner, the allocation screen, the rules identity. ⚠️ **6.11.6 can only close here** — a simulator has no camera, so the scan is the first thing in this project the lane structurally cannot verify. |
+| ⏳ **The deploy** | Codemagic → TestFlight. **54 commits** since the 2026-09-10 publish: the whole data route, the scanner, the allocation screen, the rules identity, and 7.5's drops. ⛔ **Codemagic has never been given the market key.** The TestFlight workflow references only the `AppleConnect` group, the yaml sets no vendor variable, and `.env.local` is gitignored — so a build ships **without `EXPO_PUBLIC_SOLDCOMPS_KEY`** unless one is added to a Codemagic group **first**. Settings → Data keys on the phone then says whether it landed. ⚠️ **6.11.6 can only close here** — a simulator has no camera, so the scan is the first thing in this project the lane structurally cannot verify. |
 | **B26** | The operator's **state marginal rate** is still unverified (the local rate is confirmed). ⚡ Fixable in the app — the settings screen writes the tax profile, and a non-zero rate is refused without a stated basis. Ten minutes, and the tax reserve is computed from it. |
 | **Two repos** | Delete `resale-os-prescrub-2` and `resale-os-prescrub-private`. Both private, both still holding the scrubbed tax profile, and the CLI token cannot delete. History is bundled and restore-verified in the OneDrive backups folder. |
 | **D2** | The owner split (20/10/70) is still a default. ⚡ **B73 is closed — 6.7 gave it a screen**, so the thing that blocked answering it is gone. Still not live below $100 NAV, so decide it against real sales rather than in the abstract. |

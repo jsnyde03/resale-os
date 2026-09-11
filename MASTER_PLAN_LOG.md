@@ -6203,3 +6203,65 @@ operator after the wrong problem.
 drop source — pokemontcg.io answered 502 then 500 today, and Brickset needs a
 key only Jason can request. ⏳ The deploy is still the largest thing waiting:
 31+ commits, and the whole of 7.5 has never run on hardware.
+
+## 2026-09-11 — deploy readiness: the build would have shipped without its key
+
+🎯 **Jason:** *"Let's go ahead and push. Even with 7.5 not complete I can still
+try out the scanning when I go to Wal-Mart in a few."* The deploy stops being
+last by his call.
+
+### Verified before asking for a build, not after
+
+- **0 unpushed after a `git fetch`** — the check that would have saved
+  Hearthlight two build cycles on 2026-09-07.
+- **HEAD differs from the lane-verified `4d4d9cb` by `MASTER_PLAN.md` only**, so
+  the code being shipped is exactly the code that passed.
+- **56/56 on the device lane, confirmed BY NAME** — run 34631425815 names both
+  *"sourcing: a scan proposes, and never decides"* and *"drops: a drop survives
+  the app closing, and the schema refuses a bad one"*.
+
+⚠️ **The first two by-name checks failed, and said so rather than passing.**
+`gh run list --commit` matched nothing — an empty result, not a pass. The
+second grep surfaced **"52/52"**, which was a **comment in the workflow
+script** being echoed into the log, not the verdict; reading it as the result
+would have cited a comment as evidence, and a stale one. Only the third —
+excluding echoed script lines and not truncating before the result — found it.
+
+### ⛔ The finding: Codemagic has never been given the market key
+
+The TestFlight workflow references only the `AppleConnect` group; the yaml sets
+no vendor variable; `.env.local` is gitignored, so the clone never sees it. The
+2026-09-10 build had no data route, so **this is the first build that has ever
+needed `EXPO_PUBLIC_SOLDCOMPS_KEY`** — and it would have shipped without it. At
+Walmart that is a scan that names the product and then answers every lookup
+with *"No data key is set — type the counts from eBay"*.
+
+⚡ **B93 pays for itself here.** Settings → Data keys reports whether this build
+carries each key, so the question is answerable on the phone in the aisle.
+
+### ⛔ And $50 buys nothing
+
+**D3, measured:** at $50 three capital gates refuse even an excellent purchase.
+Unless the $25 contribution is recorded on the phone first, every scan at
+Walmart comes back refused — which would read as the scanner or the rules being
+broken, on the one trip meant to test them.
+
+### My own stale claim, corrected
+
+I wrote at 7.5.4 that the drops case *"has never run on hardware"*. It went
+stale within the hour, the moment the lane ran it. Third instance this session
+of a waiting list decaying one way: a claim about what has not happened yet
+does not update itself when it happens.
+
+⚠️ **Deliberately NOT updated: the 80-day TestFlight row.** It says the next
+publish is due 2026-11-29, and that stays true until a publish actually lands.
+Update it then — recording a deploy that has not happened is how a remembered
+gate result becomes an unrun one.
+
+### ⚠️ The shell, again
+
+The first attempt at this commit put two heredocs on one command line — the
+Python edit and the commit message. Bash fed the commit message to Python, which
+failed on a `SyntaxError`. **Python parses before it runs, so nothing was
+written**, and the `&&` chain stopped before the commit — verified with `git
+status` rather than assumed. The script and the message now live in files.
