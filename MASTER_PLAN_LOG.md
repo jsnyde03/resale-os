@@ -5911,3 +5911,105 @@ seam D16 made load-bearing. Which source, per vertical, is **7.5.4**.
 build is **7.5.4**, the feed adapter. ⛔ Still true and still blocking: the $25
 contribution (**D3**) and the deploy — nothing built since 2026-09-10 is on the
 phone.
+
+## 2026-09-11 — 7.5.4: the drops screen, and a table that stores no verdict
+
+### The sequencing was changed before anything was built
+
+7.5.4 was the feed adapter. The switch-in scan found that **nothing rendered
+`screens/drops.ts`** — no `mobile/app/drops.tsx`, no storage — so a feed would
+have been a second unverified layer on an unverified one. That is the shape that
+shipped an exhaustively-proven save format wired to a store which had never run.
+Jason chose storage-and-screen first; **D19 is untouched**, the feed is 7.5.5.
+
+⚠️ **And the feed has a constraint D19 could not have seen**: the phone is the
+runtime and React Native has no DOM, so "scrape HTML" on-device means regex over
+markup — which breaks silently, the one failure mode this fund cannot see.
+Structured sources only (JSON/RSS/iCal); manual entry is the per-vertical
+fallback. Recorded on 7.5.5 rather than argued now.
+
+### ⛔ The table stores no verdict, and that is the decision it embodies
+
+`opportunities` stores a recommendation because it records a decision that was
+MADE. A drop has not happened; the only useful question is what today's rules say
+at today's bankroll, and that moves whenever the fund does. So the screen
+recomputes, exactly as the watchlist does.
+
+⚡ **It also dissolved the id problem rather than solving it.** `drop-<dropId>`
+is stable across re-evaluations, unlike the aisle screen's draft digest, so a
+stored score would be silently overwritten on every re-judgement with nothing to
+say which rules produced the row. **Storing no score means there is nothing to
+overwrite.**
+
+⚡ And the id is deliberately deterministic — `slug(name)-YYYY-MM-DD` — because
+the same product on the same date IS the same drop, however many times it is
+typed. That is what will stop D19's feed from duplicating what was entered by
+hand.
+
+### What the row refuses, in the schema rather than in a comment
+
+- A **date the screen could not read**. `dropTiming` throws on an unparseable
+  date, and the row that would throw is written long before it is read, so the
+  column carries a `GLOB` pattern.
+- A **keyword with no stated reason**. `Comparable.why` is required in the type
+  because an analogy nobody can inspect is a guess with a number attached — and
+  the number becomes the resale price. `CHECK ((keyword IS NULL) = (why IS NULL))`.
+- A **half-written valuation**. Counts with no comps would price a drop off
+  nothing; comps with no category would escape the exposure cap. The CHECK is
+  what lets the reader test one field (`valued_at`) instead of five.
+
+⛔ All three are asserted **on the device too** — Apple's SQLite has to enforce
+them, and nothing on Windows can prove that it does.
+
+### `DropEvidence` moved to core
+
+Building storage asked the question the screen had not: evidence is a **fact
+about a market**, like `Drop` is a fact about a product, and the db layer should
+not import a screen to describe one. It sits beside `Drop` now, with
+`evidenceFromMarket` — a fact-to-fact mapping, as against `fillFromMarket`,
+which produces a form a person edits.
+
+### ⚠️ The after-scan caught a hazard I had documented and then not wired
+
+The repository comment says plainly that a reading ages and a screen which
+cannot say when it was taken shows a three-week-old sell-through as though it
+were measured this morning — and then `DropCandidate` had no `valuedAt` and the
+row had no age. **Writing the warning is not the same as threading the value.**
+`valuationAgeDays` now reaches the row and the screen, ⛔ deliberately distinct
+from `compMedianAgeDays`: a fresh reading of a stale market and a stale reading
+of a fresh one are different problems.
+
+### Planted, and one plant was invalid
+
+Nine claims planted: the three schema CHECKs (as one plant), the valuation
+surviving an edit, the null-comparable class, the floors travelling, the id
+carrying the date, the reading age.
+
+⚠️ **The first CHECK plant red all nine tests** — because removing the
+constraints left a trailing comma, so the migration was a **syntax error** and
+every test failed for a reason unrelated to what it claimed to verify. Reading
+the failure rather than the exit code is what caught it; repaired, it red
+exactly the three refusal tests and left the six round-trips green.
+
+⚠️ **And an earlier assertion in that plant was wrong rather than the plant** —
+`'GLOB' not in s` fails on a *comment* mentioning GLOB. The suite showed green
+after the aborted write, which is exactly what a plant that was never applied
+looks like.
+
+### State at close
+
+**774 tests, 47 files, six gates green.** ⛔ The device lane now carries a **56th
+case that has never run on hardware**, and the whole of 7.5 is in that position.
+The active build is **7.5.5**, the feed adapter. Filed: **B93** — the AUTH
+failure message tells the operator to check Settings for a key that lives in an
+env var.
+
+### Filed, not built: restock monitors (Jason, mid-session)
+
+*"I also will want restock monitors and notifications."* Queued as **7.6** and
+blocked on a new decision, **D20 — where a restock monitor RUNS.** ⛔ The phone
+cannot be the monitor: iOS background fetch has no guaranteed interval and none
+at all if the app is force-quit, while a restock window is often minutes. Three
+answers exist (foreground-only and honest; an always-on box that pushes; a
+vendor that already does restock alerts and the app only judges the buy) and
+**none is recommended yet** — (b) is unpriced and (c) unresearched.

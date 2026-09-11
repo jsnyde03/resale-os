@@ -165,6 +165,10 @@ function Position() {
           <Button label="What blocks me" onPress={() => router.push('/rejections')} />
         </View>
       </View>
+      {/* 🎯 Jason, 2026-09-11: the highest returns were online drops, not the
+          clearance rack. This is the half of sourcing that is planned rather
+          than encountered. */}
+      <Button label="What is coming" onPress={() => router.push('/drops')} />
       <Button label="Rules and tax" onPress={() => router.push('/settings')} />
 
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>

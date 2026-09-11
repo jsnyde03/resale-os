@@ -167,11 +167,17 @@ buying.
       too (Jason). 757 tests (+21).
 - [x] **7.5.3** ✅ **[DECISION] answered 2026-09-11 — a scraped release feed
       (D19).** ⚠️ I recommended manual-first; Jason chose the feed.
-- [ ] **7.5.4** The feed adapter — which source, per vertical, behind
+- [x] **7.5.4** ✅ **Done 2026-09-11.** Migration 008, a repository, and
+      `mobile/app/drops.tsx` — add a drop, value it against the comparable's
+      market, remove it. ⛔ **The table stores no verdict**, which is what
+      settled the id question: a drop is in the future, so the screen
+      recomputes. 774 tests (+17), and a 56th device case that has not run on
+      hardware.
+- [ ] **7.5.5** ⚡ **ACTIVE.** The feed adapter — which source, per vertical, behind
       `src/adapters/` (**D19**). Sneakers, consoles, LEGO, cards.
-- [ ] **7.5.5** Storage and the screen itself (`mobile/app/drops.tsx`).
-      ⚠️ `drop-<dropId>` is stable across re-evaluations, unlike the aisle
-      screen's draft digest — settle that before a score is stored.
+      ⛔ **Structured sources only** (JSON/RSS/iCal): the phone has no DOM, so
+      an HTML scrape is regex over markup and breaks **silently**. Manual entry
+      is the per-vertical fallback where no structured source exists.
 - [ ] **7.5.6** Alerting. ⚠️ `expo-notifications` is a second native module;
       **D13 bounds this to monitoring and alerting, never checkout.**
 - [ ] **7.5.7** On-device verification.
@@ -200,6 +206,7 @@ reach by the date — and never tries to buy anything.
 | 6.11 | **The scan flow** (**D18**) — barcode → identity → keyword → verdict | ✅ **Built 2026-09-11**; 6.11.6 needs a real device |
 | 7 | **Radar over the fund's OWN HISTORY** — scarcity, demand, momentum, confidence, from what the operator has actually seen. ⛔ Not market-wide; that premise died with **D16** | ⏸️ **PARKED until there is history** (**D17**) |
 | 7.5 | **Drop intel** — dated retail drops, monitoring and alerting. ⛔ Checkout automation is OUT, see **D13** | ⚡ **ACTIVE BUILD** |
+| 7.6 | **Restock monitors + notifications** (Jason, 2026-09-11) — watch a SKU at a retailer, alert when it comes back. ⛔ Same D13 boundary: alert, never checkout. ⚠️ **Blocked on D20**: iOS gives no guaranteed background interval, so a monitor that only runs while the app is open misses a restock window measured in minutes | 🟠 **Open — needs D20** |
 | 8 | *(architecture only until 1–7 are reliable)* authorization states, drop intel, autonomy | Not started, not startable |
 
 **Gate exit criteria are in the log**, one entry per gate.
@@ -212,6 +219,7 @@ reach by the date — and never tries to buy anything.
 |---|---|---|
 | D1 | What the tax reserve covers | ✅ **Incremental annual tax, 2026-09-08.** SE tax + federal brackets + QBI + state. ⚠️ Income tax abstains until a `TaxProfile` is set — **D7** |
 | D14 | Which gate set decides a purchase, given the two paths disagree | ✅ **One evaluator everywhere — 2026-09-10.** `evaluateOpportunity` gates every purchase, typed or scored; `assessQuote`'s candidate stops being a decision path. ⚠️ **Deliberately stricter on the live fund:** a buy typed with no comps and middling sell-through now needs **D4**'s override with a reason. Measured first — 64 divergences in 96 cases, both directions (**B58**) |
+| D20 | Where a restock monitor RUNS | 🟠 **OPEN, and it gates 7.6.** Jason asked for restock monitors and notifications, 2026-09-11. ⛔ **The phone cannot be the monitor.** iOS background fetch has no guaranteed interval — minutes to hours, at the OS's discretion, and nothing at all if the app is force-quit — while a restock window is often **minutes**. So a foreground-only monitor alerts you to restocks you were already looking at. ⚡ **The three answers:** (a) foreground-only, honest and weak, zero infrastructure; (b) something always-on polls and sends a **push** — a machine that has to exist, be paid for and be kept alive, and ⚠️ **the phone cannot reach home** (`phone-cannot-run-vpn-apps`), so it is a hosted box, not the desktop; (c) a vendor that already does restock alerts, and the app only decides whether the restock is a BUY. **No recommendation yet — I have not priced (b) or looked for (c).** |
 | D19 | Where the drop calendar comes from | ⚡ **A SCRAPED RELEASE FEED — 2026-09-11.** ⚠️ **Recommended against, and overruled**: I argued manual entry first — zero vendor risk after **D16**, and the storage shape is identical whichever feeds it, so a feed would be an addition rather than a rewrite. Jason chose the feed. ⛔ **What it commits to:** a THIRD outside dependency after SoldComps and UPCitemdb, a source that differs per vertical (sneakers, consoles, LEGO, cards), and a scrape whose breakage is silent. It goes behind `src/adapters/` for exactly the reason D16 made that seam load-bearing. **Which source, per vertical, is 7.5.4** |
 | D18 | Whether to build the full barcode-scan flow now | ⚡ **YES — build it, Jason 2026-09-11.** *"Without scanning at Walmart it'll be too tedious to go through the clearance rack and type everything in."* ⚠️ **I recommended the cheaper half first** (derive resale from comps, default the category — free, no camera, no second vendor) and measuring whether typing a short name was really the tedium; Jason chose the full flow. Recorded because the concern stands: **SoldComps takes no barcode** (no UPC/GTIN/EAN parameter — verified in its docs), so the scan needs a SECOND vendor to turn a UPC into a title. ⚡ **De-risked first rather than assumed**: UPCitemdb's keyless trial round-tripped three real LEGO UPCs to title **plus brand and category**, so the resolver works and kills the category field too. ⛔ **But the keyword derived from that title is a MONEY decision** — see **B89**. ⚡ **Jason's reasoning, and it reframes the app:** *"Scanning is vital to this app until I actually get recommendations of what to purchase."* Today the app is a **checker** — you bring it an item and it judges. He wants a **recommender**. ⛔ D16 killed market-wide discovery, but **scan-the-rack-and-rank IS a recommender** scoped to the shelf in front of him, and that version survives. So 6.11 builds single-item scan and **keeps the session additive** rather than precluding it — scored opportunities already persist, so "rank what I scanned today" is mostly free afterwards. ⚠️ Batch scanning makes the quota binding immediately: 40 items = 80 requests against a free tier of 100. |
 | D17 | What Gate 7 becomes, now that its premise is gone | ⛔ **PARKED, and re-premised — 2026-09-11.** D12 chose *"Browse to find, SoldComps to value"* and **D16 deleted the finding half**, so Market Radar's input is one metered vendor at 2 requests per item. ⚡ **Gate 7 is re-premised as radar over the fund's OWN HISTORY** — D12's third leg, free, specific to what the operator actually encounters in stores, and better every flip — and **parked until there IS history**, because the fund has never bought anything. ⛔ **Building it now would mean guessing at its inputs.** ⚠️ Market-wide radar on the paid tier was considered and declined: 2,000 requests is 1,000 items a month, every tier caps at 60/min so a plan buys quota and never speed, and it would bet more of the product on the single vendor D16 just exposed. **Meanwhile the build stream takes the correctness backlog, starting with B54.** |
@@ -263,6 +271,12 @@ being "done".
 
 Filed, not forgotten. Nothing here is in a gate until it is promoted.
 
+- **B93** ⛔ **A failure message tells the operator to do something impossible.**
+  `UNAVAILABLE_WORDING.AUTH` says *"check it in Settings"*, and the market key
+  is `EXPO_PUBLIC_SOLDCOMPS_KEY` — an env var baked at build time, with no
+  settings field and no way to fix it on the device. ⚠️ Two screens now read
+  `process.env` inline (sourcing, drops) and a third will. One place that says
+  where the key comes from, and wording that matches it. Surfaced by 7.5.4.
 - **B91** ⚠️ **A dated shortfall inherits `SCAN_NAVS_CENTS`'s grid.** 7.5.2 tells
   the operator the next bankroll on that ladder at which a drop clears — so at
   small NAV it can say *"you need $100 by Dec 1"* when $92 would do, and the

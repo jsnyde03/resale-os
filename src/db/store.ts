@@ -49,6 +49,7 @@ import {
   type BackupState,
 } from './backup-types.js';
 import { OpportunityReader, OpportunityRepository } from './repositories/opportunities.js';
+import { DropReader, DropRepository } from './repositories/drops.js';
 import { hashEvent } from './hash.js';
 import { toParams, type Db, type ReadOnlyDb } from './db-types.js';
 
@@ -176,6 +177,8 @@ export interface LedgerReader {
    * gets this one.
    */
   opportunityReader(): OpportunityReader;
+  /** ⚠️ The reading half, for the same reason as `opportunityReader`. */
+  dropReader(): DropReader;
 }
 
 /**
@@ -943,6 +946,19 @@ export class FundStore {
   /** Opportunities live beside the ledger but are not part of it. */
   opportunities(): OpportunityRepository {
     return new OpportunityRepository(this.db);
+  }
+
+  /** The read-only half, for a screen that only renders what is coming. */
+  dropReader(): DropReader {
+    return new DropReader(this.db);
+  }
+
+  /**
+   * Drops, like opportunities, sit beside the ledger and never in it.
+   * ⛔ Nothing here moves money — a drop is a note about the future (D13).
+   */
+  drops(): DropRepository {
+    return new DropRepository(this.db);
   }
 
   // --- reading ------------------------------------------------------------

@@ -29,6 +29,7 @@
  */
 
 import type { Cents } from './money.js';
+import type { MarketReading } from './market.js';
 
 /**
  * What stands in for a product that has never been sold.
@@ -43,6 +44,71 @@ export interface Comparable {
   readonly keyword: string;
   /** In the operator's words: "last year's UCS set, same piece count". */
   readonly why: string;
+}
+
+/**
+ * The market behind the COMPARABLE — never behind the drop.
+ *
+ * ⚠️ **Named for what it actually is.** The obvious field names
+ * (`soldLast90Days`, on a thing that has never been sold) would read as
+ * measurements of the drop itself, and the whole difficulty of this gate is
+ * that they are not.
+ */
+export interface DropEvidence {
+  /** Sold prices for the comparable, in cents. */
+  readonly comparableCompPricesCents: readonly Cents[];
+  readonly comparableCompMedianAgeDays: number;
+  readonly comparableSoldLast90Days: number;
+  readonly comparableActiveListings: number;
+  readonly comparableSoldIsFloor?: boolean;
+  readonly comparableActiveIsFloor?: boolean;
+  /** The category the fund books it under. The exposure cap reads it. */
+  readonly category: string;
+}
+
+/**
+ * A drop's id: what it is, and when it lands.
+ *
+ * ⛔ **Deterministic, so re-entering the same drop is idempotent.** The aisle
+ * screen digests its draft because two identical-looking items in two shops are
+ * two different objects; a drop is the opposite — the same product on the same
+ * date IS the same drop, however many times it is typed or a feed re-reads it.
+ * ⚡ That property is what will keep D19's feed from filling the list with
+ * duplicates of what the operator already entered by hand.
+ */
+export function dropIdFrom(name: string, dropDate: string): string {
+  const slug =
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 32)
+      .replace(/-$/, '') || 'drop';
+  return `${slug}-${dropDate}`;
+}
+
+/**
+ * What the comparable's market said, as evidence about the drop.
+ *
+ * ⛔ **A fact-to-fact mapping, which is why it is here and not in the screen.**
+ * `fillFromMarket` produces a FORM — strings a person can edit. This produces
+ * EVIDENCE, and nobody edits it: the operator's judgement about a drop is the
+ * comparable they chose, not the counts that search returned.
+ *
+ * ⚠️ **The floors travel.** `90 x (active + 1)/sold` is not linear in either
+ * count, so a "240,000+" that arrives here as an exact number is a count the
+ * fund believes it measured. @see CountBounds
+ */
+export function evidenceFromMarket(reading: MarketReading, category: string): DropEvidence {
+  return {
+    comparableCompPricesCents: reading.compPricesCents,
+    comparableCompMedianAgeDays: reading.compMedianAgeDays,
+    comparableSoldLast90Days: reading.sold90.value,
+    comparableActiveListings: reading.active.value,
+    comparableSoldIsFloor: reading.sold90.isFloor,
+    comparableActiveIsFloor: reading.active.isFloor,
+    category,
+  };
 }
 
 export interface Drop {

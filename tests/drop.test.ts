@@ -8,7 +8,15 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { dropReadiness, dropShortfall, dropTiming, IMMINENT_DAYS, type Drop } from '@/core/drop.js';
+import {
+  dropIdFrom,
+  dropReadiness,
+  dropShortfall,
+  dropTiming,
+  evidenceFromMarket,
+  IMMINENT_DAYS,
+  type Drop,
+} from '@/core/drop.js';
 import { compConfidence, ANALOGOUS_EVIDENCE_CEILING_BPS } from '@/scoring/confidence.js';
 
 const NOW = new Date('2026-09-11T12:00:00.000Z');
@@ -119,5 +127,59 @@ describe('a shortfall with a deadline', () => {
     const s = dropShortfall(5_000, 7_500, soon);
     expect(s.shortfallCents).toBe(0);
     expect(s.reachable).toBe(true);
+  });
+});
+
+describe('⛔ a drop id is deterministic, so re-entering one is idempotent', () => {
+  it('is the same id for the same product on the same date', () => {
+    // ⚡ This is what will stop D19's feed from duplicating what the operator
+    // already typed by hand.
+    expect(dropIdFrom('LEGO UCS Millennium Falcon 2026', '2026-10-01')).toBe(
+      dropIdFrom('lego ucs millennium falcon 2026', '2026-10-01'),
+    );
+  });
+
+  it('⚠️ and a DIFFERENT id when the date moves, because that is a different drop', () => {
+    expect(dropIdFrom('Same Thing', '2026-10-01')).not.toBe(dropIdFrom('Same Thing', '2026-11-01'));
+  });
+
+  it('never produces an empty id, whatever it is handed', () => {
+    expect(dropIdFrom('!!!', '2026-10-01')).toBe('drop-2026-10-01');
+  });
+});
+
+describe("the comparable's market becomes evidence about the drop", () => {
+  const reading = {
+    sold90: { value: 90, isFloor: false },
+    active: { value: 240_000, isFloor: true },
+    compPricesCents: [5_900, 6_000],
+    compMedianAgeDays: 20,
+    provenance: {
+      keyword: 'lego ucs 75192',
+      compCondition: 'new' as const,
+      categoryId: '183447',
+      categoryName: 'LEGO (R) Building Toys',
+      soldItemsSeen: 40,
+      activeItemsSeen: 200,
+      soldAfter: '2026-06-13',
+      fetchedAt: '2026-09-11T12:00:00.000Z',
+    },
+    quota: { monthlyLimit: 100, monthlyRemaining: 86, resetAt: null },
+  };
+
+  it('⛔ carries the FLOOR across, in both directions', () => {
+    // `90 x (active + 1)/sold` is not linear in either count, so a "240,000+"
+    // that arrives as exact is a number the fund believes it measured.
+    const e = evidenceFromMarket(reading, 'LEGO');
+    expect(e.comparableActiveIsFloor).toBe(true);
+    expect(e.comparableSoldIsFloor).toBe(false);
+    expect(e.comparableActiveListings).toBe(240_000);
+  });
+
+  it('takes the category from the operator, not from the vendor', () => {
+    // The vendor's category decides which market was MEASURED; the fund's
+    // category decides which exposure cap applies. They are different things,
+    // and the reading carries a plausible-looking one of its own.
+    expect(evidenceFromMarket(reading, 'LEGO').category).toBe('LEGO');
   });
 });

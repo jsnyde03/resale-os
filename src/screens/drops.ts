@@ -29,6 +29,7 @@ import {
   dropTiming,
   type Comparable,
   type Drop,
+  type DropEvidence,
   type DropShortfall,
   type DropTiming,
 } from '../core/drop.js';
@@ -39,30 +40,17 @@ import type { Evaluation } from '../scoring/evaluate.js';
 import type { OpportunityInput } from '../domain/opportunity.js';
 import type { Recommendation } from '../scoring/recommend.js';
 
-/**
- * The market behind the COMPARABLE — never behind the drop.
- *
- * ⚠️ **Named for what it actually is.** The obvious field names
- * (`soldLast90Days`, on a thing that has never been sold) would read as
- * measurements of the drop itself, and the whole difficulty of this gate is
- * that they are not.
- */
-export interface DropEvidence {
-  /** Sold prices for the comparable, in cents. */
-  readonly comparableCompPricesCents: readonly Cents[];
-  readonly comparableCompMedianAgeDays: number;
-  readonly comparableSoldLast90Days: number;
-  readonly comparableActiveListings: number;
-  readonly comparableSoldIsFloor?: boolean;
-  readonly comparableActiveIsFloor?: boolean;
-  /** The category the fund books it under. The exposure cap reads it. */
-  readonly category: string;
-}
-
 export interface DropCandidate {
   readonly drop: Drop;
   /** ⚠️ Null is TWO different things; see `DropStatus`. */
   readonly evidence: DropEvidence | null;
+  /**
+   * ⚠️ **When that evidence was read.** A market reading ages, and a screen
+   * that cannot say when it was taken shows a three-week-old sell-through as
+   * though it were measured this morning. The store records it; this is what
+   * carries it to the row.
+   */
+  readonly valuedAt?: string | null;
 }
 
 /**
@@ -137,6 +125,13 @@ export interface DropRow {
    * able to disagree with the comparison, which means seeing it.
    */
   readonly comparable: Comparable | null;
+  /**
+   * ⚡ How old the market reading is, in whole days. Null when there is none.
+   * ⛔ **Not the same as `compMedianAgeDays`**, which is how old the SALES are.
+   * A fresh reading of a stale market and a stale reading of a fresh one are
+   * different problems and the operator can only act on one of them.
+   */
+  readonly valuationAgeDays: number | null;
   /** The one line the list renders. */
   readonly line: string;
 }
@@ -244,6 +239,7 @@ function dropRow(
     timing,
     status,
     comparable: drop.comparable,
+    valuationAgeDays: ageInDays(candidate.valuedAt ?? null, now),
     line: lineFor(drop, timing, status),
   };
 }
@@ -323,6 +319,18 @@ function shortfallFor(
   const assessment = assessUnlock(input, (nav) => evaluate(input, fundAtNav(state, nav)), navCents);
   if (assessment.unlock.kind !== 'AT_NAV') return null;
   return dropShortfall(assessment.unlock.navCents, navCents, timing);
+}
+
+/**
+ * ⚠️ **Whole days, floored at zero.** A reading taken an hour ago is 0 days
+ * old, which is the honest answer; rounding it up to 1 to look tidy would make
+ * a fresh reading indistinguishable from yesterday's.
+ */
+function ageInDays(valuedAt: string | null, now: Date): number | null {
+  if (valuedAt === null) return null;
+  const then = Date.parse(valuedAt);
+  if (Number.isNaN(then)) return null;
+  return Math.max(0, Math.floor((now.getTime() - then) / 86_400_000));
 }
 
 /** "in 20 days" / "TODAY" / "3 days ago". The unit the operator thinks in. */

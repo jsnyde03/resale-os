@@ -10,8 +10,9 @@ about to change.
 
 **Status (2026-09-11): Gates 1-6 BUILT and 6.5-6.11 closed. The fund LIVES ON
 THE PHONE, the desktop is deleted, the app VALUES what it is shown, and it now
-SCANS. ⚡ Gate 7.5 — DROP INTEL — is the active build: 7.5.1-7.5.3 closed, and
-the next step is the release-feed adapter (D19).**
+SCANS. ⚡ Gate 7.5 — DROP INTEL — is the active build: 7.5.1-7.5.4 closed, so the
+app now HOLDS a drop calendar and judges it; next is the release-feed adapter
+(D19).**
 
 ⛔ **NOTHING BUILT AFTER 2026-09-10 IS ON THE PHONE.** Every gate above shipped
 to `origin/master` and **the last TestFlight publish was 2026-09-10**. The
@@ -50,7 +51,7 @@ CHIPS"*, so a mis-scan succeeds *wrongly*. The title on screen beside the object
 in hand is the only check on that, and it is the operator's.
 
 Live on a real **$50** bankroll — ⏳ **$75 decided, awaiting a $25 CONTRIBUTION**
-(**D3**). **757 tests, 46 files.** `npm run check` runs **six** gates: source
+(**D3**). **774 tests, 47 files.** `npm run check` runs **six** gates: source
 bytes, import direction, phone bundle, **the PLAN**, typecheck, tests.
 
 ---
@@ -99,8 +100,8 @@ database, never like an artifact.
 
 **The ledger, the engine, every write and read screen, the sourcing screen,
 backups, the import, the DATA ROUTE and the SCAN all run on the device: 55/55
-against
-Apple's SQLite** in
+against Apple's SQLite** — ⚠️ **and the lane now carries a 56th, 7.5.4's drops
+case, which has never run on hardware**, in
 `.github/workflows/driver-contract-ios.yml`. The app ships via Codemagic to
 TestFlight.
 
@@ -172,7 +173,7 @@ margin play needing hold tolerance a $50 fund does not have. Backlog **B28**.
 ### Five gates run on every check
 
 ```
-npm run check    # source bytes · imports · PHONE BUNDLE · PLAN · typecheck · 757 tests
+npm run check    # source bytes · imports · PHONE BUNDLE · PLAN · typecheck · 774 tests
 ```
 
 ⚡ **`lint:plan` is new, 2026-09-11, and it exists because nothing read the one

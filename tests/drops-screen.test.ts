@@ -12,13 +12,12 @@ import { describe, expect, it } from 'vitest';
 import { evaluateOpportunity } from '@/scoring/evaluate.js';
 import { parseOpportunity, type OpportunityInput } from '@/domain/opportunity.js';
 import { computeMetrics } from '@/core/capital/metrics.js';
-import type { Drop } from '@/core/drop.js';
+import type { Drop, DropEvidence } from '@/core/drop.js';
 import {
   dropAsOpportunity,
   dropsScreen,
   whenText,
   type DropCandidate,
-  type DropEvidence,
 } from '@/screens/drops.js';
 import { Fund } from './helpers.js';
 
@@ -298,6 +297,26 @@ describe('the list is ordered by the deadline, and says plainly when nothing is 
       { drop: drop({ msrpCents: 9_000 }), evidence: evidence({ comparableCompPricesCents: [9_100, 9_200] }) },
     ]);
     expect(screen.headline).toContain('none a buy at MSRP');
+  });
+
+  it('⚠️ reports how OLD the market reading is, not just how old the sales are', () => {
+    // A fresh reading of a stale market and a stale reading of a fresh one are
+    // different problems, and the operator can only act on one of them.
+    const f = fund();
+    const screen = dropsScreen(
+      [{ drop: drop(), evidence: evidence(), valuedAt: '2026-09-04T12:00:00.000Z' }],
+      f.state,
+      computeMetrics(f.state).navCents,
+      NOW,
+      evaluateOpportunity,
+    );
+    expect(screen.rows[0]!.valuationAgeDays).toBe(7);
+  });
+
+  it('and says nothing about the age when nothing has been read', () => {
+    expect(screenOf([{ drop: drop(), evidence: null }])[
+      'rows'
+    ][0]!.valuationAgeDays).toBeNull();
   });
 
   it('an empty calendar says so', () => {

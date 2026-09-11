@@ -41,6 +41,8 @@ import { CONSTRAINT_CODES } from '../core/capital/constraints.js';
 import { rulesAreStale, rulesIdentity } from '../core/capital/rules-identity.js';
 import { rejectionsView } from '../screens/rejections.js';
 import { watchlist } from '../screens/watchlist.js';
+import { dropsScreen } from '../screens/drops.js';
+import { dropIdFrom, evidenceFromMarket } from '../core/drop.js';
 import { parseOpportunity } from '../domain/opportunity.js';
 import { evaluateOpportunity } from '../scoring/evaluate.js';
 import { OpportunityReader, OpportunityRepository } from './repositories/opportunities.js';
@@ -1090,6 +1092,125 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
         r.evaluation.gates.results.length > 0,
         'and it is judged by the gates, not by the scanner',
       );
+    },
+  },
+  {
+    // ⛔ 7.5.4 on the device. The screen model is pure and Windows can hammer
+    // it; what Windows CANNOT prove is that Apple's SQLite enforces this
+    // table's CHECKs — GLOB on the date, both-or-neither on the analogy, and
+    // all-or-nothing on the valuation. Those three are the row's only defence
+    // against a drop that throws when the screen reads it, and they have never
+    // run anywhere but here.
+    name: 'drops: a drop survives the app closing, and the schema refuses a bad one',
+    run: (db) => {
+      const store = funded(db, 7_500);
+      const now = '2026-09-11T12:00:00.000Z';
+
+      const dropId = dropIdFrom('LEGO UCS Something 2026', '2026-12-01');
+      eq(dropId, 'lego-ucs-something-2026-2026-12-01', 'the id is the product and the date');
+
+      store.drops().save(
+        {
+          dropId,
+          name: 'LEGO UCS Something 2026',
+          retailer: 'LEGO Store',
+          dropDate: '2026-12-01',
+          msrpCents: 22_000,
+          comparable: { keyword: 'lego ucs something 2025', why: "last year's set" },
+        },
+        now,
+      );
+
+      const saved = store.drops().get(dropId);
+      ok(saved !== undefined, 'the drop comes back');
+      if (saved === undefined) return;
+      eq(saved.drop.msrpCents, 22_000, 'the price it drops at');
+      eq(saved.evidence, null, 'and nobody has valued it yet');
+
+      // ⛔ Apple's SQLite has to enforce the GLOB, or a row that throws when
+      // the screen reads it is written without complaint.
+      let refused = false;
+      try {
+        store.drops().save(
+          { ...saved.drop, dropId: 'bad-date', dropDate: 'next Tuesday' },
+          now,
+        );
+      } catch {
+        refused = true;
+      }
+      ok(refused, 'a date the screen could not read is refused by the row');
+
+      // ⛔ And a keyword nobody can inspect.
+      refused = false;
+      try {
+        db.run(
+          `INSERT INTO drops (drop_id, created_at, updated_at, name, retailer, drop_date,
+             msrp_cents, comparable_keyword, comparable_why)
+           VALUES ('half', ?, ?, 'n', 'r', '2026-12-01', 100, 'a keyword', NULL)`,
+          [now, now],
+        );
+      } catch {
+        refused = true;
+      }
+      ok(refused, 'an analogy with no stated reason is refused');
+
+      // The comparable's market, mapped from a reading exactly as the screen
+      // does it — including the floor, which the gates read.
+      store.drops().value(
+        dropId,
+        evidenceFromMarket(
+          {
+            sold90: { value: 90, isFloor: false },
+            active: { value: 240_000, isFloor: true },
+            compPricesCents: [48_000, 50_000, 52_000],
+            compMedianAgeDays: 20,
+            provenance: {
+              keyword: 'lego ucs something 2025',
+              compCondition: 'new',
+              categoryId: '183447',
+              categoryName: 'LEGO (R) Building Toys',
+              soldItemsSeen: 40,
+              activeItemsSeen: 200,
+              soldAfter: '2026-09-01',
+              fetchedAt: now,
+            },
+            quota: { monthlyLimit: 100, monthlyRemaining: 86, resetAt: null },
+          },
+          'LEGO',
+        ),
+        now,
+      );
+
+      const valued = store.drops().get(dropId);
+      ok(valued?.evidence !== null && valued?.evidence !== undefined, 'the valuation persisted');
+      if (!valued || valued.evidence === null) return;
+      ok(valued.evidence.comparableActiveIsFloor === true, 'and the floor travelled with it');
+      eq(valued.valuedAt, now, 'with the time it was taken');
+
+      // ⚡ The screen recomputes rather than reading a stored verdict — there
+      // is no verdict column, by design.
+      const view = dropsScreen(
+        store.drops().list().map((d) => ({
+          drop: d.drop,
+          evidence: d.evidence,
+          valuedAt: d.valuedAt,
+        })),
+        store.state(),
+        computeMetrics(store.state()).navCents,
+        new Date('2026-09-11T12:00:00.000Z'),
+        evaluateOpportunity,
+      );
+      eq(view.rows.length, 1, 'one drop on the screen');
+      const row = view.rows[0];
+      ok(row !== undefined && row.status.kind === 'JUDGED', 'and it is judged');
+      if (!row || row.status.kind !== 'JUDGED') return;
+      eq(row.timing.daysAway, 81, 'the days to the drop, counted on a calendar');
+      ok(
+        row.status.verdict.confidenceBps <= 5_900,
+        'the analogy ceilings the confidence, both halves of it',
+      );
+      ok(row.line.includes('LEGO Store'), 'the line says where');
+      eq(row.valuationAgeDays, 0, 'and the market reading is reported as todays');
     },
   },
 ];
