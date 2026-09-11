@@ -84,15 +84,15 @@ orientation.
 
 ### What needs a human, not a session
 
+⚠️ **Three things, and none of them block the build.** Everything the data route
+needed is done — see the log for the fund move, Codemagic, the SoldComps key and
+eBay's refusal (**D16**).
+
 | | |
 |---|---|
-| ~~**Move the fund**~~ | ✅ **Done 2026-09-10.** 55 events imported on device, every hash reproduced. |
-| ~~**Codemagic**~~ | ✅ **Done 2026-09-10 — built AND published to TestFlight on the first run.** ⚠️ Deployment is **manual**, so the 80-day rebuild is a reminder in MASTER_PLAN's Recurring table, not a scheduled workflow. |
-| ⚡ **SoldComps** | **Sign up at sold-comps.com — free, 100 req/month, no card, NO approval needed.** It is the BINDING half of the data route: three of the four gates that refuse everything are fed by SOLD data. **6.1.1 is unblocked and waiting only on this key.** |
-| ⏳ **eBay** | Developer account submitted 2026-09-10, ~1 business day. Then Production keyset (App ID / Dev ID / Cert ID) from *Your Account → Application Keys*. Unblocks **Browse** for the ACTIVE count only. ⚠️ Also file the Marketplace Insights ticket from the approved account — expect refusal. |
-| **Two repos** | Delete `resale-os-prescrub-2` and `resale-os-prescrub-private`. Both are private, both still hold the scrubbed tax profile, and the CLI token cannot delete. The history is bundled and restore-verified in the OneDrive backups folder. |
-| **B26** | Verify the operator's state and local rates against the published table. Half closed — the local rate is confirmed; the state marginal is not. |
-| **D2** | The owner split (20/10/70) is still a default. Not live below $100 NAV, and the fund is at $50 — four to six flips away. |
+| **Two repos** | Delete `resale-os-prescrub-2` and `resale-os-prescrub-private`. Both private, both still holding the scrubbed tax profile, and the CLI token cannot delete. History is bundled and restore-verified in the OneDrive backups folder. |
+| **B26** | The operator's **state marginal rate** is still unverified (the local rate is confirmed). ⚡ **Now fixable in the app** — 5.12's settings screen writes the tax profile, and a non-zero rate is refused without a stated basis. |
+| **D2** | The owner split (20/10/70) is still a default. Not live below $100 NAV and the fund is at $50 — four to six flips away, so decide it against real sales. ⚠️ **B73**: the allocation block has no screen yet, so answering D2 needs that first. |
 
 ### Two things a new session should not re-litigate
 

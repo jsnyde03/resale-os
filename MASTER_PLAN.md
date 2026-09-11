@@ -44,16 +44,28 @@ wired.
       **B3**'s histogram has something to count and **6.5**'s watchlist something
       to watch. Scores are device-local by decision (**D15**).
 
-- [~] **6.1** ⛔ **RE-PLANNED 2026-09-11: the eBay developer account was DENIED.**
-      Not just Marketplace Insights — the account, which takes Browse with it.
-      ⚡ **Survivable: SoldComps returns ACTIVE listings too** (`sold=false`, up to
-      200/page), so one vendor covers both halves and the denial costs the route,
-      not the data. ⚠️ **eBay is not coming back — D16**: the denial was generic and the
-      pattern is blanket, so there is nothing to re-apply for. **SoldComps is the
-      ONLY automated route**, which makes D12's *"the manual path stays wired"* a
-      second leg rather than a fallback.
-      ⛔ **And the two caps are not symmetric — B77 before any number reaches a
-      gate.** Sub-steps in the log, retrieved at switch-in.
+- [ ] **6.1** ⚡ **ACTIVE BUILD — the data route.** ⛔ eBay is gone (**D16**), so
+      **SoldComps is the only automated source** and serves both halves. The
+      contract is MEASURED, not assumed — four real requests on 2026-09-11.
+  - [ ] **6.1.1** The client behind an ADAPTER in `src/adapters/` — empty since
+        the beginning, and it red-gates on arrival until its import rules are
+        declared. **2 requests per item**: `sold=true` for comps and the count,
+        `sold=false` for the active count.
+        ⛔ **B79 first — the parse is the dangerous part.** `totalResults` is
+        `"133392"` on sold and **`"72,000+"`** on active; `parseInt` gives **72**
+        and `Number` gives **NaN**. A total that will not parse is REJECTED, never
+        defaulted, and `+` means "at least".
+        ⚠️ **B77**: an ACTIVE undercount is the UNSAFE direction — a floor makes
+        the hold a LOWER bound and the gate must refuse to pass on it.
+        ⚠️ **B80**: show what was searched and how many matched — the keyword
+        decides which market is measured.
+  - [ ] **6.1.2** ⛔ **Offline-first, and the API never gates.** A shop with no
+        signal is the normal case. ⚡ **And quota is a second kind of absent**
+        (**B78**): `x-usage-remaining` on every call, and a `quota_exceeded`
+        degrades to the manual path rather than breaking the screen.
+  - [ ] **6.1.3** Wire it into the aisle screen as FILLED fields the operator can
+        overwrite — never as a gate input the network owns.
+  - [ ] **6.1.4** On-device verification.
 
 **Exit:** the screen fills what it can from SoldComps, says where every number
 came from, and answers exactly as well as it does today when there is no signal.
@@ -82,27 +94,12 @@ the screen warns when growing would LOSE a buy. Detail in the log.
 
 ---
 
-### Gate 6.6 — A GATE THAT ABSTAINS MUST SAY SO (B66)
+### Gate 6.6 — A GATE THAT ABSTAINS MUST SAY SO (B66) — queued
 
-⚡ **ACTIVE BUILD**, and it is the structural class behind this session's biggest
-find. `assessPurchase` **skips any gate whose field is `undefined`** — which is
-correct for `sellThroughBps` under an operator estimate (abstain rather than fail
-an unknown) and was catastrophic for the buy score across a whole surface
-(**B58**, 64 divergences). **The code cannot tell the two cases apart, and
-neither can a reader.**
-
-- [ ] **6.6.1** Split the candidate's gate fields into **required** and
-      **deliberately-abstaining**, the second carrying its reason. Absent-and-
-      required becomes an error, not a skipped gate.
-- [ ] **6.6.2** Exhaustive **by construction**, off a declared object's keys — the
-      shape `validatePolicy` already uses, after a hand-written field list let
-      `minSellThroughBps` through as `NaN` and it failed closed by luck.
-- [ ] **6.6.3** A control that plants an under-populated candidate and proves the
-      gate refuses to run rather than passing quietly.
-- [ ] **6.6.4** On-device verification.
-
-**Exit:** a gate that does not run says why, and one that should have run cannot
-be skipped by omission.
+The structural class behind **B58**: `assessPurchase` skips any gate whose field
+is `undefined`, which is correct for `sellThroughBps` under an operator estimate
+and was catastrophic for the buy score across a whole surface. **The code cannot
+tell the two cases apart, and neither can a reader.** Sub-steps in the log.
 
 ---
 

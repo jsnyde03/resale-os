@@ -4495,3 +4495,39 @@ caught and the ones shipped.
 
 **Quota: 4 of 100 used.** The headers confirm B78's display — `x-usage-limit`,
 `x-usage-remaining`, `x-usage-reset` and `x-ratelimit-*` come back on every call.
+
+### 6.6's decomposition, parked until switch-in
+
+Moved off the queue at the 2026-09-11 button-up when 6.1 became unblocked and
+took the active slot. **B66** — a gate that abstains must say so:
+
+- **6.6.1** Split the candidate's gate fields into **required** and
+  **deliberately-abstaining**, the second carrying its reason. Absent-and-required
+  becomes an error, not a skipped gate.
+- **6.6.2** Exhaustive **by construction**, off a declared object's keys — the
+  shape `validatePolicy` already uses, after a hand-written field list let
+  `minSellThroughBps` through as `NaN`.
+- **6.6.3** A control that plants an under-populated candidate and proves the gate
+  refuses to run rather than passing quietly.
+- **6.6.4** On-device verification.
+
+### 2026-09-11 (second button-up) — the queue was pointing at the wrong thing
+
+The morning's button-up left **6.6** active because 6.1 was blocked on eBay. By
+evening eBay was **refused outright** (D16) and the SoldComps contract had been
+**measured** with four real requests — so 6.1 was no longer blocked at all, and
+the only thing still pointing it at 6.6 was that nobody had re-read the queue
+after the facts changed.
+
+⚡ **D12 settles the priority rather than taste**: the data route is *"a
+precondition, not an enhancement"* — without comps the 45% confidence gate refuses
+nearly every purchase. A correctness cleanup, however good, does not outrank the
+thing that makes the product work.
+
+So 6.1 is the active build, decomposed with the **measured** contract as its
+constraints rather than the docs: B79's two formats, B77's unsafe direction, B78's
+metered quota, B80's keyword. 6.6's sub-steps moved here.
+
+⚠️ **The `What needs a human` table had become a changelog** — four of seven rows
+struck through. Trimmed to the three that are actually live; the rest is in this
+log where completed work belongs.
