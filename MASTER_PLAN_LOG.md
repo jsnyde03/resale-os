@@ -5234,3 +5234,47 @@ the mitigation and B87 carries it.
 
 ⛔ **The rule for the next person, including me:** do not write a third guard
 without first reading what a GREEN run prints.
+
+### 6.7.5 — 53/53 on device, confirmed by name rather than by arithmetic
+
+⚠️ **The log truncates at 49 of 53 case names**, so "52 + 1 = 53" was the only
+evidence the log could give — and a count is not a name. Downloaded the
+`driver-contract-result` artifact instead and read the case list directly:
+
+```
+PASS  screen: settings: the owner split survives, and a bad one is refused
+PASS  screen: gates: every rule is accounted for — as a result, or as a declared abstention
+PASS  screen: sourcing: the data route reads the same on Hermes as it does in Node
+```
+
+⚡ **Worth keeping as a habit**: the artifact is the record, the log is a view of
+it, and the view is lossy. Earlier today I confirmed the 6.6 case by name from
+the log and got away with it because that run's truncation fell elsewhere.
+
+⚡ **And the reverted boot guard stayed quiet on a healthy run** — zero firings,
+which is the behaviour that was missing when it keyed on a status every run
+prints.
+
+### Gate 6.7's after-scan, and the replenishment
+
+⚡ **D2 is unblocked.** It was waiting on a screen that did not exist, and that
+was the whole reason 6.7 outranked the correctness backlog. It is still not
+*live* — the set-aside is off below $100 NAV and the fund is at $50 — so the
+decision is still owed against real sales rather than in the abstract.
+
+⛔ **B66 had been closed by Gate 6.6 and left standing in the backlog.** Found by
+auditing the list before answering "what's remaining", not by any check. **The
+row nobody deletes** — `waiting-lists-decay-one-way`, and the second instance
+today after the terseness rule that governed the active items and not the
+backlog. ⚠️ **Closing an item and closing its backlog row are two actions, and
+only one of them is in front of you at the time.**
+
+**Next active build: 6.8 (B54)**, per **D17**. Its premises were measured at
+switch-in rather than trusted: 75 `store.state()` call sites against 7
+`derivedState()`, no lint — and its **filed fix is wrong as stated**. A blanket
+lint would red-gate correct tests, because reading the cache is a fine assertion
+about the engine and only wrong as a claim about persistence. So 6.8.1 is
+*defining the enforceable rule*, and 6.8.3 explicitly permits the answer "this
+cannot be made to fail safe, leave it a convention" — ⛔ **because shipping a
+gate that fires on correct input is the mistake the boot guard made four hours
+ago, and it is fresh enough to be worth naming in the plan.**

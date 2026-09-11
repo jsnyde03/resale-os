@@ -88,38 +88,53 @@ also deleted `quote.candidate`, a second way to build the object that decides
 whether money moves, which nothing had assessed since D14. Detail, and the three
 plants (one of which corrected me), in the log.
 
-### Gate 6.7 — THE ALLOCATION BLOCK HAS NO SCREEN (B73) ⚡ **ACTIVE BUILD**
+### Gate 6.7 — THE ALLOCATION BLOCK ✅ **DONE 2026-09-11, 53/53 on device**
 
-Settings edits **three fields of ONE mode** — verified 2026-09-11: `PolicyFields`
-is `maxPerItemPercent`, `minProfit`, `maxHoldDays`, off `policy.modes[mode]`.
-⛔ **The whole `allocation` block is uneditable** — the owner split and the
-set-aside NAV threshold — and **that block is what D2 needs.** D2 is due at $100
-NAV, four to six flips away.
+⚡ **Closes B73, and unblocks D2.** The owner split and the set-aside threshold
+are editable on the phone, refused in the operator's words before the engine's,
+and the screen says the split is **dormant at the live $50** so an edit does not
+read as having done nothing. ⚡ **The other mode is configurable too** — the
+model always took one; only the screen was pinned to the active mode.
 
-⚠️ **Chosen as the active build because Gate 7's SCOPE is Jason's** (D12 assumed
-a feed and there is one vendor), and the queue does not idle while a question is
-out. This is real work, not filler: it is the thing standing between D2 and being
-answerable.
-
-- [x] **6.7.1** ✅ **Done 2026-09-11.** `allocationFieldsFrom` / `allocationEdit`
-      — the split and the threshold, refused in the operator's words before
-      `validatePolicy` refuses them in the engine's.
-- [x] **6.7.2** ✅ **Done 2026-09-11.** `SplitConsequence`: what stays, what
-      leaves, and ⚡ **that the split is DORMANT at the live $50** — so an
-      operator editing it is not left concluding the numbers did nothing.
-- [x] **6.7.3** ✅ **Done 2026-09-11.** ⚡ **The model already took a mode** —
-      only the screen was pinned to `metrics.mode`, so GROWTH could not be
-      configured until the fund was already in it. A picker, and a warning when
-      editing a mode the fund is not in.
-- [x] **6.7.4** ✅ **Done 2026-09-11.** 672 tests (+12), both claims planted.
-      ⛔ **`allocation.tax` deliberately left off the screen** — read by nothing
-      outside `policy.ts` (**B86**).
-- [ ] **6.7.5** On-device verification — the case is written, waiting on a lane.
-
-**Exit:** every number D2 needs is editable on the phone, and the screen says
-what changing it costs.
+⛔ `allocation.tax` left off deliberately: read by nothing outside `policy.ts`
+(**B86**). Detail and the two plants in the log.
 
 ---
+
+### Gate 6.8 — A TEST THAT READS THE CACHE IS TESTING THE ENGINE AGAINST ITSELF (B54) ⚡ **ACTIVE BUILD**
+
+`store.state()` answers from a cache, so a test that asserts on it can pass over
+a value the write path dropped. It cost a real hour in 5.5.1. ⚡ **Measured at
+switch-in: 75 `store.state()` call sites against 7 `derivedState()`, and no
+lint.**
+
+⛔ **The filed fix — "worth a lint" — is wrong as stated, and 6.8.1 is deciding
+the right one.** `expect(store.state().balances.LIQUID)` is a perfectly good
+assertion *about the engine*; it is only wrong as a claim about **persistence**.
+A blanket ban would red-gate correct tests.
+
+- [ ] **6.8.1** ⚠️ **[DECISION-SHAPED, mine]** Define the enforceable rule. The
+      candidate: *a test asserting something SURVIVED must read it back through a
+      path that did not write it* — `derivedState()`, or a second `FundStore`
+      over the same db, the pattern the settings contract case already uses.
+      **Write the rule before writing the check.**
+- [ ] **6.8.2** Classify the 75 sites against that rule and fix the ones that are
+      genuinely persistence claims. ⚠️ Expect the list to undercount — an
+      enumerated audit list has come up short on five consecutive items here.
+- [ ] **6.8.3** The check itself, whatever 6.8.1 decides it can be. ⛔ If it
+      cannot be made to fail safe, say so and leave it a convention rather than
+      shipping a gate that red-gates correct tests — **that is the mistake the
+      boot guard just made** (**B87**).
+- [ ] **6.8.4** Plant it: a persistence assertion rewritten to read the cache
+      must red. ⛔ **And run the control** — a correct test must stay green.
+- [ ] **6.8.5** On-device verification.
+
+**Exit:** a test cannot claim something persisted while reading the engine's
+cache, and the check that says so has been planted in both directions.
+
+---
+
+## Queue---
 
 ## Queue
 
@@ -133,7 +148,8 @@ what changing it costs.
 | 6 | **Sourcing: the app values and recommends** — ⛔ the FINDING half was struck as UNAVAILABLE, not deferred (**D16**, Jason 2026-09-11); the operator finds | ✅ **Done 2026-09-11**, 51/51 on device |
 | 6.5 | **Not yet, or never?** — ⚡ the before-scan disproved the "watchlist that unlocks" premise: most refusals never clear at any bankroll | ✅ **Done 2026-09-10**, 50/50 on device |
 | 6.6 | **A gate that abstains must say so** (**B66**) | ✅ **Done 2026-09-11**, 52/52 on device |
-| 6.7 | **The allocation block has no screen** (**B73**) — owner split and the set-aside threshold, which is what **D2** needs | ⚡ **ACTIVE BUILD** |
+| 6.7 | **The allocation block** (**B73**) — owner split and set-aside threshold; **unblocks D2** | ✅ **Done 2026-09-11**, 53/53 on device |
+| 6.8 | **A test that reads the cache is testing the engine against itself** (**B54**) | ⚡ **ACTIVE BUILD** |
 | 7 | **Radar over the fund's OWN HISTORY** — scarcity, demand, momentum, confidence, from what the operator has actually seen. ⛔ Not market-wide; that premise died with **D16** | ⏸️ **PARKED until there is history** (**D17**) |
 | 7.5 | **Drop intel** — dated retail drops, monitoring and alerting. ⛔ Checkout automation is OUT, see **D13** | Open |
 | 8 | *(architecture only until 1–7 are reliable)* authorization states, drop intel, autonomy | Not started, not startable |
@@ -452,20 +468,7 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   Anything published from here gets a whole-tree sweep, not a directory list.
   ⏳ **Needs Jason: delete `resale-os-prescrub-2` and `resale-os-prescrub-private`**
   — both private, both still holding the data, and the CLI token cannot delete.
-- **B54** ⚠️ **`store.state()` answers from a cache, and a test that reads it is
-  testing the engine against itself.** Cost a real hour in 5.5.1: a round-trip
-  test passed with the new column dropped on the write path.
-  ⚡ **Measured 2026-09-11 (pre-scouted, not yet switched in): 75 `store.state()`
-  call sites against 7 `derivedState()`, and no lint.**
-  ⛔ **But the stated fix — "worth a lint" — is harder than it reads.**
-  `expect(store.state().balances.LIQUID)` is a perfectly good assertion *about
-  the engine*; it is only wrong as a claim about **persistence**. A blanket ban
-  would red-gate correct tests, so the rule to enforce is not "never call
-  `state()`" but "a test asserting something SURVIVED must read it back through
-  a path that did not write it" — which in practice means `derivedState()` or a
-  second `FundStore` over the same db, the pattern the settings contract case
-  already uses. **Decide the enforceable form before writing the check.**
-  → next after 6.7, per **D17**.
+- ~~**B54**~~ ⚡ **Promoted to Gate 6.8, 2026-09-11.** Measured at switch-in: 75 `store.state()` sites against 7 `derivedState()`, no lint.
 - **B55** The migration-rebuild test hard-coded `[REBUILD]` as everything stage
   2 would run, so migration 006 broke it — and because the store was closed
   *after* the assertions, the real failure surfaced as an EBUSY from the temp
