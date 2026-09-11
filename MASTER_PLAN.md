@@ -436,13 +436,10 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
 - ~~**B70**~~ ✅ **Closed 2026-09-10 in 6.0.1.**
 - ~~**B71**~~ ✅ **Closed 2026-09-10 in 6.0.2.**
 - ~~**B68**~~ ✅ **Closed 2026-09-10 in 6.0.3.** ⚠️ The backup half is **6.0.5**.
-- **B66** ⚠️ **`assessPurchase` fails OPEN by construction and nothing detects
-  it.** Every `PurchaseCandidate` gate field is optional, and a missing one
-  skips its gate silently — which is right for `sellThroughBps` under an
-  operator estimate (abstain, do not fail an unknown) and was wrong for the
-  buy score for a whole surface (**B58**). The two cases are indistinguishable
-  in the code. `validatePolicy` solved the same class by being exhaustive off a
-  defaults object's keys; this wants the same treatment, or a lint. → Gate 6.
+- ~~**B66**~~ ✅ **Closed 2026-09-11 in Gate 6.6**, 52/52 on device. Every gate
+  field is required so a forgetting caller fails to compile; the one gate that
+  may decline to run declares it with a reason; every code is accounted for as
+  a result or an abstention.
 - ~~**B65**~~ ✅ **Closed 2026-09-10 in 5.10.3**, alongside **B62**.
 - **B57** The app has no icon — a white square on the home screen. Cosmetic,
   and only visible because a CI screenshot caught it. → before any TestFlight
