@@ -4656,3 +4656,66 @@ written number failed against a run one, after the vendor's own header names,
 A typed count is assumed exact. An operator reading `"72,000+"` off eBay types
 `72000` and the flag is silently gone — the form needs the same *"at least"* the
 API has. Filed onto **6.1.3**, where the screen is wired.
+
+### 6.1.1 — the client, and the layer that had never been asked what it may import
+
+`src/adapters/soldcomps.ts` plus `total-results.ts`, the dangerous parse kept in
+a file of its own with no network in it. **630 tests, +23, every one of them
+against captured bytes.**
+
+⛔ **Declaring the layer's import rules was the first edit, not the last.** The
+gate that fails a directory with source and no rules did exactly what it was
+built for. `src/adapters` may reach `src/core` and nothing else — not `scoring`,
+not `domain`, not a screen — so it knows about money and knows nothing about
+opportunities or verdicts. ⚡ **That is what makes a vendor swap a new file
+beside this one**, and with eBay refused it is the only thing standing between
+this fund and a rewrite if SoldComps changes its terms.
+
+**Two plants, run separately so neither could hide the other.** Removing the
+category pinning reddened exactly one test; discarding the `+` reddened two.
+Both restored from a copy taken before the plant — ⚠️ **not with `git checkout`,
+because neither file was committed yet and the restore would have deleted the
+work along with the plant.**
+
+### ⛔ `**B77**/**B79**` closed a block comment
+
+The doc comment ended thirty lines early and TypeScript reported eight syntax
+errors starting at a line that looked like prose. **`**` followed by `/` is
+`*/`** — the terminator, produced by ordinary markdown emphasis around two
+backlog ids. Nothing about the source looks wrong; the rendering is what is
+wrong. The fix is *"and"* instead of a slash, and the class is the same one as
+the NUL byte in `hash.ts` and the `\b` from a Python script: **a character
+sequence that means something to a parser and nothing to a reader.**
+
+### ⚠️ The adapter is written for the phone and nothing checks that yet
+
+`lint:phone` discovers its roots by scanning `mobile/` for what it imports, which
+is the right design — but the adapter is not imported by the phone until
+**6.1.3**, so it is currently outside that closure. The direct `node:*` ban in
+`check-import-direction.mjs` covers the obvious failure; the transitive one waits
+for the wiring. **Recorded because "it is written to run on a device" and "it is
+checked to run on a device" are not the same claim**, and this project has
+confused them before.
+
+### The remaining smaller decisions, each with its reason
+
+**`soldPrice`, not `totalPrice`, for a comp.** The fee model already handles
+postage separately, so the item price is the consistent one — and where a seller
+baked shipping into free postage it UNDERSTATES the resale, which refuses a good
+item rather than accepting a bad one. ⚡ **Given a choice of two defensible
+readings, take the one whose error refuses.**
+
+**An unusable total falls back to the page count as a FLOOR**, rather than to a
+refusal, when `hasNextPage` says there are more. The items in hand are a real
+count of something and "at least this many" is an honest fact — 6.1.0's gate
+then refuses to pass on it, which is the whole point of having built that first.
+
+**One malformed comp price is skipped, not fatal.** A market is not refused
+because one of forty listings had a strange price; an empty comp set is already
+capped hard by the confidence gate.
+
+**`.env.local.example` rewritten.** It documented `RESALE_PASSWORD` and
+`npm run serve` — a password for a server deleted at 5.10 — and said nothing
+about the only key the project now has. ⛔ It also now says plainly that
+`EXPO_PUBLIC_` is not a secret store: the key is compiled into the bundle, which
+is acceptable for a single-operator private build and would not be otherwise.

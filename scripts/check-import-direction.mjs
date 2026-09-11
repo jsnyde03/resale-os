@@ -37,6 +37,21 @@ const FORBIDDEN = {
   // 5.10.4, and an import of either would quietly re-tether the phone to
   // the desktop it is replacing.
   'src/screens': ['src/cli', 'src/server', 'src/app'],
+  // 6.1.1. The outside world. An adapter turns ONE vendor's response into
+  // numbers with provenance, and knows nothing about opportunities, scores or
+  // verdicts — `src/core` for money and nothing else. ⛔ That is what makes a
+  // vendor swap a new file rather than a refactor, and with eBay refused
+  // (**D16**) SoldComps is the only automated route the fund has.
+  'src/adapters': [
+    'src/db',
+    'src/cli',
+    'src/server',
+    'src/app',
+    'src/screens',
+    'src/ui',
+    'src/scoring',
+    'src/domain',
+  ],
 };
 
 /** Modules the pure layers may not touch, however they are reached. */
@@ -46,6 +61,8 @@ const FORBIDDEN_MODULES = {
   'src/domain': ['node:sqlite', 'node:child_process'],
   'src/app': ['node:sqlite'],
   'src/ui': ['node:sqlite', 'node:fs', 'node:child_process'],
+  // ⛔ The adapter runs ON THE PHONE, in the aisle. `fetch` and nothing else.
+  'src/adapters': ['node:sqlite', 'node:fs', 'node:child_process', 'node:http', 'node:https'],
 };
 
 const toPosix = (p) => p.split(sep).join('/');

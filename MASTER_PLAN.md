@@ -51,20 +51,12 @@ wired.
         — an optimistic unknown is refused rather than waved through, and only
         when it was the deciding number. 604 tests (+15), planted both
         directions. ⚡ A floored count is a **NEVER**, not a not-yet.
-  - [ ] **6.1.1** The client behind an ADAPTER in `src/adapters/` — empty since
-        the beginning, and it red-gates on arrival until its import rules are
-        declared. `GET api.sold-comps.com/v1/scrape`, `Authorization: Bearer`.
-        ⛔ **ACTIVE FIRST, then SOLD pinned to the category ACTIVE declares**
-        (**B82**) — the two calls measure different populations otherwise, and
-        the ratio is not a ratio of anything. Costs no extra request.
-        ⛔ **B79 — the parse is the dangerous part.** `totalResults` is
-        `"122956"` on sold and **`"240,000+"`** on active, and the vendor
-        documents **`null`** as a third case; `parseInt` gives **240** and
-        `Number` gives **NaN**. A total that will not parse is REJECTED, never
-        defaulted, and `+` means "at least".
-        ⚠️ **B80**: return what was searched, which category, and how many
-        matched — the keyword decides which market is measured.
-        ⚠️ Fixtures are **captured bytes**, `tests/fixtures/soldcomps/`.
+  - [x] **6.1.1** ✅ **Done 2026-09-11. Closes B79, B80, B82.** The client in
+        `src/adapters/`, import rules declared, 630 tests (+23) against captured
+        bytes. ACTIVE first then SOLD pinned to the category it declares; an
+        unparseable total is refused, never defaulted; every failure is a value.
+        Planted both claims and restored. ⚠️ **Not yet imported by the phone**,
+        so `lint:phone` does not cover it until **6.1.3**.
   - [ ] **6.1.2** ⛔ **Offline-first, and the API never gates.** A shop with no
         signal is the normal case. ⚡ **And quota is a second kind of absent**
         (**B78**): `x-usage-remaining` on every call, and a `quota_exceeded`
@@ -366,6 +358,7 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   ⚡ **And compare credits before buying a plan**: $3/1,000 ($0.003/req) beats
   Starter's $9/2,000 ($0.0045/req) below ~3,000/month, and every tier is capped
   at 60/min, so a plan buys quota only — never speed. → **6.1.1**.
+- ~~**B79**~~ ✅ **Closed 2026-09-11 in 6.1.1.** `src/adapters/total-results.ts`, and the vendor documents a THIRD form, `null`, which is refused like any other.
 - **B79** ⛔ **THE SAME FIELD RETURNS TWO FORMATS, AND BOTH NAIVE PARSES ARE
   CATASTROPHIC.** Measured 2026-09-11: `totalResults` is `"133392"` on a SOLD
   search and **`"72,000+"`** on an ACTIVE one — formatted, with a comma and a
@@ -377,6 +370,7 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   **reject a total that will not parse rather than defaulting it** — NaN reaching
   a gate is how `minSellThroughBps` once printed *"vs a NaN% minimum"*.
   → **6.1.1, in the adapter, with a test per format.**
+- ~~**B80**~~ ✅ **Closed 2026-09-11 in 6.1.1** — the reading carries `provenance`: keyword, category, and how many each half matched.
 - **B80** ⚠️ **The KEYWORD is an input to a money gate.** `totalResults` counts
   whatever the keyword matched, so a vague name measures the broad market and a
   precise one measures the item — *"lego star wars"* returns 133,392 sold against
@@ -392,6 +386,7 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   worth having is *page once when `hasNextPage` is set and page 2 is likely to
   end it*, which needs a measured hit rate the fund does not have yet. → when
   6.1 has run against real racks, not before.
+- ~~**B82**~~ ✅ **Closed 2026-09-11 in 6.1.1** by calling ACTIVE first and pinning SOLD to the category it declares.
 - **B82** ⛔ **THE TWO HALVES OF THE RATIO MEASURE DIFFERENT POPULATIONS, AND THE
   RESPONSE THAT IS WRONG IS THE ONE THAT LOOKS CLEAN.** Measured 2026-09-11:
   the ACTIVE call silently restricts to a category it picks itself
