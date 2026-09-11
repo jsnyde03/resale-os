@@ -4439,3 +4439,59 @@ still tracked, which is the one that has to stay.
 
 ⚡ **The same shape as the morning's other finds**, one level down: a list of the
 cases someone enumerated, standing in for the property they meant.
+
+## 2026-09-11 — four requests against the real API, and what they settled
+
+**B74 is answered.** `totalResults` is populated on a SOLD search and is a clean
+integer string, so the sold count costs **one request**, not two or three. ⚠️ It
+**ignores `soldAfter`** — measured directly, a 7-day and a 90-day window returned
+133,392 and 133,495, which is live drift between two calls rather than filtering.
+That is survivable only because eBay's sold index reaches back about 90 days
+anyway, so the total **is** sold-in-90 **by accident of their retention rather
+than by our parameter**. Worth writing down as luck, because luck changes.
+
+### ⛔ B79 — one field, two formats, and both naive parses are catastrophic
+
+`totalResults` came back `"133392"` from the sold call and **`"72,000+"`** from
+the active one. Same field, same endpoint, different shape.
+
+```
+parseInt("72,000+")  ->  72      a thousandfold under
+Number("72,000+")    ->  NaN
+```
+
+With the true 72,000 active, that item is a **49-day hold**. Misparsed as 72 it
+reads **0 days** and clears every ceiling in the policy. ⚡ **B77 said an ACTIVE
+undercount is the unsafe direction; this is the mechanism that would deliver
+one**, and it is a string format rather than a cap.
+
+The `+` means the number is a floor, which for active is the *safe* direction —
+but only once it is parsed at all. And `NaN` has a history here:
+`minSellThroughBps` once reached a gate as `NaN` and printed *"vs a NaN%
+minimum"*, failing closed by luck. **A total that will not parse must be
+rejected, never defaulted.**
+
+### B80 — the keyword is an input to a money gate
+
+`totalResults` counts whatever the keyword matched, so the words the operator
+types decide *which market* is being measured.
+
+⚠️ **And I asserted the direction and was wrong.** I predicted a vague keyword
+would make an item look optimistically fast, wrote the probe to demonstrate it,
+and the probe printed the opposite: the broad search gave a **49-day** hold and
+the specific one **18 days** — the broad one was *refused*. Breadth changes which
+market is measured; it does not bias the verdict a fixed way.
+
+So the real risk is **misattribution, not optimism**: a confident, correctly
+computed number about a *different item*. The screen has to show what was
+searched and how many it matched, so a wrong keyword is visible rather than
+silently authoritative.
+
+⚡ **This is the fourth time today a measurement contradicted something I stated
+with confidence** — the 240-per-page correction, the bisection premise, the
+`as`-cast no-op, and now this. Each was caught because the thing was run rather
+than reasoned about, which is the only reliable difference between the ones
+caught and the ones shipped.
+
+**Quota: 4 of 100 used.** The headers confirm B78's display — `x-usage-limit`,
+`x-usage-remaining`, `x-usage-reset` and `x-ratelimit-*` come back on every call.

@@ -361,6 +361,25 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   ⚡ **And compare credits before buying a plan**: $3/1,000 ($0.003/req) beats
   Starter's $9/2,000 ($0.0045/req) below ~3,000/month, and every tier is capped
   at 60/min, so a plan buys quota only — never speed. → **6.1.1**.
+- **B79** ⛔ **THE SAME FIELD RETURNS TWO FORMATS, AND BOTH NAIVE PARSES ARE
+  CATASTROPHIC.** Measured 2026-09-11: `totalResults` is `"133392"` on a SOLD
+  search and **`"72,000+"`** on an ACTIVE one — formatted, with a comma and a
+  plus. **`parseInt("72,000+")` → 72** (a thousandfold under) and
+  **`Number(...)` → NaN**. With the true 72,000 that item is a **49-day hold**;
+  misparsed as 72 it reads **0 days** and clears every ceiling there is. ⚡ The
+  `+` means it is a FLOOR, which for ACTIVE is the safe direction **only if
+  parsed correctly** (B77). ⛔ Parse defensively, treat `+` as "at least", and
+  **reject a total that will not parse rather than defaulting it** — NaN reaching
+  a gate is how `minSellThroughBps` once printed *"vs a NaN% minimum"*.
+  → **6.1.1, in the adapter, with a test per format.**
+- **B80** ⚠️ **The KEYWORD is an input to a money gate.** `totalResults` counts
+  whatever the keyword matched, so a vague name measures the broad market and a
+  precise one measures the item — *"lego star wars"* returns 133,392 sold against
+  72,000 active. ⚠️ **Not directionally biased**: I assumed a vague keyword would
+  look optimistic and the measurement said otherwise (broad 49d vs specific 18d
+  — the broad one was *refused*). The risk is **misattribution, not optimism**: a
+  confident number about a different item. → the screen must show what was
+  searched and how many matched, so a wrong keyword is visible. → **6.1.1**.
 - **B77** ⛔ **THE TWO CAPS PUSH OPPOSITE WAYS, and one of them is unsafe.**
   SoldComps caps SOLD at 40/page and ACTIVE at 200/page. Hold time is
   `90 × (active + 1) / sold90`, so **undercounting SOLD refuses a good item
@@ -371,16 +390,13 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   and the derived hold a LOWER BOUND** — the gate must refuse to pass on it, which
   is the reverse of the sell-through rule. → **6.1.1, before any number reaches a
   gate.**
-- **B74** ⛔ **SoldComps: a SOLD page caps at 40, and `totalItems` is the count on
-  the CURRENT PAGE.** ⚠️ **I said 240 and that was wrong** — 240 is the ACTIVE
-  limit; `count` is 1-40 for sold. The clearance rule needs `sold ≥ 4.3 × (active
-  + 1)`, so **10 active listings need 48 sold — more than one page can report.**
-  One request can only ever prove "at least 40", which does not clear it.
-  ⚡ **Three ways out, and the first is free:** `totalResults` (documented as
-  "string or null") may carry the grand total — **unknown until a real response
-  is seen**; or page twice (2 requests × 100/month free = 50 items); or treat 40
-  as a floor and say so. ⚡ `soldAfter=YYYY-MM-DD` gives the 90-day window exactly,
-  so no client-side date filtering. → decide against a REAL response, not the docs.
+- ~~**B74**~~ ✅ **ANSWERED 2026-09-11 by two real requests.** `totalResults` IS
+  populated on a SOLD search and is a clean integer string (`"133392"`), so the
+  sold count costs **one request**. ⚠️ It **ignores `soldAfter`** — measured, a
+  7-day window and a 90-day window returned 133,392 and 133,495 — but eBay's sold
+  index only reaches back ~90 days, so the total **is** sold-in-90 by accident of
+  their retention rather than by our parameter. `soldAfter` still narrows the
+  ITEMS, which is what the comp prices come from. → **2 requests per item.**
 - **B69** ⚡ **Barcode scanning in the aisle** (Jason, 2026-09-10). The SCAN is
   the easy part — `expo-camera` does it offline, one screen. ⛔ **But a barcode
   is a product identity, not a price**, and the sourcing screen's binding fields
