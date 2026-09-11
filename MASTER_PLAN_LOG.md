@@ -5506,3 +5506,42 @@ broke it.
 unknown set. Above one, the headline says so. ⚠️ **Deliberately not a reason to
 withhold the chart** — a chart withheld teaches nothing, and a chart that quietly
 averages two rule sets teaches the wrong thing.
+
+## 2026-09-11 — 6.11: the scan flow (D18)
+
+### ⛔ De-risked the unevaluated vendor BEFORE building on it
+
+SoldComps takes no barcode — verified against its docs, `keyword` only, `epid`
+output-not-input — so a scan needs a second vendor. UPCitemdb's keyless trial
+round-tripped three real UPCs to title, brand **and category**, which kills the
+category field as well as the name.
+
+### ⚠️ Two instincts the real bytes corrected, both of which would have shipped
+
+⛔ **`model` is not a model number.** On the LEGO record it is the UPC repeated
+back — `model: "673419209366"`. Preferring a named vendor field over a regex is
+the obvious instinct and it was **wrong**: the set number (`75038`) lives in the
+TITLE. Only capturing a real response showed it.
+
+⛔ **An all-zeros barcode RESOLVES.** `000000000000` returns HTTP 200 with a
+genuine record — *"ORGANIC BLUE CORN TORTILLA CHIPS"*. So a mis-scan does not
+fail loudly, it succeeds quietly with the wrong product. ⚡ **The guard is the
+operator**: the title goes on screen beside the object in their hand. That is a
+design consequence, not a code one, and it is why 6.11.4 shows the title before
+anything is decided.
+
+⚠️ **And the same record carried `brand: "N/A"`** — a placeholder that, passed
+through, becomes the keyword *"n/a something"* and searches a market that does
+not exist. Placeholders now read as absent.
+
+### B89 in the code: the keyword proposes and never imposes
+
+`keywordFor` returns the cleaned title AND, when there is one, the
+brand-plus-model reading as an `alternative`. ⛔ **Not a formatting detail.**
+Measured on LEGO 75038: the two are **68% apart in median sold price**, and that
+median becomes the resale price. Neither is obviously right — the long title may
+be catching loose sets while the number catches sealed ones, or the reverse — so
+both are offered and the operator picks.
+
+⚠️ The hyphen rule needed narrowing: `x-wing` and `z-95` carry meaning, a
+standalone `-` is punctuation. Found by a test, not by reading.

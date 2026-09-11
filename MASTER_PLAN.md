@@ -123,36 +123,55 @@ stale list. Detail in the log.
 
 ---
 
-### Gate 6.10 — STALENESS IS BLIND TO RULE CHANGES (B88) ⚡ **ACTIVE BUILD**
+### Gate 6.10 — THE RULES GOT AN IDENTITY ✅ **DONE 2026-09-11, 54/54 on device**
 
-⛔ **`Policy.version` versions the NUMBERS, not the RULES**, and
-`watchlist.ts:89` detects staleness from it alone. Today proved the gap: 6.1.0
-added a constraint code and 6.6 changed how every gate is evaluated, both with
-`Policy.version` untouched at `2026-09-08.5`. **A score recorded yesterday reads
-as scored under today's rules.**
-
-⚠️ **The instrument that suffers is 6.2's rejection histogram** — it counts
-STORED codes, so it mixes rule sets and under-counts the new one. That chart
-answers *"why is nothing passing?"*, so a silent mix is the wrong kind of wrong.
-
-- [x] **6.10.1** ✅ **Done 2026-09-11, and the plan's own design was too weak.**
-      Hashing `CONSTRAINT_CODES` would catch 6.1.0 and **miss 6.6** — the change
-      that motivated the item. So the identity is taken from **behaviour**: run
-      the evaluator over a fixed reference candidate and fingerprint the verdict.
-- [x] **6.10.2** ✅ **Done 2026-09-11.** Migration 007, carried on `Evaluation`
-      and stored on the row. NULL reads as stale, never as a match.
-- [x] **6.10.3** ✅ **Done 2026-09-11.** Staleness reads both, and the histogram
-      **says on the headline** when it is mixing rather than hiding the chart.
-- [x] **6.10.4** ✅ **Done 2026-09-11.** Planted on the fingerprint (a new gate
-      moves it, a changed outcome moves it, **an unrelated string does not**), on
-      the write path, and on the watchlist — each with its control.
-- [ ] **6.10.5** On-device verification — the case is written; this one IS on the
-      device path, so the lane covers it.
-
-**Exit:** a stored verdict can be told apart from one today's rules would give,
-and the histogram never silently mixes the two.
+⚡ **Closes B88.** A fingerprint taken from BEHAVIOUR — the evaluator run over a
+fixed reference candidate — because hashing `CONSTRAINT_CODES` would have caught
+6.1.0 and missed 6.6, the change that motivated it. Stored per score, NULL reads
+as stale, and the histogram says when it is mixing rule sets. Detail in the log.
 
 ---
+
+### Gate 6.11 — THE SCAN FLOW (D18) ⚡ **ACTIVE BUILD**
+
+🎯 **Jason 2026-09-11:** *"Without scanning at Walmart it'll be too tedious to go
+through the clearance rack and type everything in… Scanning is vital to this app
+until I actually get recommendations of what to purchase."*
+
+⛔ **SoldComps takes no barcode** — verified, `keyword` only — so this needs a
+SECOND vendor. ⚡ **Already de-risked:** UPCitemdb's keyless trial round-tripped
+three real UPCs to title, brand and category.
+
+⛔ **And B89 is the shape of the whole item.** On one real product, the raw
+resolver title and the set-number keyword gave medians **68% apart** — and that
+median becomes the resale price. **A scan cannot silently produce an answer.**
+
+- [x] **6.11.1** ✅ **Done 2026-09-11.** `core/product.ts` + the UPCitemdb
+      adapter, against captured bytes. ⛔ **Two instincts the real response
+      corrected**: `model` is the UPC repeated back, not a model number; and an
+      all-zeros barcode RESOLVES, to tortilla chips.
+- [x] **6.11.2** ✅ **Done 2026-09-11.** `keywordFor` proposes and never
+      imposes — the set-number reading is offered as an `alternative`, because
+      **B89** measured the two 68% apart. Editing it is 6.11.4's screen.
+- [ ] **6.11.3** The two free fields: **resale from the comps median**, scoped to
+      sealed retail where condition is not a judgement call, and **category from
+      the resolver**. ⚠️ Not a global default — for used goods the resale price
+      is the operator's call and must stay typed.
+- [ ] **6.11.4** The scan screen (`expo-camera`) and the wiring: scan → identity
+      → keyword → market → verdict, with the tag price the only typed field.
+- [ ] **6.11.5** ⛔ **Every failure degrades to typing** — no permission, UPC not
+      found, resolver down, quota gone. A rack SKU that will not resolve is the
+      normal case, not an error.
+- [ ] **6.11.6** ⚠️ **On-device verification needs a REAL DEVICE.** A simulator
+      has no camera, so the lane cannot prove this half — TestFlight and a
+      barcode. The contract still covers everything below the camera.
+
+**Exit:** a clearance item goes from barcode to verdict with one number typed,
+the keyword visible, and no step that breaks when the scan fails.
+
+---
+
+## Queue---
 
 ## Queue---
 
@@ -175,7 +194,8 @@ and the histogram never silently mixes the two.
 | 6.7 | **The allocation block** (**B73**) — owner split and set-aside threshold; **unblocks D2** | ✅ **Done 2026-09-11**, 53/53 on device |
 | 6.8 | **A test may not assert on the cache** (**B54**) | ✅ **Done 2026-09-11**, 53/53 on device |
 | 6.9 | **A leaked handle was replacing real failures** (**B55**) | ✅ **Done 2026-09-11** |
-| 6.10 | **Staleness is blind to rule changes** (**B88**) | ⚡ **ACTIVE BUILD** |
+| 6.10 | **The rules got an identity** (**B88**) | ✅ **Done 2026-09-11**, 54/54 on device |
+| 6.11 | **The scan flow** (**D18**) — barcode → identity → keyword → verdict | ⚡ **ACTIVE BUILD** |
 | 7 | **Radar over the fund's OWN HISTORY** — scarcity, demand, momentum, confidence, from what the operator has actually seen. ⛔ Not market-wide; that premise died with **D16** | ⏸️ **PARKED until there is history** (**D17**) |
 | 7.5 | **Drop intel** — dated retail drops, monitoring and alerting. ⛔ Checkout automation is OUT, see **D13** | Open |
 | 8 | *(architecture only until 1–7 are reliable)* authorization states, drop intel, autonomy | Not started, not startable |
