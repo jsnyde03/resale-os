@@ -16,10 +16,14 @@ const hist = (
   codes: [string, number][],
   rejectedRows: number,
   unreadableRows = 0,
+  // ⚠️ One rule set by default, so the helper keeps meaning "a clean record".
+  // A test about mixing passes something else.
+  ruleSets = 1,
 ): RejectionHistogram => ({
   codes: codes.map(([code, n]) => ({ code, n })),
   rejectedRows,
   unreadableRows,
+  ruleSets,
 });
 
 describe('what the record says is stopping you', () => {
@@ -95,5 +99,36 @@ describe('what the record says is stopping you', () => {
     // A screen showing SELL_THROUGH_TOO_LOW to a person in a shop has failed.
     const v = rejectionsView(hist(CONSTRAINT_CODES.map((c) => [c, 1] as [string, number]), 14));
     for (const row of v.rows) expect(row.wording).not.toBe(row.code);
+  });
+});
+
+describe('B88 — the chart says when it is mixing rule sets', () => {
+  it('⛔ warns on the headline rather than hiding the chart', () => {
+    // The codes record what the rules said THEN, so counting across rule sets
+    // under-counts the newest gate. A chart withheld teaches nothing; a chart
+    // that quietly averages two rule sets teaches the wrong thing.
+    const v = rejectionsView(hist([['HOLD_TOO_LONG', 6]], 6, 0, 2));
+    expect(v.mixedRuleSets).toBe(true);
+    expect(v.headline).toContain('more than one rule set');
+    // ⚠️ And the shape is still there to read.
+    expect(v.rows[0]?.n).toBe(6);
+    expect(v.conclusive).toBe(true);
+  });
+
+  it('and the control — a single rule set says nothing about mixing', () => {
+    // Without this the assertion above passes for a view that warns always,
+    // which would make the warning invisible.
+    const v = rejectionsView(hist([['HOLD_TOO_LONG', 6]], 6, 0, 1));
+    expect(v.mixedRuleSets).toBe(false);
+    expect(v.headline).not.toContain('rule set');
+  });
+
+  it('⚠️ a mix is reported even when there is too little to conclude', () => {
+    // The two are independent: "too few to call it a pattern" and "these came
+    // from different rules" are different problems, and the second does not
+    // stop mattering because the first is true.
+    const v = rejectionsView(hist([['HOLD_TOO_LONG', 2]], 2, 0, 3));
+    expect(v.conclusive).toBe(false);
+    expect(v.mixedRuleSets).toBe(true);
   });
 });

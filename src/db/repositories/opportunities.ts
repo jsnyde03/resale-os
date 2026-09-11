@@ -44,6 +44,7 @@ export interface OpportunityRow {
   score_breakdown_json: string | null;
   scored_at: string | null;
   policy_version: string | null;
+  rules_version: string | null;
   status: OpportunityStatus;
   item_id: string | null;
   input_json: string;
@@ -108,6 +109,20 @@ export interface RejectionHistogram {
    * two look identical on a chart. Surfacing the count is what tells them apart.
    */
   readonly unreadableRows: number;
+  /**
+   * ⛔ **How many DISTINCT rule sets these refusals were scored under (B88).**
+   *
+   * The codes are a historical record of what the rules said THEN. When the
+   * code changes what a gate decides, older rows keep their old codes — so a
+   * chart summing across rule sets under-counts whichever gate is newest and
+   * reports one number for two different questions. ⚠️ Rows written before
+   * migration 007 have no identity at all and are counted here as their own
+   * unknown set, because *"scored under rules we cannot name"* is exactly the
+   * situation that must not read as agreement.
+   *
+   * **1 is the healthy answer.** Anything more means the chart is mixing.
+   */
+  readonly ruleSets: number;
 }
 
 function rejectionHistogram(db: ReadOnlyDb): RejectionHistogram {
@@ -115,10 +130,21 @@ function rejectionHistogram(db: ReadOnlyDb): RejectionHistogram {
   let rejectedRows = 0;
   let unreadableRows = 0;
 
-  for (const row of db.all<{ reasoning_json: string | null; score_breakdown_json: string | null }>(
-    "SELECT reasoning_json, score_breakdown_json FROM opportunities WHERE recommendation = 'REJECT'",
+  // ⛔ `rules_version` comes back so the chart can say whether it is summing
+  // across one rule set or several. B88.
+  const identities = new Set<string>();
+
+  for (const row of db.all<{
+    reasoning_json: string | null;
+    score_breakdown_json: string | null;
+    rules_version: string | null;
+  }>(
+    'SELECT reasoning_json, score_breakdown_json, rules_version FROM opportunities ' +
+      "WHERE recommendation = 'REJECT'",
   )) {
     rejectedRows += 1;
+    // ⚠️ NULL is its own set, not "the same as everything else".
+    identities.add(row.rules_version ?? '<before rules were identified>');
     let found = 0;
 
     // Structured first. Rows written before 6.2 do not have it.
@@ -153,6 +179,7 @@ function rejectionHistogram(db: ReadOnlyDb): RejectionHistogram {
       .sort((a, b) => b.n - a.n || a.code.localeCompare(b.code)),
     rejectedRows,
     unreadableRows,
+    ruleSets: identities.size,
   };
 }
 
@@ -208,8 +235,8 @@ export class OpportunityRepository {
          sell_through_bps, expected_days_to_sale, expected_days_p90, buy_score,
          risk_score, confidence_bps, max_recommended_cents, price_bound_by,
          recommendation, reasoning_json, score_breakdown_json, scored_at,
-         policy_version, status, item_id, input_json
-       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         policy_version, rules_version, status, item_id, input_json
+       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
        ON CONFLICT(opportunity_id) DO UPDATE SET
          updated_at            = excluded.updated_at,
          asking_price_cents    = excluded.asking_price_cents,
@@ -238,6 +265,7 @@ export class OpportunityRepository {
          score_breakdown_json  = excluded.score_breakdown_json,
          scored_at             = excluded.scored_at,
          policy_version        = excluded.policy_version,
+         rules_version         = excluded.rules_version,
          status                = excluded.status,
          input_json            = excluded.input_json`,
       toParams([
@@ -288,6 +316,7 @@ export class OpportunityRepository {
         }),
         now,
         e.policyVersion,
+        e.rulesVersion,
         // A PURCHASED opportunity keeps that status through a re-score; nothing
         // else is sticky, because everything else is a judgement that can change.
         existing?.status === 'PURCHASED' ? 'PURCHASED' : statusFor(e.result.recommendation),

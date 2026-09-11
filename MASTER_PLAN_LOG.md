@@ -5447,3 +5447,62 @@ entry, and this project has watched that shape fail five times.
 *"before any TestFlight build"* and the first publish was 2026-09-10. Verified:
 no `icon` key in `mobile/app.json`, no assets directory — the fund is a white
 square on the home screen. The plumbing is twenty minutes; the picture is his.
+
+## 2026-09-11 — 6.10: the rules got an identity (B88)
+
+### ⛔ The plan's own design was too weak, and the before-scan caught it
+
+6.10.1 specified *"a short hash over `CONSTRAINT_CODES` and the evaluator's
+shape"*. ⚠️ **Hashing `CONSTRAINT_CODES` would catch 6.1.0 and miss 6.6** — and
+6.6 is the change that motivated the whole item. A gate can change what it
+DECIDES without the list of gate names moving, so that fingerprint would have
+been a control blind to its own founding example.
+
+⚡ **So the identity is taken from BEHAVIOUR**: run the real evaluator over a
+fixed reference candidate and fingerprint the verdict — every gate's code, its
+outcome, and every declared abstention with its reason. Anything that changes
+what the rules DO changes the string, and nothing else does.
+
+⛔ **And it is a fingerprint rather than a version string on purpose.** A
+hand-maintained `RULES_VERSION` is an enumerated list with one entry, and this
+project has watched that shape go stale five times — the iOS lane's `paths:`
+filter four times, and `validatePolicy`'s field list once, which let
+`minSellThroughBps` through as `NaN`. **Anything a person must remember to bump
+will not get bumped.**
+
+### The plants, including the one that lied
+
+| change | fingerprint |
+|---|---|
+| baseline | `7c45b2a9` |
+| a new gate emitting a result (6.1.0's shape) | `c3add270` — moved |
+| a gate's OUTCOME changed, code list untouched (6.6's shape) | `779c4350` — moved |
+| an unrelated message string — **the control** | `7c45b2a9` — unmoved |
+
+⚠️ **The first attempt at the gate-addition plant did not apply.** It anchored
+on `if (candidate.buyScore`, which 6.6.1 had replaced with a bare `{` — so it
+added a code with no gate behind it, changed nothing, and would have been read as
+"the fingerprint does not catch new gates". ⛔ **A plant lies two ways: it never
+applied, or it applied without touching the thing asserted on.** Verified the
+anchor existed before re-running, and the redone plant moved the hash.
+
+⚡ The accidental version was informative anyway: **a declared code with no gate
+correctly does not change the rules**, and 6.8's exhaustiveness test already
+refuses that state.
+
+### ⚠️ 687 tests were green on the plumbing before anything asserted the value
+
+The column count is what throws when an INSERT is wrong; a **dropped value** does
+not. So the persistence assertion came next, and was planted by removing
+`e.rulesVersion` from the write path — two tests red, restore verified.
+
+⛔ **And the placeholder row was fixed by DERIVING the count from the column
+list**, not by adding one more `?` to a row of forty-one. Hand-counting is what
+broke it.
+
+### The chart says it is mixing rather than hiding
+
+`ruleSets` counts distinct identities among refusals, NULL forming its own
+unknown set. Above one, the headline says so. ⚠️ **Deliberately not a reason to
+withhold the chart** — a chart withheld teaches nothing, and a chart that quietly
+averages two rule sets teaches the wrong thing.

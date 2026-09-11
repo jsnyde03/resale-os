@@ -37,6 +37,7 @@ import { evaluateForm, fillFromMarket } from '../screens/sourcing.js';
 import { buildScrapeUrl, readQuota } from '../adapters/soldcomps.js';
 import { parseCount } from '../core/counts.js';
 import { CONSTRAINT_CODES } from '../core/capital/constraints.js';
+import { rulesAreStale, rulesIdentity } from '../core/capital/rules-identity.js';
 import { rejectionsView } from '../screens/rejections.js';
 import { watchlist } from '../screens/watchlist.js';
 import { parseOpportunity } from '../domain/opportunity.js';
@@ -357,7 +358,12 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
       ok(view.headline.includes('takes too long to sell'), 'and hold time is named in it');
 
       // ⛔ And the honest half: below the threshold it must decline to conclude.
-      const thin = rejectionsView({ codes: [{ code: 'HOLD_TOO_LONG', n: 2 }], rejectedRows: 2, unreadableRows: 0 });
+      const thin = rejectionsView({
+        codes: [{ code: 'HOLD_TOO_LONG', n: 2 }],
+        rejectedRows: 2,
+        unreadableRows: 0,
+        ruleSets: 1,
+      });
       ok(!thin.conclusive, 'two refusals is not a pattern');
     },
   },
@@ -424,6 +430,7 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
           opportunityId: r.opportunity_id,
           input: parseOpportunity(JSON.parse(r.input_json)),
           policyVersion: r.policy_version,
+          rulesVersion: r.rules_version,
         })),
         store.state(),
         computeMetrics(store.state()).navCents,
@@ -938,6 +945,49 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
           .consequence.splitIsDormant,
         'at $50 - where the fund actually is - it is dormant',
       );
+    },
+  },
+  {
+    // ⛔ B88 on the device. `policy_version` is stored CONFIG; it does not move
+    // when the CODE changes what a verdict means, and on 2026-09-11 that
+    // happened twice in a day. A score written before then read as current.
+    name: 'settings: a score records the RULES that produced it, not just the policy',
+    run: (db) => {
+      const store = funded(db, 50_000);
+      const repo = new OpportunityRepository(db);
+
+      const r = evaluateForm(
+        { name: 'ruled', category: 'TOYS', price: '12.00', resale: '60.00',
+          sold90: '40', active: '10' },
+        store.state(),
+      );
+      ok(r.ok, 'the form should parse');
+      if (!r.ok) return;
+      repo.save(r.input, r.evaluation, T0);
+
+      // ⚠️ Read back through a SEPARATE reader — the value must be on disk, not
+      // in the object that wrote it.
+      const row = new OpportunityReader(db).get(r.input.opportunityId);
+      ok(row !== undefined, 'the score should be stored');
+      eq(row?.rules_version, rulesIdentity(), 'the rules identity is on disk');
+      ok(
+        row?.rules_version !== row?.policy_version,
+        'and it is a different fact from the policy version',
+      );
+
+      // ⛔ Absence is not agreement: every row written before migration 007 has
+      // NULL here, and that must read as stale.
+      ok(rulesAreStale(null), 'no identity must read as stale');
+      ok(rulesAreStale('aaaaaaaa'), 'a different identity must read as stale');
+      // The control: an implementation that marks everything stale is useless.
+      ok(!rulesAreStale(rulesIdentity()), 'the current identity must NOT be stale');
+
+      // ⚡ And the chart says when it is mixing, which is the whole point.
+      db.run("UPDATE opportunities SET recommendation = 'REJECT' WHERE opportunity_id = ?", [
+        r.input.opportunityId,
+      ]);
+      const one = new OpportunityReader(db).rejectionHistogram();
+      eq(one.ruleSets, 1, 'one rule set on a clean record');
     },
   },
 ];

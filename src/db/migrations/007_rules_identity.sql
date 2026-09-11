@@ -1,0 +1,25 @@
+-- B88, 2026-09-11: a score records the POLICY it was made under, and not the
+-- RULES.
+--
+-- `policy_version` is stored config. It moves when the operator edits a cap or
+-- a floor, and it does not move when the CODE changes what a verdict means. On
+-- 2026-09-11 that happened twice in a day: 6.1.0 added VELOCITY_COUNTS_UNBOUNDED
+-- and 6.6 made every gate field required and gave the abstaining one a voice —
+-- both with policy_version sitting at 2026-09-08.5. So every score written
+-- before that day compares equal to today's and reads as current.
+--
+-- The instrument that suffers is the rejection histogram, which counts these
+-- stored codes. It has been mixing rule sets and reporting a single number, and
+-- that chart is how the fund answers "why is nothing passing?".
+--
+-- `rules_version` is a fingerprint DERIVED from the code — see
+-- src/core/capital/rules-identity.ts — not a version string anybody maintains.
+-- A number a person must remember to bump is an enumerated list with one entry,
+-- and this project has watched that shape go stale five times.
+--
+-- ⛔ NULL means "scored under rules we can no longer name", and that is NOT the
+-- same as "matches". Every row written before this migration has NULL, which is
+-- exactly B88's situation, so `rulesAreStale()` reads NULL as stale. Collapsing
+-- the two would re-create the bug this column exists to remove.
+
+ALTER TABLE opportunities ADD COLUMN rules_version TEXT NULL;

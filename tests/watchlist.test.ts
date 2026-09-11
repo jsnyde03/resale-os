@@ -12,6 +12,7 @@ import { watchlist, type WatchCandidate } from '@/screens/watchlist.js';
 import { evaluateOpportunity } from '@/scoring/evaluate.js';
 import { parseOpportunity } from '@/domain/opportunity.js';
 import { DEFAULT_POLICY } from '@/core/capital/policy.js';
+import { rulesIdentity } from '@/core/capital/rules-identity.js';
 import { computeMetrics } from '@/core/capital/metrics.js';
 import { Fund, WITH_JOB } from './helpers.js';
 
@@ -21,9 +22,13 @@ const cand = (
   id: string,
   o: { price: number; gross: number; sold: number; active: number },
   policyVersion: string | null = DEFAULT_POLICY.version,
+  // ⚠️ Defaults to the CURRENT identity, so the helper keeps meaning "a
+  // freshly scored row". A test about staleness passes something else.
+  rulesVersion: string | null = rulesIdentity(),
 ): WatchCandidate => ({
   opportunityId: id,
   policyVersion,
+  rulesVersion,
   input: parseOpportunity({
     opportunityId: id,
     name: id,
@@ -88,6 +93,34 @@ describe('being honest about what it recomputed', () => {
 
   it('does not flag a row scored under the current rules', () => {
     const v = run([cand('current', { price: 3_000, gross: 12_000, ...FAST })]);
+    expect(v.rows[0]!.stale).toBe(false);
+  });
+
+  // ⛔ **B88. The policy version alone was not enough**, and 2026-09-11 proved
+  // it: the CODE changed what a verdict means twice while `Policy.version` sat
+  // still, so every stored score read as current.
+  it('⛔ flags a row whose RULES moved, even with the policy version matching', () => {
+    const v = run([
+      cand('rules-moved', { price: 3_000, gross: 12_000, ...FAST }, DEFAULT_POLICY.version, 'aaaaaaaa'),
+    ]);
+    expect(v.rows[0]!.stale).toBe(true);
+  });
+
+  it('⛔ flags a row with NO rules identity — absence is not agreement', () => {
+    // Every row written before migration 007. "Scored under rules we can no
+    // longer name" must not read as "scored under today's".
+    const v = run([
+      cand('pre-007', { price: 3_000, gross: 12_000, ...FAST }, DEFAULT_POLICY.version, null),
+    ]);
+    expect(v.rows[0]!.stale).toBe(true);
+  });
+
+  it('and the control — both matching is NOT stale', () => {
+    // Without this the three above pass for an implementation that marks
+    // everything stale, which is a flag nobody reads.
+    const v = run([
+      cand('fresh', { price: 3_000, gross: 12_000, ...FAST }, DEFAULT_POLICY.version, rulesIdentity()),
+    ]);
     expect(v.rows[0]!.stale).toBe(false);
   });
 });

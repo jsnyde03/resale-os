@@ -135,20 +135,19 @@ as scored under today's rules.**
 STORED codes, so it mixes rule sets and under-counts the new one. That chart
 answers *"why is nothing passing?"*, so a silent mix is the wrong kind of wrong.
 
-- [ ] **6.10.1** A rules identity derived from the CODE — a short hash over
-      `CONSTRAINT_CODES` and the evaluator's shape. ⛔ **Not a hand-maintained
-      version string**: this project has watched an enumerated list go stale five
-      times, and a number somebody must remember to bump is that same list with
-      one entry.
-- [ ] **6.10.2** Store it with each score, beside `policy_version`.
-      ⚠️ **A migration adds a column, and every existing row has none** — an
-      absent identity must read as *"unknown, treat as stale"*, never as a match.
-- [ ] **6.10.3** Staleness reads BOTH. ⛔ And the histogram must say when it is
-      mixing rule sets rather than silently averaging them.
-- [ ] **6.10.4** Plant both directions: changing the code's rules must mark old
-      scores stale, **and** the control — an unchanged rule set must not mark
-      everything stale, which would make the flag useless.
-- [ ] **6.10.5** On-device verification — this one IS on the device path.
+- [x] **6.10.1** ✅ **Done 2026-09-11, and the plan's own design was too weak.**
+      Hashing `CONSTRAINT_CODES` would catch 6.1.0 and **miss 6.6** — the change
+      that motivated the item. So the identity is taken from **behaviour**: run
+      the evaluator over a fixed reference candidate and fingerprint the verdict.
+- [x] **6.10.2** ✅ **Done 2026-09-11.** Migration 007, carried on `Evaluation`
+      and stored on the row. NULL reads as stale, never as a match.
+- [x] **6.10.3** ✅ **Done 2026-09-11.** Staleness reads both, and the histogram
+      **says on the headline** when it is mixing rather than hiding the chart.
+- [x] **6.10.4** ✅ **Done 2026-09-11.** Planted on the fingerprint (a new gate
+      moves it, a changed outcome moves it, **an unrelated string does not**), on
+      the write path, and on the watchlist — each with its control.
+- [ ] **6.10.5** On-device verification — the case is written; this one IS on the
+      device path, so the lane covers it.
 
 **Exit:** a stored verdict can be told apart from one today's rules would give,
 and the histogram never silently mixes the two.

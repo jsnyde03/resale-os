@@ -20,6 +20,7 @@ import { formatCents, type Cents } from '../core/money.js';
 import type { FundState } from '../core/capital/state.js';
 import type { Evaluation } from '../scoring/evaluate.js';
 import type { OpportunityInput } from '../domain/opportunity.js';
+import { rulesAreStale } from '../core/capital/rules-identity.js';
 import { assessUnlock, fundAtNav, worthWatching } from './unlock.js';
 
 export interface WatchRow {
@@ -52,6 +53,12 @@ export interface WatchCandidate {
   readonly opportunityId: string;
   readonly input: OpportunityInput;
   readonly policyVersion: string | null;
+  /**
+   * ⛔ **The RULES the score was made under**, which `policyVersion` cannot
+   * say — it is stored config and moves only when a number is edited. **B88**.
+   * `null` on every row written before migration 007, and that reads as stale.
+   */
+  readonly rulesVersion: string | null;
 }
 
 /**
@@ -86,7 +93,13 @@ export function watchlist(
       askingPriceCents: c.input.askingPriceCents,
       unlocksAtCents: assessment.unlock.navCents,
       shortfallCents: Math.max(0, assessment.unlock.navCents - navCents),
-      stale: c.policyVersion !== null && c.policyVersion !== state.policy.version,
+      // ⛔ **BOTH, because they answer different questions.** The policy
+      // version says whether the NUMBERS moved; the rules identity says
+      // whether the CODE did. On 2026-09-11 the code changed twice with the
+      // policy untouched, and every stored score read as current. **B88**.
+      stale:
+        (c.policyVersion !== null && c.policyVersion !== state.policy.version) ||
+        rulesAreStale(c.rulesVersion),
     });
   }
 

@@ -12,6 +12,7 @@
 import type { Bps, Cents } from '../core/money.js';
 import type { FundState } from '../core/capital/state.js';
 import { computeMetrics, type CapitalMetrics } from '../core/capital/metrics.js';
+import { rulesIdentity } from '../core/capital/rules-identity.js';
 import {
   abstained,
   assessPurchase,
@@ -39,6 +40,13 @@ export interface Evaluation {
   readonly metrics: CapitalMetrics;
   /** The policy version that produced this. A score means nothing without it. */
   readonly policyVersion: string;
+  /**
+   * ⛔ **And the RULES that produced it, which `policyVersion` cannot say.**
+   * Stored config moves when the operator edits a number; this moves when the
+   * CODE changes what a verdict means. Both are needed to tell a stored verdict
+   * apart from one today would give. **B88**.
+   */
+  readonly rulesVersion: string;
 }
 
 export function evaluateOpportunity(input: OpportunityInput, state: FundState): Evaluation {
@@ -158,6 +166,7 @@ export function evaluateOpportunity(input: OpportunityInput, state: FundState): 
     result,
     metrics,
     policyVersion: state.policy.version,
+    rulesVersion: rulesIdentity(),
   };
 }
 

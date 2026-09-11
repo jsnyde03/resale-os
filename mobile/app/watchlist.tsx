@@ -38,6 +38,7 @@ export default function WatchlistScreen() {
           opportunityId: r.opportunity_id,
           input: parseOpportunity(JSON.parse(r.input_json)),
           policyVersion: r.policy_version,
+          rulesVersion: r.rules_version,
         });
       } catch {
         continue;

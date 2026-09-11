@@ -4,6 +4,7 @@ import { openDb } from '@/db/driver.js';
 import { migrate } from '@/db/migrate.js';
 import { parseOpportunity } from '@/domain/opportunity.js';
 import { evaluateOpportunity } from '@/scoring/evaluate.js';
+import { rulesIdentity, rulesAreStale } from '@/core/capital/rules-identity.js';
 import { T0 } from './helpers.js';
 import { accuracyReport } from '@/core/capital/accuracy.js';
 
@@ -338,5 +339,39 @@ describe('B77 — a floored count survives being stored and re-read', () => {
       store.state(),
     );
     expect(replayed.gates.failures.map((f) => f.code)).toContain('VELOCITY_COUNTS_UNBOUNDED');
+  });
+});
+
+describe('B88 — a score records the RULES that produced it, not just the policy', () => {
+  it('⛔ stores the rules identity, read back by a separate reader', () => {
+    // ⚠️ 677 tests went green on the column plumbing alone, because a wrong
+    // count throws and a dropped VALUE does not. This asserts the value lands.
+    const store = freshStore();
+    const e = save(store, opp());
+    const row = store.opportunities().get('o1')!;
+
+    expect(row.rules_version).toBe(rulesIdentity());
+    expect(row.rules_version).toMatch(/^[0-9a-f]{8}$/);
+    // And it is a DIFFERENT fact from the policy version, which is the point.
+    expect(row.rules_version).not.toBe(row.policy_version);
+    expect(e.rulesVersion).toBe(row.rules_version);
+  });
+
+  it('⛔ a row with no identity is stale, not a match', () => {
+    // Every score written before migration 007 has NULL here. "Scored under
+    // rules we can no longer name" is exactly B88's situation, and reading it
+    // as agreement would re-create the bug.
+    const store = freshStore();
+    save(store, opp());
+    store.db.run('UPDATE opportunities SET rules_version = NULL WHERE opportunity_id = ?', ['o1']);
+    const row = store.opportunities().get('o1')!;
+    expect(row.rules_version).toBeNull();
+    expect(rulesAreStale(row.rules_version)).toBe(true);
+  });
+
+  it('and the control — a freshly written row is NOT stale', () => {
+    const store = freshStore();
+    save(store, opp());
+    expect(rulesAreStale(store.opportunities().get('o1')!.rules_version)).toBe(false);
   });
 });

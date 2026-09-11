@@ -65,12 +65,22 @@ export interface RejectionsView {
   readonly unreadableRows: number;
   /** Whether there is enough on record to believe the shape of it. */
   readonly conclusive: boolean;
+  /**
+   * ⛔ **True when these refusals were scored under more than one rule set.**
+   *
+   * The codes record what the rules said THEN, so a chart summing across rule
+   * sets under-counts whichever gate is newest — and this chart is how the fund
+   * answers *"why is nothing passing?"*. ⚠️ It is not a reason to hide the
+   * chart; it is a reason to say so on it. **B88**.
+   */
+  readonly mixedRuleSets: boolean;
   /** The one line worth reading. */
   readonly headline: string;
 }
 
 export function rejectionsView(histogram: RejectionHistogram): RejectionsView {
   const { codes, rejectedRows, unreadableRows } = histogram;
+  const mixedRuleSets = histogram.ruleSets > 1;
 
   const rows: RejectionRow[] = codes.map((c) => ({
     code: c.code,
@@ -83,9 +93,15 @@ export function rejectionsView(histogram: RejectionHistogram): RejectionsView {
   const readable = unreadableRows === 0;
   const conclusive = rejectedRows >= MIN_FOR_A_CONCLUSION && rows.length > 0;
 
-  return { rows, rejectedRows, readable, unreadableRows, conclusive, headline: headlineFor(
-    rows, rejectedRows, unreadableRows, conclusive,
-  ) };
+  return {
+    rows,
+    rejectedRows,
+    readable,
+    unreadableRows,
+    conclusive,
+    mixedRuleSets,
+    headline: headlineFor(rows, rejectedRows, unreadableRows, conclusive, mixedRuleSets),
+  };
 }
 
 function headlineFor(
@@ -93,6 +109,7 @@ function headlineFor(
   rejectedRows: number,
   unreadableRows: number,
   conclusive: boolean,
+  mixedRuleSets: boolean,
 ): string {
   // ⛔ The broken case first. It must never be reported as "nothing is refused".
   if (unreadableRows > 0 && rows.length === 0) {
@@ -117,5 +134,18 @@ function headlineFor(
     const list = tied.map((r) => r.wording).join(', ');
     return `All ${top.n} of ${rejectedRows} refusals failed the same ${tied.length} rules: ${list}.`;
   }
-  return `Most of what you look at ${top.wording} — ${top.n} of ${rejectedRows} refusals.`;
+  return `${sentence(top, rejectedRows)}${mixed(mixedRuleSets)}`;
 }
+
+const sentence = (top: RejectionRow, rejectedRows: number): string =>
+  `Most of what you look at ${top.wording} — ${top.n} of ${rejectedRows} refusals.`;
+
+/**
+ * ⛔ **Said on the chart, not hidden from it.** The codes record what the rules
+ * said THEN, so counting across rule sets under-counts the newest gate. The
+ * honest move is to keep showing the shape and warn that it is mixed — a chart
+ * withheld teaches nothing, and a chart that quietly averages two rule sets
+ * teaches the wrong thing. **B88**.
+ */
+const mixed = (mixedRuleSets: boolean): string =>
+  mixedRuleSets ? ' ⚠️ Scored under more than one rule set — the counts mix them.' : '';
