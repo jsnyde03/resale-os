@@ -199,6 +199,20 @@ Break any of these and the product stops being what it is.
 
 ## Things that cost real time to rediscover
 
+- ⛔ **A SIGNAL THAT APPEARS NEXT TO A FAILURE IS NOT A FAILURE SIGNAL.** The
+  device lane prints `Status=4294967295, isTerminal=YES` on **every** run,
+  including the ones that pass 52/52. Two separate fixes treated it as a sick
+  boot because each looked at a FAILING run and **neither looked at a passing
+  one, where the same line is sitting in the log**. The second fix made the lane
+  worse: it tore down a simulator that was merely slow. ⚠️ **Planting the parser
+  is not planting the premise** — the parser was tested against synthetic
+  sick/healthy text and worked perfectly while the claim it encoded was false.
+  ⛔ **Before keying on any log line, read a GREEN run.** B87.
+- ⚠️ **The expensive check is the one that gets skipped, which is when it
+  matters most.** Three mechanisms were stated confidently and wrong in one
+  session; the two that were cheap to verify locally were caught before
+  shipping, and the one that needed a 15-minute macOS run was not — because
+  reasoning felt cheaper than measuring. **Cost is not evidence.**
 - ⛔ **`**B77**/**B79**` inside a block comment is `*/`.** Two bolded ids
   separated by a slash produce the comment terminator, the doc comment ends
   thirty lines early, and TypeScript reports eight syntax errors starting at a
