@@ -292,6 +292,17 @@ ever announces that the day arrived. A threshold the app already computes does.
 
 Filed, not forgotten. Nothing here is in a gate until it is promoted.
 
+- **B96** ⛔ **The aisle screen invites the worst-case lookup.** *Look up the
+  market* sits ABOVE *Condition*, which defaults to *Not sure*, and the lookup
+  reads the condition **at the moment it is tapped** — so the natural
+  top-to-bottom order (scan, then look up) draws comps from **any** condition:
+  the mixed market B90 measured at a 234x spread, a dispersion term of zero,
+  and **no resale fill**, because `fillFromMarket` withholds resale for `any`.
+  ⚠️ **Changing the condition afterwards does not refetch**, so correcting it
+  costs a second lookup — 2 more requests of ~50 a month. Fix at the next
+  build: Condition above the lookup, or a lookup that will not run on *Not
+  sure*, or a refetch when the condition changes. **Until then: set Condition
+  first.** Found 2026-09-11 writing Jason's Walmart guide.
 - ~~**B95**~~ ✅ **Closed 2026-09-11.** ⛔ **The fund could not receive money on
   the phone.** No screen issued a contribution after 5.10, so D3's $25 sat under
   "waiting on Jason" while being impossible to record. **Money in** mirrors

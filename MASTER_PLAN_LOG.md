@@ -6385,3 +6385,30 @@ of unpacking the binary. It answered.
 
 ⏳ **Still open on the device:** the $25 through Money in (B95's first real use), and a
 real scan (6.11.6).
+
+## 2026-09-11 — B96: the screen order leads to the worst lookup
+
+Found writing Jason a guide for the Walmart trip, which is the first time anyone read
+the aisle screen **top to bottom as an operator would** rather than as the code that
+built it.
+
+⛔ *Look up the market* renders above *Condition*. *Condition* defaults to *Not sure*,
+which maps to `any` comps. The lookup passes `COMPS_FOR[condition]` from the state at
+the moment of the tap, and nothing re-runs it when the condition changes. So the order
+the screen suggests — scan, return, look up, scroll, set Sealed, check — produces
+exactly the case B90 measured as worthless: mixed markets, a coefficient of variation
+around 1.24, a dispersion term of zero, and **no resale price at all**, since
+`fillFromMarket` deliberately withholds resale for `any`.
+
+⚠️ **And it costs money twice.** The first lookup spends 2 requests on the wrong market;
+setting the condition afterwards does not refetch, so the correct one spends 2 more. On
+a ~50-item month that is a real fraction burnt by a layout.
+
+⚡ **B90 fixed the data and left the path to it unguarded.** Every piece is individually
+right — the default *should* be *Not sure* (narrowing on the operator's behalf would be
+guessing), and the lookup *should* honour the condition. It is the ORDER that is wrong,
+and no test reads a screen in order.
+
+**Not fixed now:** the phone is already running a build, and a fix needs another. Jason
+was given the workaround — set Condition first — and the three candidate fixes are on
+the backlog entry.
