@@ -132,3 +132,65 @@ describe('soldNeededForHold is the number to look for in the field', () => {
     expect(soldNeededForHold(10, 20)).toBeGreaterThan(soldNeededForHold(10, 2));
   });
 });
+
+describe('a count can be a floor, and only one direction is dangerous', () => {
+  it('defaults to exact, so every existing caller is unchanged', () => {
+    const v = estimateFromComps(45, 5);
+    expect(v.activeIsFloor).toBe(false);
+    expect(v.soldIsFloor).toBe(false);
+    expect(v.boundsAreOptimistic).toBe(false);
+  });
+
+  it('an ACTIVE floor makes the estimate optimistic', () => {
+    // "240,000+" active: the hold is the FASTEST this could sell, not the
+    // expected one, and the sell-through is the highest it could be.
+    const v = estimateFromComps(45, 5, { activeIsFloor: true });
+    expect(v.activeIsFloor).toBe(true);
+    expect(v.boundsAreOptimistic).toBe(true);
+  });
+
+  it('a SOLD floor does NOT — undercounting sales refuses a good item', () => {
+    // ⚠️ The asymmetry is the whole point, so it is asserted in both
+    // directions rather than once. Undercounting SOLD lengthens the hold and
+    // lowers the ratio; both refuse. Nothing needs to intervene.
+    const v = estimateFromComps(45, 5, { soldIsFloor: true });
+    expect(v.soldIsFloor).toBe(true);
+    expect(v.boundsAreOptimistic).toBe(false);
+  });
+
+  it('both floors at once is still driven by the active one', () => {
+    const v = estimateFromComps(45, 5, { activeIsFloor: true, soldIsFloor: true });
+    expect(v.boundsAreOptimistic).toBe(true);
+  });
+
+  it('carries the flags through the nothing-has-sold branch', () => {
+    // That branch returns early, which is exactly where a flag gets dropped.
+    const v = estimateFromComps(0, 5, { activeIsFloor: true });
+    expect(v.expectedDaysToSale).toBe(MAX_MODELLED_DAYS);
+    expect(v.boundsAreOptimistic).toBe(true);
+  });
+
+  it('an operator estimate has no counts to be a floor of', () => {
+    const v = estimateFromOperator(14);
+    expect(v.activeIsFloor).toBe(false);
+    expect(v.boundsAreOptimistic).toBe(false);
+  });
+
+  it('B77 measured: 500 active read as 200 turns a 150d hold into 60d', () => {
+    // The case that made this worth building. A GROWTH ceiling is 60 days.
+    //
+    // ⚠️ B77 recorded this as 300 sold giving 150d and 60d. That arithmetic
+    // dropped the `+ 1` — your own listing — and the ceiling, so the real
+    // figures at 300 sold are 151d and 61d, and 61 is OUTSIDE the ceiling,
+    // which would have made the example refuse itself. At 302 sold the
+    // illustration is honest: the capped reading passes and the true one does
+    // not. **The finding was right and its worked example was not.**
+    const truth = estimateFromComps(302, 500);
+    const capped = estimateFromComps(302, 200, { activeIsFloor: true });
+    expect(truth.expectedDaysToSale).toBe(150);
+    expect(capped.expectedDaysToSale).toBe(60);
+    // The capped reading is INSIDE the ceiling and wrong, and the only thing
+    // that can say so is the flag — the number itself looks fine.
+    expect(capped.boundsAreOptimistic).toBe(true);
+  });
+});

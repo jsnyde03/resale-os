@@ -135,3 +135,33 @@ describe('the hypothetical fund', () => {
     expect(s1.eventCount).toBe(s0.eventCount);
   });
 });
+
+describe('B77 — a measurement problem is NEVER, not not-yet', () => {
+  it('⛔ no bankroll fixes a floored count, so it is a closed answer', () => {
+    // ⚡ The composition worth asserting: `VELOCITY_COUNTS_UNBOUNDED` does not
+    // read the fund, so it fails identically at every NAV in the scan. That
+    // makes a floored item a NEVER — which is the right answer and the useful
+    // one, but only because the gate is NAV-independent. If it ever starts
+    // reading the fund, this test is what notices.
+    const input = parseOpportunity({
+      opportunityId: 'u',
+      name: 'u',
+      category: 'TOYS',
+      askingPriceCents: 1_000,
+      expectedGrossCents: 4_000,
+      soldLast90Days: 40,
+      activeListings: 3,
+      activeListingsIsFloor: true,
+    });
+    const a = assessUnlock(input, at(input), 5_000);
+    expect(a.unlock.kind).toBe('NEVER');
+    // ⛔ And it must not sit on the watchlist waiting for a day that cannot come.
+    expect(worthWatching(a)).toBe(false);
+  });
+
+  it('the same item with exact counts is buyable now', () => {
+    // The control. Without it the test above passes for any reason at all.
+    const a = assess({ price: 1_000, gross: 4_000, sold: 40, active: 3 }, 5_000);
+    expect(a.unlock.kind).toBe('NOW');
+  });
+});

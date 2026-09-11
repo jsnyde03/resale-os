@@ -50,6 +50,31 @@ export const OPERATOR_ESTIMATE_CONFIDENCE_BPS: Bps = 3_000;
 
 export type VelocitySource = 'COMPS' | 'OPERATOR_ESTIMATE';
 
+/**
+ * ⛔ **A COUNT CAN BE A FLOOR, AND THE TWO FLOORS ARE NOT EQUALLY SAFE.**
+ *
+ * A market count is not always exact. SoldComps returns `totalResults` as
+ * `"240,000+"` on a broad search — the `+` means *at least*, and the true number
+ * is unknown and larger. Both gates that use these counts are non-linear in
+ * them, and the two directions land on opposite sides of safe:
+ *
+ * - **SOLD undercounted** → the hold gets LONGER and sell-through gets LOWER.
+ *   Both refuse a good item. **Safe**, and needs no special handling.
+ * - **ACTIVE undercounted** → the hold gets SHORTER and sell-through gets
+ *   HIGHER. Both let a bad item through. **Unsafe**, and it is the whole reason
+ *   this type exists.
+ *
+ * Backlog **B77**. ⚠️ The estimate carries the facts *and* the conclusion
+ * (`boundsAreOptimistic`), because the direction is the part that is easy to get
+ * backwards and a consumer should never have to re-derive it.
+ */
+export interface CountBounds {
+  /** `activeListings` is known to be an undercount of an unknown true value. */
+  readonly activeIsFloor?: boolean;
+  /** `soldLast90Days` is known to be an undercount. Safe, but recorded. */
+  readonly soldIsFloor?: boolean;
+}
+
 export interface VelocityEstimate {
   readonly soldLast90Days: number;
   readonly activeListings: number;
@@ -62,6 +87,19 @@ export interface VelocityEstimate {
   /** How much the estimate should be trusted, driven by sample size. */
   readonly confidenceBps: Bps;
   readonly source: VelocitySource;
+  /** @see CountBounds */
+  readonly activeIsFloor: boolean;
+  /** @see CountBounds */
+  readonly soldIsFloor: boolean;
+  /**
+   * ⛔ **The conclusion, so no consumer has to get the direction right twice.**
+   *
+   * True when `expectedDaysToSale` is a LOWER bound and `sellThroughBps` an
+   * UPPER one — i.e. every gate reading this estimate is being shown the
+   * friendliest number consistent with what was measured, by an unknown margin.
+   * Derived here rather than stored, so it cannot drift from the facts above.
+   */
+  readonly boundsAreOptimistic: boolean;
 }
 
 export class VelocityError extends Error {
@@ -90,14 +128,24 @@ export function velocityConfidenceBps(soldLast90Days: number): Bps {
 export function estimateFromComps(
   soldLast90Days: number,
   activeListings: number,
+  bounds: CountBounds = {},
 ): VelocityEstimate {
   assertCount(soldLast90Days, 'soldLast90Days');
   assertCount(activeListings, 'activeListings');
+
+  const activeIsFloor = bounds.activeIsFloor === true;
+  const soldIsFloor = bounds.soldIsFloor === true;
+  // Only an ACTIVE floor flatters the numbers. See `CountBounds`.
+  const boundsAreOptimistic = activeIsFloor;
 
   const sellThroughBps = toBps(soldLast90Days, soldLast90Days + activeListings);
 
   // Nothing has sold: there is no rate to estimate. Say "no" loudly rather than
   // dividing by zero or quietly producing a small number.
+  //
+  // ⚠️ The bound flags still travel. A zero sold count is already the worst
+  // possible answer, so optimism cannot make it pass — but a consumer that
+  // reports WHY should not have the fact disappear on one branch.
   if (soldLast90Days === 0) {
     return {
       soldLast90Days,
@@ -107,6 +155,9 @@ export function estimateFromComps(
       expectedDaysP90: MAX_MODELLED_DAYS,
       confidenceBps: 0,
       source: 'COMPS',
+      activeIsFloor,
+      soldIsFloor,
+      boundsAreOptimistic,
     };
   }
 
@@ -125,6 +176,9 @@ export function estimateFromComps(
     expectedDaysP90,
     confidenceBps: velocityConfidenceBps(soldLast90Days),
     source: 'COMPS',
+    activeIsFloor,
+    soldIsFloor,
+    boundsAreOptimistic,
   };
 }
 
@@ -144,6 +198,11 @@ export function estimateFromOperator(expectedDaysToSale: number): VelocityEstima
     expectedDaysP90: Math.min(MAX_MODELLED_DAYS, Math.ceil(days * P90_MULTIPLIER)),
     confidenceBps: OPERATOR_ESTIMATE_CONFIDENCE_BPS,
     source: 'OPERATOR_ESTIMATE',
+    // There are no counts here to be a floor of. The low confidence is what
+    // holds this path back, and it already cannot clear a gate alone.
+    activeIsFloor: false,
+    soldIsFloor: false,
+    boundsAreOptimistic: false,
   };
 }
 

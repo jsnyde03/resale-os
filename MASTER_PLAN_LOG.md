@@ -4608,3 +4608,51 @@ trust.
 **Quota: 4 requests spent (2 for fixtures, 2 to measure B82's mechanism rather
 than assert it), 92 of 100 remaining.** Jason approved 2; the second pair bought
 the finding above, which is the one that would have shipped.
+
+### 6.1.0 — B77's channel, and what it turned out to compose with
+
+`VELOCITY_COUNTS_UNBOUNDED`. `CountBounds` enters at `estimateFromComps`, the
+estimate carries the facts (`activeIsFloor`, `soldIsFloor`) **and the
+conclusion** (`boundsAreOptimistic`), and `PurchaseCandidate` reads only the
+conclusion. Derived rather than stored, so it cannot drift from the facts.
+
+⚠️ **The gate fires only when the optimism was the deciding number** — if the
+hold or the ratio already refused the item at the friendly figure, the true
+figure refuses it harder and the verdict is unchanged. Firing anyway would put a
+non-binding refusal into **6.2**'s histogram, which exists to find the binding
+one. An ABSTAINED sell-through counts as "did not stop anything", which is the
+case that is easy to get backwards.
+
+**604 tests, +15.** Planted in both directions per the two-class rule: an ACTIVE
+floor flips a BUY to a REJECT, and a SOLD floor changes nothing — asserted
+explicitly, because a test suite that only ever checks the dangerous direction
+would pass just as well over a flag that fires on everything.
+
+### ⚡ Three things the implementation surfaced that reading would not have
+
+**A floored count is a NEVER, not a not-yet.** The gate does not read the fund,
+so it fails identically at every NAV `assessUnlock` scans — which makes a floored
+item a closed answer rather than a watchlist row waiting for a day that cannot
+come. That is the right behaviour and it is right *by consequence*, so there is
+now a test that notices if the gate ever starts reading the fund.
+
+**The opportunities row disagrees with itself, harmlessly.** `active_listings`
+is denormalised into its own column; the flag beside it is not, and lives only in
+`input_json`. Every reconstruction uses `input_json`, so a replayed score still
+refuses — **fine by accident until something asserted it**, which it now does.
+
+⛔ **B77's own worked example was wrong.** It recorded 300 sold against 500/200
+active as a 150-day hold read as 60. The real figures are **151 and 61**: the
+`+ 1` — your own listing, the whole point of the queue model — and the ceiling
+were both dropped. 61 days is already outside GROWTH's 60-day ceiling, so the
+illustration refused itself and could not have demonstrated what it claimed. The
+test uses 302 sold, where the capped reading genuinely passes. ⚠️ **The finding
+was sound and its arithmetic was not** — the fourth time on this item that a
+written number failed against a run one, after the vendor's own header names,
+`totalResults`' third form, and `totalItems` beside `scrapedCount`.
+
+### Still open in 6.1.3, filed rather than fixed
+
+A typed count is assumed exact. An operator reading `"72,000+"` off eBay types
+`72000` and the flag is silently gone — the form needs the same *"at least"* the
+API has. Filed onto **6.1.3**, where the screen is wired.

@@ -27,6 +27,7 @@ export const CONSTRAINT_CODES = [
   'ROI_BELOW_MIN',
   'CONFIDENCE_TOO_LOW',
   'SELL_THROUGH_TOO_LOW',
+  'VELOCITY_COUNTS_UNBOUNDED',
   'BUY_SCORE_TOO_LOW',
   'RISK_SCORE_TOO_HIGH',
 ] as const;
@@ -63,6 +64,19 @@ export interface PurchaseCandidate {
    * no ratio to test — the gate abstains rather than failing an unknown.
    */
   readonly sellThroughBps?: Bps;
+  /**
+   * ⛔ **Set when `expectedDaysToSale` is a LOWER bound and `sellThroughBps` an
+   * UPPER one** — the market counts behind them were a floor, so both gates are
+   * being shown the friendliest number consistent with the measurement.
+   *
+   * ⚠️ **This is the REVERSE of the sell-through rule above.** There, an absent
+   * ratio makes the gate abstain, because not knowing is neutral. Here not
+   * knowing is *optimistic*, and abstaining would hand the benefit of the doubt
+   * to the one direction that cannot afford it. **The direction the unknown
+   * leans is what decides whether abstaining is safe.** `VelocityEstimate`
+   * carries it as `boundsAreOptimistic`; backlog **B77**.
+   */
+  readonly boundsAreOptimistic?: boolean;
 }
 
 export interface ConstraintAssessment {
@@ -233,6 +247,36 @@ export function assessPurchase(
         p.minSellThroughBps,
         `sell-through ${(candidate.sellThroughBps / 100).toFixed(0)}% vs a ` +
           `${(p.minSellThroughBps / 100).toFixed(0)}% minimum in ${m.mode}`,
+      ),
+    );
+  }
+
+  // --- the counts underneath the hold and the ratio ------------------------
+  //
+  // ⛔ **An optimistic bound only matters when it is what let the item
+  // through.** If the hold or the ratio already refused the item at the
+  // friendly number, the true number refuses it harder and the verdict is
+  // unchanged — firing here as well would add a refusal that is not binding,
+  // and 6.2's histogram counts refusals to find the one that is.
+  {
+    const optimistic = candidate.boundsAreOptimistic === true;
+    // An absent gate abstained, which did not stop anything either.
+    const letThrough = (code: ConstraintCode): boolean =>
+      results.find((r) => r.code === code)?.passed !== false;
+    const itWasTheDecidingNumber =
+      letThrough('HOLD_TOO_LONG') && letThrough('SELL_THROUGH_TOO_LOW');
+
+    results.push(
+      result(
+        'VELOCITY_COUNTS_UNBOUNDED',
+        !(optimistic && itWasTheDecidingNumber),
+        candidate.expectedDaysToSale,
+        p.maxHoldDays,
+        optimistic
+          ? `the market counts are a floor, so ${candidate.expectedDaysToSale}d is the ` +
+            `FASTEST this could sell, not the expected hold — narrow the search ` +
+            `until the counts are exact`
+          : 'the market counts are exact',
       ),
     );
   }

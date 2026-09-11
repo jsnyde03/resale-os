@@ -47,11 +47,10 @@ wired.
 - [ ] **6.1** ⚡ **ACTIVE BUILD — the data route.** ⛔ eBay is gone (**D16**), so
       **SoldComps is the only automated source** and serves both halves. The
       contract is MEASURED, not assumed — four real requests on 2026-09-11.
-  - [ ] **6.1.0** ⛔ **B77's channel, and it is not in the adapter.**
-        `PurchaseCandidate` cannot say *"this number is a lower bound"*, so a
-        capped ACTIVE count makes the hold a floor **and** sell-through a
-        ceiling — **both gates wrongly PASS**. Carry the flag `core → domain →
-        scoring` and make the gate refuse. No network, no key, no quota.
+  - [x] **6.1.0** ✅ **Done 2026-09-11. Closes B77.** `VELOCITY_COUNTS_UNBOUNDED`
+        — an optimistic unknown is refused rather than waved through, and only
+        when it was the deciding number. 604 tests (+15), planted both
+        directions. ⚡ A floored count is a **NEVER**, not a not-yet.
   - [ ] **6.1.1** The client behind an ADAPTER in `src/adapters/` — empty since
         the beginning, and it red-gates on arrival until its import rules are
         declared. `GET api.sold-comps.com/v1/scrape`, `Authorization: Bearer`.
@@ -72,6 +71,9 @@ wired.
         degrades to the manual path rather than breaking the screen.
   - [ ] **6.1.3** Wire it into the aisle screen as FILLED fields the operator can
         overwrite — never as a gate input the network owns.
+        ⚠️ **A typed count is assumed exact, and an operator reading `"72,000+"`
+        off eBay types `72000`** — which silently discards 6.1.0's flag. The
+        form needs the same "at least" the API has.
   - [ ] **6.1.4** On-device verification.
 
 **Exit:** the screen fills what it can from SoldComps, says where every number
@@ -401,6 +403,13 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   ⚡ **Fix is free**: call ACTIVE first, pin SOLD to the category it declares.
   → folded into **6.1.1**, which is why this is filed as measured rather than
   deferred.
+- ~~**B77**~~ ✅ **Closed 2026-09-11 in 6.1.0** by `VELOCITY_COUNTS_UNBOUNDED`.
+  ⚠️ **Its worked example below was arithmetically wrong** — 300 sold against
+  500/200 active is **151d and 61d**, not 150 and 60, because the `+ 1` (your
+  own listing) and the ceiling were dropped. At 61d the "safe" reading is
+  already outside GROWTH's ceiling, so the example refused itself. The test uses
+  **302 sold**, where the capped reading really does pass and the true one does
+  not. **The finding was right and its illustration was not.**
 - **B77** ⛔ **THE TWO CAPS PUSH OPPOSITE WAYS, and one of them is unsafe.**
   SoldComps caps SOLD at 40/page and ACTIVE at 200/page. Hold time is
   `90 × (active + 1) / sold90`, so **undercounting SOLD refuses a good item

@@ -66,6 +66,15 @@ export const opportunityInputSchema = z
     // --- evidence ----------------------------------------------------------
     soldLast90Days: z.number().int().nonnegative().nullable().default(null),
     activeListings: z.number().int().nonnegative().default(0),
+    /**
+     * ⛔ Set when a count is known to be an undercount — a data source that
+     * answers `"240,000+"` rather than a number. Only the ACTIVE one is
+     * dangerous; see `CountBounds` in `core/velocity.ts` for why the two
+     * directions are not symmetric. Defaults to exact, so every existing
+     * caller keeps the behaviour it had.
+     */
+    activeListingsIsFloor: z.boolean().default(false),
+    soldLast90DaysIsFloor: z.boolean().default(false),
     /** Only used when comp counts are absent. Carries low confidence. */
     operatorDaysEstimate: z.number().int().positive().nullable().default(null),
     compPricesCents: z.array(centsSchema).default([]),
@@ -130,7 +139,10 @@ export function deriveEconomics(input: OpportunityInput): OpportunityEconomics {
 
   const velocity =
     input.soldLast90Days !== null
-      ? estimateFromComps(input.soldLast90Days, input.activeListings)
+      ? estimateFromComps(input.soldLast90Days, input.activeListings, {
+          activeIsFloor: input.activeListingsIsFloor,
+          soldIsFloor: input.soldLast90DaysIsFloor,
+        })
       : estimateFromOperator(input.operatorDaysEstimate ?? 7);
 
   return {

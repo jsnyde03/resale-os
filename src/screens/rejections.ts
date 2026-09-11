@@ -41,6 +41,7 @@ const WORDING: Readonly<Record<string, string>> = {
   ROI_BELOW_MIN: 'the return is too thin',
   CONFIDENCE_TOO_LOW: 'not enough evidence',
   SELL_THROUGH_TOO_LOW: 'too few sell',
+  VELOCITY_COUNTS_UNBOUNDED: 'the market counts were not exact',
   BUY_SCORE_TOO_LOW: 'scores too low overall',
   RISK_SCORE_TOO_HIGH: 'too risky',
 };

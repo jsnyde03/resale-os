@@ -124,6 +124,9 @@ export function evaluateOpportunity(input: OpportunityInput, state: FundState): 
       ...(economics.velocity.source === 'COMPS'
         ? { sellThroughBps: economics.velocity.sellThroughBps }
         : {}),
+      // ⛔ NOT abstained on, and that is the point — an unknown that leans
+      // optimistic has to be refused rather than waved through. B77.
+      boundsAreOptimistic: economics.velocity.boundsAreOptimistic,
     },
     metrics,
   );

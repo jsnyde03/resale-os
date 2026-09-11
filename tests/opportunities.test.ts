@@ -319,3 +319,24 @@ describe('the authorizations table exists and nothing writes to it', () => {
     expect(store.opportunities().get('o1')!.status).toBe('ARMED');
   });
 });
+
+describe('B77 — a floored count survives being stored and re-read', () => {
+  it('⛔ the flag is in input_json, so a replayed score still refuses', () => {
+    // ⚠️ The row denormalises `active_listings` into its own column but NOT
+    // the flag beside it, and `input_json` is what every reconstruction
+    // actually uses. That is fine — and it is fine by accident unless
+    // something asserts it, because the two representations disagree.
+    const store = freshStore();
+    save(store, opp({ activeListingsIsFloor: true }));
+    const row = store.opportunities().get('o1')!;
+
+    expect(row.recommendation).toBe('REJECT');
+    expect(JSON.parse(row.input_json).activeListingsIsFloor).toBe(true);
+
+    const replayed = evaluateOpportunity(
+      parseOpportunity(JSON.parse(row.input_json)),
+      store.state(),
+    );
+    expect(replayed.gates.failures.map((f) => f.code)).toContain('VELOCITY_COUNTS_UNBOUNDED');
+  });
+});

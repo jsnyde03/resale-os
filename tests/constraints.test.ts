@@ -141,6 +141,7 @@ describe('each rejection code fires', () => {
       candidate({ expectedNetProfitCents: 0 }),
       candidate({ expectedRoiBps: 0 }),
       candidate({ confidenceBps: 0, buyScore: 0, riskScore: 100, sellThroughBps: 0 }),
+      candidate({ boundsAreOptimistic: true }),
     ]) {
       for (const code of failed(assessPurchase(f.state, c))) triggered.add(code);
     }
@@ -313,5 +314,63 @@ describe('growth mode relaxes the right things and not others', () => {
       }),
     );
     expect(failed(a)).toContain('LONG_HOLD_ALLOCATION_EXCEEDED');
+  });
+});
+
+describe('VELOCITY_COUNTS_UNBOUNDED — an optimistic unknown is refused, not waved through', () => {
+  const fund = () => Fund.withBankroll(7_500);
+
+  it('passes when the counts are exact', () => {
+    const a = assessPurchase(fund().state, candidate({ sellThroughBps: 9_000 }));
+    expect(failed(a)).toEqual([]);
+  });
+
+  it('⛔ refuses the SAME candidate once the active count is a floor', () => {
+    // The plant. Nothing about the numbers changed — only whether they are
+    // known to be exact — and that alone has to flip the verdict, because the
+    // hold it passed on is the fastest this could possibly sell.
+    const exact = candidate({ sellThroughBps: 9_000 });
+    const floored = candidate({ sellThroughBps: 9_000, boundsAreOptimistic: true });
+    expect(failed(assessPurchase(fund().state, exact))).toEqual([]);
+    expect(failed(assessPurchase(fund().state, floored))).toEqual([
+      'VELOCITY_COUNTS_UNBOUNDED',
+    ]);
+  });
+
+  it('says what would fix it, not just that it failed', () => {
+    const a = assessPurchase(
+      fund().state,
+      candidate({ sellThroughBps: 9_000, boundsAreOptimistic: true }),
+    );
+    const r = a.failures.find((f) => f.code === 'VELOCITY_COUNTS_UNBOUNDED');
+    expect(r?.message).toContain('narrow the search');
+  });
+
+  it('stays quiet when the hold ALREADY failed — the true number fails harder', () => {
+    // ⚠️ Not binding, and 6.2's histogram counts refusals to find the one that
+    // is. A gate that fires on top of a decision it did not change is noise in
+    // the only instrument that says why nothing passes.
+    const a = assessPurchase(
+      fund().state,
+      candidate({ expectedDaysToSale: 22, sellThroughBps: 9_000, boundsAreOptimistic: true }),
+    );
+    expect(failed(a)).toContain('HOLD_TOO_LONG');
+    expect(failed(a)).not.toContain('VELOCITY_COUNTS_UNBOUNDED');
+  });
+
+  it('stays quiet when sell-through already failed', () => {
+    const a = assessPurchase(
+      fund().state,
+      candidate({ sellThroughBps: 0, boundsAreOptimistic: true }),
+    );
+    expect(failed(a)).toEqual(['SELL_THROUGH_TOO_LOW']);
+  });
+
+  it('fires when sell-through ABSTAINED — abstaining did not stop anything', () => {
+    // An absent ratio is the operator-estimate path, where the gate abstains
+    // because not knowing is neutral. Here not knowing is optimistic, so the
+    // absence must not be read as a refusal that already happened.
+    const a = assessPurchase(fund().state, candidate({ boundsAreOptimistic: true }));
+    expect(failed(a)).toEqual(['VELOCITY_COUNTS_UNBOUNDED']);
   });
 });

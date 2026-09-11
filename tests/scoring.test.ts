@@ -418,3 +418,34 @@ describe('the opportunity schema', () => {
     expect(e.modeledDownsideCents).toBeGreaterThan(0);
   });
 });
+
+describe('B77 — a floored active count travels from the input to the verdict', () => {
+  it('⛔ the SAME flip is a BUY exact and a REJECT once active is a floor', () => {
+    // ⚠️ The unit test proves the gate. This proves the WIRING — that the flag
+    // survives `parseOpportunity` -> `deriveEconomics` -> `estimateFromComps`
+    // -> `PurchaseCandidate` -> `assessPurchase`. A gate nothing reaches is a
+    // gate that does not exist, which this project has shipped before.
+    const fund = Fund.withBankroll(5_000);
+
+    const exact = evaluateOpportunity(goodOpportunity(), fund.state);
+    expect(exact.result.recommendation).toBe('BUY');
+
+    const floored = evaluateOpportunity(
+      goodOpportunity({ activeListingsIsFloor: true }),
+      fund.state,
+    );
+    expect(floored.economics.velocity.boundsAreOptimistic).toBe(true);
+    expect(floored.gates.failures.map((f) => f.code)).toContain('VELOCITY_COUNTS_UNBOUNDED');
+    expect(floored.result.recommendation).toBe('REJECT');
+    // The operator is told what to do about it, in the verdict itself.
+    expect(floored.result.reasons.join(' ')).toContain('narrow the search');
+  });
+
+  it('a floored SOLD count changes nothing — that direction refuses on its own', () => {
+    const fund = Fund.withBankroll(5_000);
+    const e = evaluateOpportunity(goodOpportunity({ soldLast90DaysIsFloor: true }), fund.state);
+    expect(e.economics.velocity.soldIsFloor).toBe(true);
+    expect(e.economics.velocity.boundsAreOptimistic).toBe(false);
+    expect(e.result.recommendation).toBe('BUY');
+  });
+});
