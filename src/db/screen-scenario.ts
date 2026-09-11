@@ -33,7 +33,8 @@ import {
   taxEdit,
   taxFieldsFrom,
 } from '../ui/settings.js';
-import { evaluateForm, fillFromMarket } from '../screens/sourcing.js';
+import { COMPS_FOR, evaluateForm, fillFromMarket } from '../screens/sourcing.js';
+import { applyScan, categoryBucket, scanOutcome } from '../screens/scan.js';
 import { buildScrapeUrl, readQuota } from '../adapters/soldcomps.js';
 import { parseCount } from '../core/counts.js';
 import { CONSTRAINT_CODES } from '../core/capital/constraints.js';
@@ -994,6 +995,101 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
       ]);
       const one = new OpportunityReader(db).rejectionHistogram();
       eq(one.ruleSets, 1, 'one rule set on a clean record');
+    },
+  },
+  {
+    // ⛔ 6.11.6 on the device — everything BELOW the camera.
+    //
+    // ⚠️ **A simulator has no camera**, so the lane cannot prove the scan
+    // itself; that needs TestFlight and a real barcode. What it CAN prove is
+    // every decision the scan drives, running on Hermes: the keyword derived
+    // from a title, the concentration bucket, what a scan is allowed to fill,
+    // and that a failed scan changes nothing.
+    name: 'sourcing: a scan proposes, and never decides',
+    run: (db) => {
+      const store = funded(db, 50_000);
+
+      const found = scanOutcome('673419209366', {
+        ok: true,
+        identity: {
+          barcode: '673419209366',
+          title: 'LEGO Star Wars 75038 - Jedi Interceptor',
+          brand: 'LEGO',
+          category: 'Toys & Games > Toys > Building Toys > Interlocking',
+        },
+      });
+      ok(found.kind === 'IDENTIFIED', 'a resolved barcode should identify');
+      if (found.kind !== 'IDENTIFIED') return;
+
+      // ⛔ B89: two defensible searches, offered rather than chosen. On this
+      // exact product they returned sold medians 68% apart.
+      eq(found.keyword, 'lego star wars 75038 jedi interceptor', 'the proposed search');
+      eq(found.alternativeKeyword, 'lego 75038', 'and the other reading, offered not applied');
+
+      // The concentration bucket is a bucket, not a taxonomy.
+      eq(categoryBucket(found), 'LEGO', 'brand beats the category path');
+
+      // ⛔ A scan fills blanks and never the asking price.
+      ok(!found.fills.includes('price'), 'the tag price is never scanned');
+      const blank = { name: '', category: '', price: '', resale: '', sold90: '', active: '' };
+      const filled = applyScan(blank, found);
+      eq(filled.name, 'LEGO Star Wars 75038 - Jedi Interceptor', 'the name is filled');
+      eq(filled.category, 'LEGO', 'and the bucket');
+
+      const typed = { ...blank, name: 'the one with the dented box', category: 'GAMES' };
+      eq(applyScan(typed, found), typed, 'a scan never replaces a judgement');
+
+      // ⛔ And a barcode the database has never heard of is NORMAL. Expect it
+      // on store brands and seasonal clearance.
+      const missing = scanOutcome('012345678905', {
+        ok: false,
+        reason: 'NOT_FOUND',
+        detail: 'nothing on record',
+      });
+      ok(missing.kind === 'UNIDENTIFIED', 'an unknown barcode does not identify');
+      if (missing.kind !== 'UNIDENTIFIED') return;
+      ok(missing.message.toLowerCase().includes('type the name'), 'it says what to do instead');
+      ok(!missing.canRetry, 'and asking twice will not find it');
+      eq(applyScan(typed, missing), typed, 'a failed scan changes nothing');
+
+      // ⚡ B90 on the device: the condition decides which market the comps
+      // describe, and that is what makes the resale fill honest.
+      eq(COMPS_FOR.SEALED, 'new', 'sealed retail is priced against new comps');
+      eq(COMPS_FOR.UNKNOWN, 'any', 'and an unstated condition narrows nothing');
+
+      const reading = {
+        ok: true as const,
+        reading: {
+          sold90: { value: 300, isFloor: false },
+          active: { value: 10, isFloor: false },
+          compPricesCents: [11_500, 12_000, 12_500],
+          compMedianAgeDays: 20,
+          provenance: {
+            keyword: 'lego 75038',
+            compCondition: 'new' as const,
+            categoryId: '183447',
+            categoryName: 'LEGO (R) Building Toys',
+            soldItemsSeen: 25,
+            activeItemsSeen: 40,
+            soldAfter: '2026-06-13',
+            fetchedAt: T0,
+          },
+          quota: { monthlyLimit: 100, monthlyRemaining: 86, resetAt: null },
+        },
+      };
+      const withPrice = fillFromMarket({ ...filled, price: '40.00' }, reading);
+      eq(withPrice.form.resale, '120.00', 'the resale fills from matched comps');
+      eq(withPrice.form.price, '40.00', 'and the tag price is untouched');
+
+      // ⛔ The whole point: a scan is not a verdict. The same evaluator, the
+      // same gates, on a form a scan happened to fill.
+      const r = evaluateForm(withPrice.form, store.state());
+      ok(r.ok, `the scanned form should parse: ${r.ok ? '' : r.problems.map((p) => p.message).join('; ')}`);
+      if (!r.ok) return;
+      ok(
+        r.evaluation.gates.results.length > 0,
+        'and it is judged by the gates, not by the scanner',
+      );
     },
   },
 ];

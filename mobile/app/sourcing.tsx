@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 import {
@@ -10,8 +10,10 @@ import {
   type SourcingForm,
 } from '../../src/screens/sourcing.js';
 import { lookUpMarket } from '../../src/adapters/soldcomps.js';
+import { applyScan, scanOutcome } from '../../src/screens/scan.js';
 import { opportunityIdFrom } from '../../src/core/ids.js';
 import { formatCents } from '../../src/core/money.js';
+import { COMPS_FOR } from '../../src/screens/sourcing.js';
 import {
   CONDITIONS,
   CONDITION_LABELS,
@@ -98,6 +100,24 @@ export default function Sourcing() {
   const [fill, setFill] = useState<FillStatus | null>(null);
   const [looking, setLooking] = useState(false);
 
+  /**
+   * ⚡ **6.11.4. What the scan screen found, if it sent us here.**
+   *
+   * ⛔ Arrives as parameters rather than shared state: the scan screen owns a
+   * camera and nothing else, and the form lives here. ⚠️ The keyword is kept
+   * SEPARATE from the name (**B84**) — the name is what the operator calls the
+   * thing, and the keyword decides which market gets measured, which on one
+   * real product moved the median 68% (**B89**).
+   */
+  const scanned = useLocalSearchParams<{
+    scanTitle?: string;
+    scanBrand?: string;
+    scanCategoryPath?: string;
+    scanKeyword?: string;
+  }>();
+  const [searchAs, setSearchAs] = useState('');
+  const [appliedScan, setAppliedScan] = useState<string | null>(null);
+
   const form: SourcingForm = useMemo(
     () => ({
       name,
@@ -112,6 +132,29 @@ export default function Sourcing() {
     }),
     [name, category, price, resale, sold, active, comps, condition, hassle],
   );
+
+  // ⛔ **Applied ONCE per scan, and only into blanks.** `applyScan` refuses to
+  // overwrite anything typed; this guard stops a re-render from re-applying it
+  // over an edit the operator made afterwards.
+  if (scanned.scanTitle !== undefined && appliedScan !== scanned.scanTitle) {
+    const out = scanOutcome(scanned.scanTitle, {
+      ok: true,
+      identity: {
+        barcode: '',
+        title: scanned.scanTitle,
+        brand: scanned.scanBrand === undefined || scanned.scanBrand === '' ? null : scanned.scanBrand,
+        category:
+          scanned.scanCategoryPath === undefined || scanned.scanCategoryPath === ''
+            ? null
+            : scanned.scanCategoryPath,
+      },
+    });
+    const filled = applyScan({ name, category, price, resale, sold90: sold, active }, out);
+    if (name.trim() === '') setName(filled.name);
+    if (category.trim() === '') setCategory(filled.category);
+    if (searchAs.trim() === '' && scanned.scanKeyword !== undefined) setSearchAs(scanned.scanKeyword);
+    setAppliedScan(scanned.scanTitle);
+  }
 
   // ⚠️ Nothing is evaluated until it is asked for, and the answer is HELD
   // rather than recomputed. A verdict that re-ran on every keystroke would
@@ -151,7 +194,14 @@ export default function Sourcing() {
     }
     setLooking(true);
     try {
-      const out = fillFromMarket(form, await lookUpMarket(name, { apiKey }));
+      // ⛔ The SEARCH term, not the name (B84) — they are different facts, and
+      // the search decides which market the numbers describe. And the
+      // condition decides which market the COMPS come from (B90).
+      const searchTerm = searchAs.trim() === '' ? name : searchAs.trim();
+      const out = fillFromMarket(
+        form,
+        await lookUpMarket(searchTerm, { apiKey }, COMPS_FOR[condition]),
+      );
       // ⛔ **A failed lookup must not take the verdict with it.** The promise is
       // that the network never makes this screen worse than it was without one,
       // and clearing an answer the operator already has because a shop has no
@@ -236,6 +286,21 @@ export default function Sourcing() {
             hint="Gross, before fees and postage."
             invalid={problemFor('resale') !== undefined}
           />
+          {/* ⛔ **B84, and B89 is why it is not optional.** The name is what YOU
+              call the thing; this is what eBay is asked. On one real product
+              two defensible searches from the same barcode gave sold medians
+              68% apart — and that median becomes the resale price. A scan may
+              propose this; it may never silently impose it. */}
+          <Field
+            label="Search eBay as"
+            value={searchAs}
+            onChangeText={edit(setSearchAs)}
+            placeholder={name.trim() === '' ? 'defaults to the name above' : name}
+            hint="What actually gets searched. A vague term measures a different market, and the result says which one it used."
+          />
+
+          <Button label="Scan a barcode" onPress={() => router.push('/scan')} />
+
           {/* ⚡ 6.1.3. Between the name and the counts, because it fills the
               counts and it searches on the name. ⛔ It is a SECOND button, not
               part of "Check it" — a lookup spends metered requests and a check

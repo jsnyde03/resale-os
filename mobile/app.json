@@ -14,6 +14,14 @@
         "LSSupportsOpeningDocumentsInPlace": true
       }
     },
-    "plugins": ["expo-router"]
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Resale OS reads barcodes so you do not have to type product names in a shop."
+        }
+      ]
+    ]
   }
 }

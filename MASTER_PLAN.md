@@ -160,14 +160,17 @@ median becomes the resale price. **A scan cannot silently produce an answer.**
       field is blank. 710 tests (+6), both claims planted.
       ⚠️ **Category-from-the-resolver moves to 6.11.4**, where the scan exists to
       supply it.
-- [ ] **6.11.4** The scan screen (`expo-camera`) and the wiring: scan → identity
-      → keyword → market → verdict, with the tag price the only typed field.
-- [ ] **6.11.5** ⛔ **Every failure degrades to typing** — no permission, UPC not
-      found, resolver down, quota gone. A rack SKU that will not resolve is the
-      normal case, not an error.
-- [ ] **6.11.6** ⚠️ **On-device verification needs a REAL DEVICE.** A simulator
-      has no camera, so the lane cannot prove this half — TestFlight and a
-      barcode. The contract still covers everything below the camera.
+- [x] **6.11.4** ✅ **Done 2026-09-11.** `expo-camera` 56.0.8, `app/scan.tsx`,
+      and `screens/scan.ts` holding every decision. ⚡ **B84 shipped with it** —
+      a *"Search eBay as"* field, separate from the name, because **B89** made it
+      a prerequisite rather than a nicety.
+- [x] **6.11.5** ✅ **Done 2026-09-11.** All five failures say what to do
+      instead; only the two that clear by themselves offer a retry. A refused
+      camera is a normal screen, not an error.
+- [ ] **6.11.6** ⚙️ **Written; the lane covers everything BELOW the camera** —
+      keyword, bucket, what a scan may fill, and that a failed scan changes
+      nothing. ⚠️ **The camera itself needs a real device**, so this closes at
+      the deploy, not on the lane.
 
 **Exit:** a clearance item goes from barcode to verdict with one number typed,
 the keyword visible, and no step that breaks when the scan fails.

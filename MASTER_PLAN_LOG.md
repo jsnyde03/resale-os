@@ -5603,3 +5603,48 @@ assertion on the device contract. Both caught by `tsc` and the suite, both fixed
 by hand. ⛔ **`prefer-edit-tool-over-scripts` earned its keep twice in one
 sub-step**, and the second mishap was only visible because the device case
 counts its parameters rather than trusting them.
+
+### 6.11.4-6.11.5 — the scan screen, and what it is allowed to do
+
+`expo-camera` 56.0.8, `mobile/app/scan.tsx`, and **`src/screens/scan.ts` holding
+every decision** — which fields a scan may fill, what each failure says, whether
+a retry is offered. The `.tsx` is a camera and typography.
+
+⚠️ **`npx expo install` exited non-zero and had already written `package.json`.**
+The dependency was there and `node_modules` was not, which is the *"verify the
+effect, not the exit"* shape again; `npm install --legacy-peer-deps` finished it.
+
+### ⛔ Two things the scan is not allowed to do, and why
+
+**It never overwrites a typed value.** `applyScan` fills blanks only — the same
+rule the market fill follows. A fetched value may fill a gap; it may not replace
+a judgement.
+
+**It never picks the keyword.** B89 measured two defensible searches from one
+barcode at sold medians **68% apart**, and that median becomes the resale price.
+So both are offered on screen and the operator taps one. ⚡ **B84 shipped with
+this** — a *"Search eBay as"* field separate from the name — because B89 turned
+it from a nicety into a prerequisite. The name is what the operator calls the
+thing; the search decides which market gets measured.
+
+### ⚡ The concentration bucket is a bucket, not a taxonomy
+
+The resolver returns `"Toys & Games > Toys > Building Toys > Interlocking"`.
+⛔ `CATEGORY_CONCENTRATION` caps how much of the fund sits in one category, so a
+path that is nearly unique per product would make every item its own category
+and **the gate could never fire**. Brand wins — the real exposure is "too much
+LEGO", not "too much Building Toys" — with the path's *second* segment as the
+fallback, never the first, which is a department every holding would share.
+
+⚠️ **Caught a doc/code disagreement in my own file**: the comment said "last
+segment of the category path" while the code read the brand, and `ScanOutcome`
+did not carry the category at all. Fixed so they agree.
+
+### 6.11.6 — what the lane can and cannot prove
+
+⛔ **A simulator has no camera.** The device case therefore covers everything
+BELOW it — the derived keyword, the bucket, what a scan may fill, that a failed
+scan changes nothing, and that the scanned form is still judged by the gates
+rather than by the scanner. **The camera itself closes at the deploy**, on a real
+device with a real barcode, and saying so is better than a green tick that means
+nothing.
