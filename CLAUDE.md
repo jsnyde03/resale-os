@@ -94,7 +94,23 @@ orientation.
 | **B26** | Verify the operator's state and local rates against the published table. Half closed — the local rate is confirmed; the state marginal is not. |
 | **D2** | The owner split (20/10/70) is still a default. Not live below $100 NAV, and the fund is at $50 — four to six flips away. |
 
-### The one thing a new session should not re-litigate
+### Two things a new session should not re-litigate
+
+⛔ **eBay's API is UNAVAILABLE, and not because the application was weak**
+(D16, 2026-09-11). The developer account was denied outright with a generic
+*"mismatched data"* reason, and the reading of the wider picture is that eBay is
+issuing **blanket denials to individual developers**. ⚠️ **Do not re-apply. Do not
+design around getting in.** D12 predicted this — *"the resellers work around eBay
+and the direction of travel is tightening"* — it just arrived early.
+
+⚡ **What follows from it:** **SoldComps is the only automated data route**
+(it serves both halves — `sold=true` and `sold=false`). So the manual path is a
+second leg rather than a fallback, and `src/adapters/` stops being good practice
+and becomes the thing that makes a vendor swap survivable. Alternatives exist if
+that vendor fails — Apify actors, CompSniper — unevaluated, and the adapter
+boundary is what buys the option.
+
+### The other thing a new session should not re-litigate
 
 ⛔ **Categories are deliberately deferred** (D5, 2026-09-08). The system gates on
 **sell-through**, not on a category list, and the architecture stays

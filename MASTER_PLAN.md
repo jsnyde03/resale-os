@@ -48,8 +48,10 @@ wired.
       Not just Marketplace Insights — the account, which takes Browse with it.
       ⚡ **Survivable: SoldComps returns ACTIVE listings too** (`sold=false`, up to
       200/page), so one vendor covers both halves and the denial costs the route,
-      not the data. ⚠️ **It buys a single-vendor dependency**, which makes D12's
-      *"the manual path stays wired"* load-bearing rather than cautious.
+      not the data. ⚠️ **eBay is not coming back — D16**: the denial was generic and the
+      pattern is blanket, so there is nothing to re-apply for. **SoldComps is the
+      ONLY automated route**, which makes D12's *"the manual path stays wired"* a
+      second leg rather than a fallback.
       ⛔ **And the two caps are not symmetric — B77 before any number reaches a
       gate.** Sub-steps in the log, retrieved at switch-in.
 
@@ -129,6 +131,7 @@ be skipped by omission.
 |---|---|---|
 | D1 | What the tax reserve covers | ✅ **Incremental annual tax, 2026-09-08.** SE tax + federal brackets + QBI + state. ⚠️ Income tax abstains until a `TaxProfile` is set — **D7** |
 | D14 | Which gate set decides a purchase, given the two paths disagree | ✅ **One evaluator everywhere — 2026-09-10.** `evaluateOpportunity` gates every purchase, typed or scored; `assessQuote`'s candidate stops being a decision path. ⚠️ **Deliberately stricter on the live fund:** a buy typed with no comps and middling sell-through now needs **D4**'s override with a reason. Measured first — 64 divergences in 96 cases, both directions (**B58**) |
+| D16 | Whether to keep pursuing first-party eBay API access | ⛔ **NO — treat it as UNAVAILABLE, 2026-09-11.** The developer account was denied outright with a generic *"mismatched data"* reason, and Jason's reading is that eBay is issuing **blanket denials to individual developers**. ⚠️ **Do not re-apply, and do not design around getting in.** It is not an application-quality problem to fix. ⚡ This is what **D12** predicted — *"the resellers work around eBay and the direction of travel is tightening"* — arriving sooner than expected. Consequence: **SoldComps is the only automated route**, the manual path is not a fallback but a second leg, and `src/adapters/` stops being good practice and becomes the thing that makes a vendor swap survivable |
 | D15 | Whether a backup carries scoring history | ✅ **No — scores are DEVICE-LOCAL, 2026-09-10.** The export is the commands plus config, and **everything in it is verified by regenerating it**. Opportunities are neither, and not derivable — a score records what was decided, when, under which policy — so carrying them would spend that guarantee on advisory data. ⚠️ A lost phone loses the rejection histogram and the watchlist, and **none of the fund**. The app says so on the backups screen |
 | D13 | How far the app goes in online drops | ⛔ **Monitoring and alerting IN; checkout automation OUT — 2026-09-09.** Being first to KNOW is clean and is most of the edge; automating checkout violates retailer terms, and the penalty is order cancellations, account bans and flagged payment methods. **For a fund that is a capital event** — risking the accounts and payment rails the whole operation runs on, to win one console. ⛔ Nothing that defeats anti-bot systems: no CAPTCHA solving, fingerprint spoofing, proxy rotation or multiple accounts. ⚡ And the strategy points the same way: online drops are where the competition is scripts; **in-store allocation is where it is people, and Jason is in stores all day** |
 | D12 | How the app values what it finds | ✅ **Browse API to find, SoldComps to value, own history to accumulate, manual as fallback — 2026-09-09.** ⛔ Sold comps are gated (Marketplace Insights is Limited Release and individual devs are denied; the logged-out sold search hit a login wall Aug 2026), and **without them the 45% confidence gate refuses nearly every purchase** — so this is a precondition, not an enhancement. Start on the free tier (100/mo); **Jason: "9 bucks is nothing"**, so Starter (2,000/mo) is pre-approved when it bites. ⚠️ The resellers work around eBay and the direction of travel is tightening — the manual path stays wired |

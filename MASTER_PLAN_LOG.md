@@ -4383,3 +4383,35 @@ attempt had a too-strict assert, threw, and nothing downstream ran.
 ⚠️ **Knowing the lesson did not apply it.** It was written down, in this file, in
 the previous entry, and the next command repeated it. **A rule holds when it is
 built into the mechanism; as a thing to remember it lasted about ten minutes.**
+
+### D16 — eBay is unavailable, and that is a fact rather than a setback
+
+The denial came back generic — *"mismatched data"* — and Jason's reading of the
+wider picture is that eBay is issuing **blanket denials to individual
+developers**. ⚠️ **That is a different fact from "the application was weak."**
+There is nothing to improve and nothing to re-apply for, so the useful thing is
+to stop treating it as pending and record it where a session would otherwise
+spend a day rediscovering it.
+
+⚡ **D12 called this**, on 2026-09-09: *"the resellers work around eBay and the
+direction of travel is tightening — the manual path stays wired."* It was written
+as a caution about the future and turned out to be a description of the present.
+
+**Two consequences, and the second is the interesting one.**
+
+SoldComps is now the **only** automated route. It happens to serve both halves —
+`sold=true` for the comps, `sold=false` for the active count — so the design
+survives, but every automated number the fund sees comes from one small vendor.
+The manual path is therefore a **second leg**, not a fallback: it is what the
+product falls back *to* when a single supplier changes its terms.
+
+⚡ **And `src/adapters/` stops being good practice.** Putting the client behind an
+adapter was filed as tidiness when the plan assumed two sources. With one source
+it is the thing that makes a swap survivable, and alternatives do exist — Apify
+actors, CompSniper — unevaluated, and the boundary is what buys the option to
+evaluate them later rather than rewrite then.
+
+⚠️ Worth noticing that the *architecture* absorbed this without a change. The
+gates, the scoring and the screens never knew where a number came from; only the
+route did. That is what the layering was for, and this is the first time it has
+been tested by an outside decision rather than by a refactor.
