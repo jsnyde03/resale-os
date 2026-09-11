@@ -153,10 +153,12 @@ median becomes the resale price. **A scan cannot silently produce an answer.**
 - [x] **6.11.2** ✅ **Done 2026-09-11.** `keywordFor` proposes and never
       imposes — the set-number reading is offered as an `alternative`, because
       **B89** measured the two 68% apart. Editing it is 6.11.4's screen.
-- [ ] **6.11.3** The two free fields: **resale from the comps median**, scoped to
-      sealed retail where condition is not a judgement call, and **category from
-      the resolver**. ⚠️ Not a global default — for used goods the resale price
-      is the operator's call and must stay typed.
+- [ ] **6.11.3** ⛔ **Match the comps to the CONDITION first (B90)** — that is a
+      live defect, not a feature: unfiltered comps score a dispersion term of
+      zero, so they add nothing to the confidence gate that decides everything.
+      Then the two free fields: **resale from the (now meaningful) median** and
+      **category from the resolver**. ⚠️ Filling resale stays scoped — it is only
+      honest once the comps describe the same condition as the thing in hand.
 - [ ] **6.11.4** The scan screen (`expo-camera`) and the wiring: scan → identity
       → keyword → market → verdict, with the tag price the only typed field.
 - [ ] **6.11.5** ⛔ **Every failure degrades to typing** — no permission, UPC not
@@ -496,6 +498,22 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   B84 stops being optional** — the operator must see the derived keyword and be
   able to correct it, or the scan is a confident wrong number arriving faster.
   → **a prerequisite of the scan flow, not a follow-up.**
+- **B90** ⛔ **THE DATA ROUTE FETCHES COMPS OF EVERY CONDITION, AND THEY ARE
+  STATISTICALLY WORTHLESS.** Measured 2026-09-11 on LEGO 75038: unfiltered, 40
+  comps span **$1.99–$465** (234×) with **CV 1.24**; filtered to
+  `itemCondition=new`, 25 comps span **$60–$179.95** (3×) with **CV 0.26**.
+  ⛔ `COMP_CV_WORTHLESS` is **0.50**, so the unfiltered set scores a dispersion
+  term of **exactly zero** — every comp set 6.1 has fetched for a product with a
+  used market has contributed **nothing** to confidence, and **D14 made
+  confidence decisive**. The app has been refusing items on dispersion it
+  manufactured itself by mixing sealed sets with loose parts and instruction
+  booklets. ⚠️ **And the median is 3× wrong** — $40 against $120 — which is the
+  difference between REJECT and BUY on a sealed item.
+  ⚡ **The fix uses a control that already exists**: the operator picks
+  `SEALED` / `LIKE_NEW` / `USED_CHECKED`, and that drives `itemCondition` on the
+  sold search. Comps then describe the thing actually being valued.
+  → **folded into 6.11.3**, because it is what makes filling the resale price
+  legitimate at all.
 - **B81** ⚠️ **One more page would turn some B77 refusals back into decisions.**
   ACTIVE caps at 200/page, so an item with 250 active is refused for being a
   floor when **one extra request** would have the true count. ⛔ Not general:
