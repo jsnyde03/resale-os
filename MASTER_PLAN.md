@@ -218,7 +218,7 @@ the keyword visible, and no step that breaks when the scan fails.
 | D12 | How the app values what it finds | ✅ **Browse API to find, SoldComps to value, own history to accumulate, manual as fallback — 2026-09-09.** ⛔ Sold comps are gated (Marketplace Insights is Limited Release and individual devs are denied; the logged-out sold search hit a login wall Aug 2026), and **without them the 45% confidence gate refuses nearly every purchase** — so this is a precondition, not an enhancement. Start on the free tier (100/mo); **Jason: "9 bucks is nothing"**, so Starter (2,000/mo) is pre-approved when it bites. ⚠️ The resellers work around eBay and the direction of travel is tightening — the manual path stays wired |
 | D11 | When the fund starts buying | ⛔ **Not until the system is ready, and never arbitrarily** (Jason 2026-09-09): *"It doesn't make sense to arbitrarily buy something."* A purchase this system cannot justify is the exact thing it exists to prevent, so "exercise it with a real buy" is not a reason. **Ready means the phone can decide, not just record** — 5.9c |
 | D2 | Owner split of after-tax profit (default 20/10/70) | ⚙️ **Default stands, revisit at $100 NAV** (Jason 2026-09-09). Not live: set-aside is off below $100 and the fund is at $50.00. ⚠️ That is four to six flips away, so decide it against the first real sales rather than in the abstract |
-| D3 | Real starting bankroll and start date | ✅ **$50, live 2026-09-08.** $20 max per item |
+| D3 | Real starting bankroll and start date | ✅ **$50, live 2026-09-08.** ⚡ **RAISED TO $75, 2026-09-11** (Jason: *"Then let's make the initial bankroll $75. I can work with that."*) ⛔ **This replaced a policy change, and was strictly better.** BOOTSTRAP was measured to buy **nothing at all** at $50 — a $40 purchase with excellent evidence was refused by three capital gates — and **$50 is the ONLY bankroll where that is true**: at $75 the same rules permit a $30 buy returning $26.71. I had drafted a relaxed BOOTSTRAP and then a SEED mode below $100; Jason changed the INPUT instead. ⚡ **No new mode, no stored-policy migration, no capital safety given up, and nothing to defend later.** ⚠️ **And `policy.ts` already said so** — `maxCapitalPerItemBps: 4_000, // 40% of NAV — $30 on a $75 fund`. The rules were designed against $75 and the fund was funded at $50; the mismatch was never a design flaw. ⏳ **Action: record a $25 CONTRIBUTION in the app.** The live fund is $50 until that lands. |
 | D4 | Whether a constraint override is ever allowed, and what it must record | ✅ **Allowed, and it must say so, 2026-09-09.** A purchase carries `overrodeGates` + `overrideReason`; the engine refuses an override with no reason, the item keeps both for life, and `items` prints them. `--force` now needs `--reason`. Unblocks 5.6 |
 | D5 | What to source against | ✅ **Sell-through gate, category-neutral, 2026-09-08.** The hold time is derived from comps; categories deferred until the bankroll supports them |
 | D6 | When profit starts being set aside | ✅ **At $100 of NAV, 2026-09-08.** Below it, owner + operating reserve are skipped and everything after tax compounds. Tax still accrues |
@@ -227,6 +227,18 @@ the keyword visible, and no step that breaks when the scan fails.
 | D10 | ✅ **Copy the figures, cite the sources, 2026-09-08.** How resale-os should take GigWorkTracker's verified 2026 tax tables | ✅ Done in 4.6 |
 | A4 | How the phone reaches the dashboard, given nothing can be installed on it | ⛔ **MOOT, closed 2026-09-09.** Answered by the architecture rather than by a decision: Gate 5 puts the ledger ON the phone and 5.10 retires `src/app`, so there is no dashboard to reach. The VPN constraint that reopened it still stands and is recorded in `phone-cannot-run-vpn-apps` |
 | D9 | How to clear the $1.50 of smoke-test SUPPLIES on the live book | ✅ **Add the no-cash correction, 2026-09-08.** `EXPENSE_CORRECTION` settles an expense against the event that already returned its cash, or reclassifies it between categories. Live book cleared; `evt_000005`/`evt_000006` |
+
+---
+
+### ⏳ Waiting on Jason — the one that unblocks the fund
+
+**Record a $25 CONTRIBUTION, taking the bankroll $50 → $75** (**D3**, decided
+2026-09-11). ⛔ **Until it lands, the fund can buy nothing**: measured, BOOTSTRAP
+at $50 NAV refuses a $40 purchase carrying excellent evidence, and its ceiling
+is $20 against a $24.51 modelled downside. At $75 the same rules permit a $30
+buy returning $26.71. ⚠️ **No code changes with this** — it is a ledger event on
+the phone, and every figure in the docs that says $50 stays true until it is
+recorded.
 
 ---
 
