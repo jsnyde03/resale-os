@@ -5545,3 +5545,61 @@ both are offered and the operator picks.
 
 ⚠️ The hyphen rule needed narrowing: `x-wing` and `z-95` carry meaning, a
 standalone `-` is punctuation. Found by a test, not by reading.
+
+### 6.11.3 — the comps were describing three markets at once (B90)
+
+⛔ **Found by asking whether 6.11.3 was safe to build, not by a test.** The
+sub-step was "fill the resale price from the comp median", and checking that
+against `fillFromMarket`'s existing refusal to do so turned up a live defect in
+the data route shipped that morning.
+
+Measured on LEGO 75038:
+
+| comps | n | median | spread | CV | dispersion term |
+|---|---|---|---|---|---|
+| any condition | 40 | $40 | **234×** | **1.24** | **zero** |
+| `itemCondition=new` | 25 | **$120** | 3× | 0.26 | usable |
+
+⛔ `COMP_CV_WORTHLESS` is **0.50**, so every comp set the route had fetched for a
+product with a used market scored a dispersion term of **exactly zero** —
+contributing nothing to the confidence gate that **D14 made decisive**. The app
+was refusing items on dispersion **it manufactured itself** by averaging sealed
+sets, loose parts and instruction booklets into one number. ⚠️ And the median was
+**3× wrong**, which is the whole distance between REJECT and BUY.
+
+### ⚡ The fix used a control that already existed
+
+`SEALED` / `LIKE_NEW` / `USED_CHECKED` / `UNKNOWN` have been on the screen since
+B71, and `condition.ts` already said *"sealed retail stock off a clearance rack
+is the thing you are most certain about"*. That is the filter. No new input, no
+new question for the operator.
+
+⚠️ **`UNKNOWN` maps to `any` deliberately.** If nobody has said what the item is,
+narrowing the comps would be guessing on their behalf — and the wide spread is
+then an *honest* signal that the evidence is poor rather than a manufactured one.
+
+### The 6.1.3 decision was REFINED, not overturned
+
+`fillFromMarket` deliberately did not fill `resale`, because *"the operator
+decides what condition their item is in, and overwriting their judgement with a
+median is how a fetched number quietly becomes the decision."* ⛔ **That was
+right, and B90 showed how right** — a median of $1.99-to-$465 is not a price.
+
+⚡ What changed is that the comps now match the condition, so the median
+describes the thing in hand. The fill is therefore offered exactly where it is
+honest and withheld where it is not: `UNKNOWN` fills nothing, and **a value the
+operator already typed is never overwritten** — a fetched number may fill a
+blank, never replace a judgement.
+
+⚠️ **Median rather than mean**, because one $465 outlier in a sealed comp set
+would drag a mean past anything the item will fetch.
+
+### ⚠️ Two mechanical-script mishaps in five minutes
+
+A `.replace` on `keyword: 'lego star wars',` matched the 8-space form **inside**
+the 14-space line, producing a duplicate key; the same run also injected the new
+field into a `buildScrapeUrl` params object, breaking a parameter-count
+assertion on the device contract. Both caught by `tsc` and the suite, both fixed
+by hand. ⛔ **`prefer-edit-tool-over-scripts` earned its keep twice in one
+sub-step**, and the second mishap was only visible because the device case
+counts its parameters rather than trusting them.

@@ -153,12 +153,13 @@ median becomes the resale price. **A scan cannot silently produce an answer.**
 - [x] **6.11.2** ✅ **Done 2026-09-11.** `keywordFor` proposes and never
       imposes — the set-number reading is offered as an `alternative`, because
       **B89** measured the two 68% apart. Editing it is 6.11.4's screen.
-- [ ] **6.11.3** ⛔ **Match the comps to the CONDITION first (B90)** — that is a
-      live defect, not a feature: unfiltered comps score a dispersion term of
-      zero, so they add nothing to the confidence gate that decides everything.
-      Then the two free fields: **resale from the (now meaningful) median** and
-      **category from the resolver**. ⚠️ Filling resale stays scoped — it is only
-      honest once the comps describe the same condition as the thing in hand.
+- [x] **6.11.3** ✅ **Done 2026-09-11. Closes B90.** The operator's condition
+      drives `itemCondition` on the sold search, so comps describe the thing in
+      hand — 3× spread instead of 234×, and a dispersion term that is no longer
+      zero. Resale fills from the median **only** when the comps match and the
+      field is blank. 710 tests (+6), both claims planted.
+      ⚠️ **Category-from-the-resolver moves to 6.11.4**, where the scan exists to
+      supply it.
 - [ ] **6.11.4** The scan screen (`expo-camera`) and the wiring: scan → identity
       → keyword → market → verdict, with the tag price the only typed field.
 - [ ] **6.11.5** ⛔ **Every failure degrades to typing** — no permission, UPC not

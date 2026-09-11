@@ -53,6 +53,7 @@
 import { parseDollars, type Cents } from '../core/money.js';
 import { parseCount, type CountResult } from '../core/counts.js';
 import type {
+  CompCondition,
   MarketFailure,
   MarketFailureReason,
   MarketResult,
@@ -197,6 +198,12 @@ async function getPage(
 export async function lookUpMarket(
   keyword: string,
   config: SoldCompsConfig,
+  /**
+   * ⛔ **Which condition to draw comps from (B90).** Defaults to `any`, which
+   * is what the caller gets if it does not think about it — and what made the
+   * comps worthless. The sourcing screen passes the operator's own condition.
+   */
+  compCondition: CompCondition = 'any',
 ): Promise<MarketResult> {
   const trimmed = keyword.trim();
   if (trimmed === '') return fail('VENDOR', 'no keyword to search for');
@@ -229,6 +236,8 @@ export async function lookUpMarket(
     count: String(SOLD_PAGE_SIZE),
     soldAfter,
     ...(categoryId === null ? {} : { categoryId }),
+    // ⛔ B90. Mixing conditions is what zeroed the dispersion term.
+    ...(compCondition === 'any' ? {} : { itemCondition: compCondition }),
   });
   if (!soldRes.ok) return soldRes;
 
@@ -275,6 +284,7 @@ export async function lookUpMarket(
       compMedianAgeDays: ageDays.length === 0 ? 45 : medianOf(ageDays),
       provenance: {
         keyword: trimmed,
+        compCondition,
         categoryId,
         categoryName,
         soldItemsSeen: soldItems.length,

@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { evaluateForm, fillFromMarket, headline } from '@/screens/sourcing.js';
+import { COMPS_FOR, evaluateForm, fillFromMarket, headline } from '@/screens/sourcing.js';
 import type { MarketFailureReason } from '@/core/market.js';
 import { evaluateOpportunity } from '@/scoring/evaluate.js';
 import { parseOpportunity } from '@/domain/opportunity.js';
@@ -452,6 +452,7 @@ describe('6.1.3 — the network fills fields, and never decides', () => {
       compMedianAgeDays: 20,
       provenance: {
         keyword: 'lego star wars',
+        compCondition: 'any' as const,
         categoryId: '183447',
         categoryName: 'LEGO (R) Building Toys',
         soldItemsSeen: 40,
@@ -606,5 +607,76 @@ describe('6.6.2 — what the sourcing screen can and cannot abstain on', () => {
     expect(ok(GOOD).failedGates).toBeDefined();
     const v = ok({ ...GOOD, sold90: '1', active: '99' });
     expect(v.failedGates.map((g) => g.code)).toContain('SELL_THROUGH_TOO_LOW');
+  });
+});
+
+describe('6.11.3 — the condition decides which market the comps come from (B90)', () => {
+  it('⛔ maps each condition to the comp market that describes it', () => {
+    expect(COMPS_FOR.SEALED).toBe('new');
+    expect(COMPS_FOR.LIKE_NEW).toBe('used');
+    expect(COMPS_FOR.USED_CHECKED).toBe('used');
+    // ⚠️ Not narrowing when nobody has said what this is. The wide spread is
+    // then an HONEST signal that the evidence is poor, rather than one the app
+    // manufactured by averaging three markets together.
+    expect(COMPS_FOR.UNKNOWN).toBe('any');
+  });
+
+  const reading = (over: Record<string, unknown> = {}, prov: Record<string, unknown> = {}) => ({
+    ok: true as const,
+    reading: {
+      sold90: { value: 300, isFloor: false },
+      active: { value: 10, isFloor: false },
+      compPricesCents: [11_500, 12_000, 12_500],
+      compMedianAgeDays: 20,
+      provenance: {
+        keyword: 'lego 75038',
+        compCondition: 'new' as const,
+        categoryId: '183447',
+        categoryName: 'LEGO (R) Building Toys',
+        soldItemsSeen: 25,
+        activeItemsSeen: 40,
+        soldAfter: '2026-06-13',
+        fetchedAt: '2026-09-11T12:00:00.000Z',
+        ...prov,
+      },
+      quota: { monthlyLimit: 100, monthlyRemaining: 86, resetAt: null },
+      ...over,
+    },
+  });
+
+  const blank = { ...GOOD, resale: '' };
+
+  it('⚡ fills the resale price from the median once the comps match', () => {
+    const { form, status } = fillFromMarket(blank, reading());
+    expect(form.resale).toBe('120.00');
+    if (status.kind !== 'FILLED') throw new Error('expected FILLED');
+    expect(status.filled).toContain('resale');
+  });
+
+  it('⛔ does NOT fill it when the comps mix markets', () => {
+    // The B90 case: unfiltered comps ran $1.99–$465 on one product. A median of
+    // that is not a price, it is an average of three different markets.
+    const { form, status } = fillFromMarket(blank, reading({}, { compCondition: 'any' }));
+    expect(form.resale).toBe('');
+    if (status.kind !== 'FILLED') throw new Error('expected FILLED');
+    expect(status.filled).not.toContain('resale');
+  });
+
+  it('⛔ never overwrites a resale price the operator already typed', () => {
+    // A fetched number may fill a blank. It may not replace a judgement.
+    const { form, status } = fillFromMarket({ ...GOOD, resale: '60.00' }, reading());
+    expect(form.resale).toBe('60.00');
+    if (status.kind !== 'FILLED') throw new Error('expected FILLED');
+    expect(status.filled).not.toContain('resale');
+  });
+
+  it('uses the median rather than the mean, so one outlier cannot drag it', () => {
+    const { form } = fillFromMarket(blank, reading({ compPricesCents: [11_500, 12_000, 46_500] }));
+    expect(form.resale).toBe('120.00'); // mean would be $233.33
+  });
+
+  it('⛔ and the asking price is STILL never filled', () => {
+    // The tag is in front of them and no data source knows it.
+    expect(fillFromMarket({ ...blank, price: '12.00' }, reading()).form.price).toBe('12.00');
   });
 });

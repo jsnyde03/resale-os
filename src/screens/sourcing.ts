@@ -18,6 +18,7 @@ import { soldNeededForHold } from '../core/velocity.js';
 import { parseCount } from '../core/counts.js';
 import {
   isWorthRetrying,
+  type CompCondition,
   type CountReading,
   type MarketFailureReason,
   type MarketResult,
@@ -459,6 +460,40 @@ const UNAVAILABLE_WORDING: Readonly<Record<MarketFailureReason, string>> = {
   VENDOR: 'The data source is having trouble — type the counts from eBay',
 };
 
+/**
+ * ⛔ **The condition the operator picked decides which market the comps come
+ * from (B90).**
+ *
+ * Measured 2026-09-11: unfiltered comps for one product spanned 234× with a
+ * coefficient of variation of **1.24**, against a `COMP_CV_WORTHLESS` of 0.50 —
+ * a dispersion term of **exactly zero**, contributing nothing to the confidence
+ * gate that decides everything. Filtered to new: 3× spread, CV 0.26, median
+ * **three times higher**.
+ *
+ * ⚠️ `UNKNOWN` maps to `any` on purpose. If the operator has not said what they
+ * are holding, narrowing the comps would be guessing on their behalf — the wide
+ * spread is then an honest signal that the evidence is poor, rather than a
+ * manufactured one.
+ */
+export const COMPS_FOR: Readonly<Record<Condition, CompCondition>> = {
+  SEALED: 'new',
+  LIKE_NEW: 'used',
+  USED_CHECKED: 'used',
+  UNKNOWN: 'any',
+};
+
+/**
+ * ⚠️ **The median, not the mean.** One $465 outlier in a set of sealed comps
+ * would drag a mean well past anything the item will actually fetch, and the
+ * confidence scorer already punishes dispersion separately.
+ */
+function medianCents(prices: readonly Cents[]): Cents {
+  const sorted = [...prices].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 1) return sorted[mid] as Cents;
+  return Math.round(((sorted[mid - 1] as Cents) + (sorted[mid] as Cents)) / 2);
+}
+
 /** How a count renders back into a field the operator can edit. */
 const countToField = (c: CountReading): string => `${c.value}${c.isFloor ? '+' : ''}`;
 
@@ -469,10 +504,18 @@ const countToField = (c: CountReading): string => `${c.value}${c.isFloor ? '+' :
  * data source knows it, and a field that sometimes fills and sometimes does not
  * is worse than one that never does.
  *
- * ⚠️ **Nor is `resale`.** It is derivable from the comps — but the operator
- * decides what condition and completeness their item is in, and overwriting
- * their judgement with a median is how a fetched number quietly becomes the
- * decision. The comps raise confidence; the price stays theirs.
+ * ⚠️ **`resale` was not filled either, and that reasoning has been REFINED
+ * rather than overturned (6.11.3).** The objection was that the operator
+ * decides what condition their item is in, so a median over a mixed market
+ * describes something they are not holding. ⛔ **That was right, and B90 showed
+ * how right**: unfiltered comps for one product ran $1.99 to $465. A median of
+ * that is not a price, it is an average of three different markets.
+ *
+ * ⚡ **What changed is that the comps now MATCH the condition.** Once the
+ * operator has said `SEALED` and the comps are drawn from `itemCondition=new`,
+ * the median describes the thing in their hand — 3× spread instead of 234×. So
+ * the fill is offered exactly when it is honest, and withheld when it is not:
+ * `UNKNOWN` fills nothing, because nobody has said what this is.
  */
 export function fillFromMarket(
   form: SourcingForm,
@@ -504,6 +547,18 @@ export function fillFromMarket(
   if (reading.compPricesCents.length > 0) {
     next.comps = reading.compPricesCents.map(toDollarsInput).join(',');
     filled.push('comps');
+
+    // ⛔ **The resale price, but ONLY when the comps describe this condition.**
+    //
+    // `any` means the operator has not said what they are holding, so the comps
+    // mix markets and their median is not a price (B90: $1.99–$465 on one
+    // product). ⚠️ And a value the operator has already typed is never
+    // overwritten — a fetched number may fill a blank, never replace a
+    // judgement.
+    if (reading.provenance.compCondition !== 'any' && form.resale.trim() === '') {
+      next.resale = toDollarsInput(medianCents(reading.compPricesCents));
+      filled.push('resale');
+    }
   }
 
   const where =

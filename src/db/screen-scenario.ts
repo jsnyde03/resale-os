@@ -754,10 +754,15 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
         sold: 'true',
         count: '40',
         categoryId: '183447',
+        // ⛔ B90. Mixing conditions zeroes the dispersion term, so the search
+        // says which market it is drawing from. Verified on Hermes because
+        // this is the parameter that decides whether comps mean anything.
+        itemCondition: 'new',
       });
       ok(url.includes('keyword=lego+star+wars'), `spaces must encode, got ${url}`);
       ok(url.includes('categoryId=183447'), `the B82 pinning must survive, got ${url}`);
-      eq(url.split('?')[1]?.split('&').length, 4, 'every parameter should be present');
+      ok(url.includes('itemCondition=new'), `B90's condition filter must survive, got ${url}`);
+      eq(url.split('?')[1]?.split('&').length, 5, 'every parameter should be present');
 
       // --- Headers.get: the quota it reads --------------------------------
       const quota = readQuota(
@@ -798,6 +803,7 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
             compMedianAgeDays: 20,
             provenance: {
               keyword: 'lego star wars',
+              compCondition: 'any' as const,
               categoryId: '183447',
               categoryName: 'LEGO (R) Building Toys',
               soldItemsSeen: 40,

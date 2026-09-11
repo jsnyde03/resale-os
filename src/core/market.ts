@@ -31,6 +31,21 @@ export interface CountReading {
 }
 
 /**
+ * ⛔ **Which condition the comps describe (B90).**
+ *
+ * Measured 2026-09-11 on LEGO 75038: unfiltered comps span 234× with a
+ * coefficient of variation of **1.24**, and `COMP_CV_WORTHLESS` is **0.50** — so
+ * they score a dispersion term of **exactly zero** and contribute nothing to the
+ * confidence gate that decides everything. Filtered to new: 3× spread, CV 0.26,
+ * and a median **three times higher** ($120 against $40).
+ *
+ * ⚠️ **The dispersion was manufactured, not measured.** Sealed sets, loose
+ * parts and instruction booklets are three markets, and averaging them describes
+ * none of them.
+ */
+export type CompCondition = 'any' | 'new' | 'used';
+
+/**
  * ⚡ **B80: the keyword is an input to a money gate.** A count counts whatever
  * the keyword matched, so a vague name measures the broad market and a precise
  * one measures the item. ⚠️ It is not directionally biased — measured, a broad
@@ -45,6 +60,8 @@ export interface CountReading {
  */
 export interface Provenance {
   readonly keyword: string;
+  /** ⛔ The condition the comps were drawn from. `any` means they mix markets. */
+  readonly compCondition: CompCondition;
   readonly categoryId: string | null;
   readonly categoryName: string | null;
   readonly soldItemsSeen: number;
