@@ -349,6 +349,18 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   saying so, which is the class this project keeps being bitten by. Cache by
   `(input, policy version, NAV)` or page it, and make the cap speak. → when the
   list gets long, not before.
+- **B78** ⚡ **THE DATA ROUTE IS METERED AND PAID — the app should say so, not
+  discover it.** Each scored item costs **2 requests** (sold + active), so the
+  free 100/month is **~33-50 items** and real sourcing exhausts it in two rack
+  visits. ⚠️ **Upgrade on a measured trigger, not in advance**: a `429` with
+  `code: "quota_exceeded"` carries `reset_at`, and `X-Usage-*` / `X-RateLimit-*`
+  come back on every call — **show what is left**. ⛔ **Exhaustion must degrade to
+  the manual path, never break the screen** — the same rule as 6.1.2's
+  offline-first for a different reason: there the network is absent, here it is
+  refusing on purpose while the operator is mid-decision in a shop.
+  ⚡ **And compare credits before buying a plan**: $3/1,000 ($0.003/req) beats
+  Starter's $9/2,000 ($0.0045/req) below ~3,000/month, and every tier is capped
+  at 60/min, so a plan buys quota only — never speed. → **6.1.1**.
 - **B77** ⛔ **THE TWO CAPS PUSH OPPOSITE WAYS, and one of them is unsafe.**
   SoldComps caps SOLD at 40/page and ACTIVE at 200/page. Hold time is
   `90 × (active + 1) / sold90`, so **undercounting SOLD refuses a good item
