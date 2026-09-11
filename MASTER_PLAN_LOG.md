@@ -6085,3 +6085,47 @@ half.
 
 **Install TYPA (free) and report whether it actually covers his verticals.** No
 amount of reading its marketing answers that, and the decision turns on it.
+
+## 2026-09-11 — proxies deferred to a threshold, not to a feeling
+
+🎯 **Jason:** *"proxies should be reevaluated when the bankroll can support
+them."*
+
+⛔ **Recorded as NAV $500 — the BOOTSTRAP → GROWTH promotion — rather than as
+the sentence.** A deferral whose trigger is *"when we can afford it"* never
+fires, because nothing ever announces that the day arrived; this project has
+watched that shape go stale repeatedly. `promoteAtCents` is **50,000**, the app
+computes it, shows it, and changes its own rules at it, so the fund arrives at
+the trigger instead of someone remembering it.
+
+⚡ **The Recurring section was widened to carry it.** It said *"fires on a date,
+not on a gate"*, and this fires on neither — a bankroll threshold is a third
+kind. The section's own principle (a checkbox gets ticked once and never fires
+again) applies to it unchanged.
+
+### What gets re-asked at $500, and what does not
+
+**Re-asked:** whether **D13**'s ban on proxy rotation stays whole-cloth or
+narrows to checkout only. Its stated harm — cancelled orders, banned accounts,
+flagged payment rails — is a **checkout** harm, and a read-only monitor behind
+proxies does not touch the payment rails. That distinction is real and it is
+Jason's to make; it is not a licence a session can grant itself.
+
+**Also re-asked, and it is the deciding number:** whether a **monthly,
+recurring** proxy bill is covered several times over by **monthly realised
+profit**. ⛔ Not by NAV. A subscription is a cost per month and a bankroll is a
+stock, and comparing them is how a fund talks itself into a fixed cost it
+cannot carry. At $50 the fund can buy nothing at all; at $500 in GROWTH the
+per-item cap is $100 and the minimum profit $15, which is the first bankroll
+where the arithmetic is even worth doing.
+
+**Not re-asked:** checkout automation. D13 settled that on grounds the bankroll
+does not change.
+
+### ⛔ Until then D13 stands whole
+
+Proxy rotation included. Nothing in the interim builds toward a self-hosted
+monitor, and 7.6 stays what the research reframed it as — **making the
+judgement instant when someone else's alert fires**, which needs no proxies at
+all. Jason's own experience is the strongest evidence for the deferral: he has
+built these before, and reports they take *"scraping and proxies"*.
