@@ -150,12 +150,19 @@ export default function Sourcing() {
       return;
     }
     setLooking(true);
-    setResult(null);
     try {
       const out = fillFromMarket(form, await lookUpMarket(name, { apiKey }));
-      setSold(out.form.sold90);
-      setActive(out.form.active);
-      if (out.form.comps !== undefined) setComps(out.form.comps);
+      // ⛔ **A failed lookup must not take the verdict with it.** The promise is
+      // that the network never makes this screen worse than it was without one,
+      // and clearing an answer the operator already has because a shop has no
+      // signal is exactly that. The verdict is retracted only when the numbers
+      // underneath it actually moved.
+      if (out.status.kind === 'FILLED') {
+        setResult(null);
+        setSold(out.form.sold90);
+        setActive(out.form.active);
+        if (out.form.comps !== undefined) setComps(out.form.comps);
+      }
       setFill(out.status);
     } finally {
       // ⚠️ The adapter does not throw, but a `finally` is what makes that a

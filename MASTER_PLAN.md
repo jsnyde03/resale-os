@@ -112,10 +112,11 @@ tell the two cases apart, and neither can a reader.** Sub-steps in the log.
 | 2 | Opportunity + Buy/Risk score + eligibility + recommendation | ✅ Done 2026-09-08 |
 | 3 | Inventory & sale lifecycle, expenses, reserves, distributions, charge-offs, recoveries | ✅ Done 2026-09-08 |
 | 4 | Dashboard + rules/config UI | ✅ Done 2026-09-08 |
-| 5 | **The phone is the system** — engine ported, ledger on-device, desktop retired | ✅ **Built 2026-09-10** — 5.11 (the phase after-scan) is closing it |
-| 6 | **Sourcing: the app finds and recommends** — Browse API for candidates, SoldComps for value, own history accumulating | ⚡ **NEXT** — data route settled (**D12**) |
-| 6.5 | **The watchlist that unlocks** — an out-of-reach opportunity is kept, carries the NAV at which it clears every gate, and resurfaces when the fund crosses it | Open |
-| 7 | Market Radar beta — scarcity, demand, momentum, market opportunity, confidence | Open |
+| 5 | **The phone is the system** — engine ported, ledger on-device, desktop retired | ✅ **Done 2026-09-10**, phase after-scan included |
+| 6 | **Sourcing: the app values and recommends** — ⛔ the FINDING half died with **D16**; SoldComps values, the operator finds, own history accumulates | ⚡ **ACTIVE** — 6.0, 6.1, 6.2 built |
+| 6.5 | **Not yet, or never?** — ⚡ the before-scan disproved the "watchlist that unlocks" premise: most refusals never clear at any bankroll | ✅ **Done 2026-09-10**, 50/50 on device |
+| 6.6 | **A gate that abstains must say so** (**B66**) — `assessPurchase` cannot tell a deliberate abstention from a missing field, and neither can a reader | ⚡ **NEXT** |
+| 7 | Market Radar beta — scarcity, demand, momentum, market opportunity, confidence | ⚠️ Open — **re-read D12 first**: it assumed a feed, and there is one vendor |
 | 7.5 | **Drop intel** — dated retail drops, monitoring and alerting. ⛔ Checkout automation is OUT, see **D13** | Open |
 | 8 | *(architecture only until 1–7 are reliable)* authorization states, drop intel, autonomy | Not started, not startable |
 
@@ -396,6 +397,14 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   "search as" field, defaulting to the name, decouples them. ⚡ **B69**'s barcode
   scan would fill it directly, since a GTIN is a better keyword than any
   phrase. → when the operator has actually mis-searched something, not before.
+- **B85** ⚠️ **Nothing stops a second lookup of the SAME keyword.** *Look up the
+  market* costs 2 of ~100 monthly requests per press. A double-tap is guarded
+  (`if (looking) return`), and a press after EDITING the name is correct — but a
+  press with nothing changed spends two requests to re-fetch what is already on
+  screen. ⛔ **Not obviously a cache**: market data goes stale, and a cache that
+  lies is worse than a request that costs. The honest fix is probably to say
+  *"already looked up — press again to refresh"* rather than to silently serve
+  a stale answer. → when the quota is actually felt, not before.
 - **B81** ⚠️ **One more page would turn some B77 refusals back into decisions.**
   ACTIVE caps at 200/page, so an item with 250 active is refused for being a
   floor when **one extra request** would have the true count. ⛔ Not general:
