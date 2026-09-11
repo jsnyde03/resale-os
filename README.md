@@ -10,7 +10,7 @@ boundaries as the bankroll grows.
 
 **Status:** Gates 1 to 5 built; Gate 6 — sourcing — is half built. The
 deterministic capital engine, the ledger, opportunity scoring, prediction
-accuracy and verified backups — **all of it runs on the device**, verified 54/54
+accuracy and verified backups — **all of it runs on the device**, verified 55/55
 against Apple's SQLite in CI and shipped to TestFlight. **The desktop was deleted
 on 2026-09-10**: no CLI, no web app, no dev server. 736 tests green.
 

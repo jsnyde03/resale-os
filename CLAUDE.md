@@ -97,7 +97,8 @@ export is not a document — it is the ledger plus the profile.** Treat it like 
 database, never like an artifact.
 
 **The ledger, the engine, every write and read screen, the sourcing screen,
-backups, the import and the DATA ROUTE all run on the device: 54/54 against
+backups, the import, the DATA ROUTE and the SCAN all run on the device: 55/55
+against
 Apple's SQLite** in
 `.github/workflows/driver-contract-ios.yml`. The app ships via Codemagic to
 TestFlight.

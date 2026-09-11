@@ -5754,3 +5754,49 @@ built from a description of a failure is not a control against the failure.
 ⚠️ **What it does NOT check, deliberately:** whether an item is terse, whether a
 decomposition is sensible, whether the wording is honest. No script judges prose,
 and a gate that implied otherwise would feel like coverage it does not have.
+
+## 2026-09-11 — buttoning up for a new session
+
+Audited the start-here docs against measurement rather than reading them, which
+is the only way this has ever worked.
+
+**Figures were stale in both**: 672 → **736 tests**, 40 → **45 files**, 52/52 →
+**55/55 on device**, and *"five gates"* → **six**, since `lint:plan` is new.
+
+### ⛔ The status block was pointing a new session at the wrong strategy
+
+Worse than stale. It described the aisle screen and the clearance rack, and a
+session reading it would have carried on optimising for racks — when Jason said
+plainly, today, that *"most of my highest returns were not off the clearance rack
+previously. They were online drops."* That is now the third line of the file.
+
+It also failed to say the two things that gate everything:
+
+- ⛔ **The fund can buy NOTHING at $50** — measured, three capital gates refuse a
+  $40 purchase carrying excellent evidence — and **$50 is the only bankroll where
+  that is true**. D3 raised it to $75; the $25 contribution has not been recorded.
+- ⛔ **28+ commits of the app's own code have never reached the phone.** The whole
+  data route, the scanner, the allocation screen, the rules identity. The deploy
+  is last by choice, and nothing decided today is actionable until it happens.
+
+### The "what needs a human" table had gone stale in BOTH directions
+
+It still said **B73 blocks D2** — 6.7 closed that this afternoon — and it did not
+mention the contribution or the deploy at all. ⚠️ **A waiting list decays one way
+on its own**: closing an item updates the item, and nobody deletes the row that
+was waiting on it. Second instance today, after B66.
+
+### Added: the two outside vendors
+
+A new session would not otherwise learn that **SoldComps takes no barcode**, that
+**UPCitemdb has never been pointed at a clearance SKU**, that the keyword between
+them is a **68% money decision**, or that **comps must match the condition or
+contribute exactly nothing** to the gate that decides everything. All four are
+things this session paid to find out.
+
+### State at close
+
+**736 tests, 45 files, six gates green, 0 unpushed, 55/55 on device** with the
+scan case confirmed by name from the artifact. Gate 7.5 is the active build with
+7.5.1 done; **7.5.3 — where the drop calendar comes from — is a decision waiting
+on Jason.**
