@@ -8,8 +8,12 @@ next.** Exactly one item is decomposed on it — the active one. Detail and
 rationale live in `MASTER_PLAN_LOG.md`; read the entry for anything you are
 about to change.
 
-**Status (2026-09-11): Gates 1-6 BUILT. The fund LIVES ON THE PHONE, the
-desktop is deleted, and the app now VALUES what it is shown.**
+**Status (2026-09-11): Gates 1-6 BUILT, 6.5 and 6.6 closed. The fund LIVES ON
+THE PHONE, the desktop is deleted, and the app now VALUES what it is shown.**
+
+⚡ **D11's condition reads as met** — it said the fund starts buying when the
+phone can *decide*, not just record, and it now decides with data it fetched
+itself. **Whether it starts buying is Jason's, and he has not said so.**
 
 The aisle screen **decides**: a price ceiling and the rule that set it, what would
 FIX a refusal (*"against 10 listed you need 48 sold in 90 days"*), whether a
@@ -23,7 +27,7 @@ what is left of the month. ⛔ **The network never gates**: offline is the norma
 case in a shop, every failure is a value, and a failed lookup leaves the screen
 exactly as usable as it was.
 
-Live on a real **$50** bankroll. **653 tests, 40 files.** `npm run check` runs
+Live on a real **$50** bankroll. **672 tests, 40 files.** `npm run check` runs
 five gates: source bytes, import direction, phone bundle, typecheck, tests.
 
 ---
@@ -51,6 +55,14 @@ force-pushing does not take it back: **GitHub keeps the objects, fetchable by
 SHA.** Measured twice on this project. Write "the operator's county", never the
 county. Same for `C:/Users/<name>/...` paths.
 
+⛔ **GATE 7 IS PARKED AND RE-PREMISED (D17, 2026-09-11).** Market Radar assumed
+a feed; **D16 deleted the finding half**, so its input would be one metered
+vendor at 2 requests an item. It is now **radar over the fund's OWN history** —
+free, specific to what the operator actually encounters — and parked until there
+IS history, because the fund has never bought anything. ⚠️ **Do not build it
+against market-wide data**; that premise is gone. Meanwhile the build stream
+takes the correctness backlog.
+
 ⛔ **A LEDGER EXPORT OR A PHONE BACKUP IS SUCH A FILE.** Its payload is the
 commands **plus `config`, and `config` carries `tax_profile`.** The CLI that
 wrote them is gone (5.10), but a backup pulled off the phone is the same payload.
@@ -63,7 +75,7 @@ export is not a document — it is the ledger plus the profile.** Treat it like 
 database, never like an artifact.
 
 **The ledger, the engine, every write and read screen, the sourcing screen,
-backups, the import and the DATA ROUTE all run on the device: 51/51 against
+backups, the import and the DATA ROUTE all run on the device: 52/52 against
 Apple's SQLite** in
 `.github/workflows/driver-contract-ios.yml`. The app ships via Codemagic to
 TestFlight.
@@ -136,7 +148,7 @@ margin play needing hold tolerance a $50 fund does not have. Backlog **B28**.
 ### Five gates run on every check
 
 ```
-npm run check    # source bytes · import direction · PHONE BUNDLE · typecheck · 653 tests
+npm run check    # source bytes · import direction · PHONE BUNDLE · typecheck · 672 tests
 ```
 
 ⚡ **`lint:phone` walks the import graph** from every `src/` module the phone

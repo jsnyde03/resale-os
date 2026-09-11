@@ -347,14 +347,22 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   and old rows may carry them. Pinned by `tests/verdict-reachability.test.ts`,
   which asserts the INVARIANT rather than the dead code. → read before **6.5**.
 - ~~**B73**~~ ⚡ **Promoted to Gate 6.7, 2026-09-11.** Premises verified against the code first.
-- ~~**B75**~~ ✅ **Recurred 2026-09-11, diagnosed, and fixed for the right
-  reason.** ⛔ **The 2026-09-10 fix read the wrong signal**: `simctl bootstatus`
-  **exits 0** on a boot that prints `Status=4294967295, isTerminal=YES`, so the
-  guard never fired and the error again blamed the app. ⚠️ The comment beside it
-  already named that status while the code checked `$?`. Now reads the printed
-  status **and** confirms the device is `(Booted)`. ⛔ **And the first version of
-  the fix would have killed every HEALTHY run** — `set -e` plus a `grep` that
-  matches nothing — caught by planting before pushing. Detail in the log.
+- **B87** ⛔ **THE DEVICE LANE IS ~3-IN-5 AND THE CAUSE IS UNIDENTIFIED.**
+  Supersedes **B75**, whose diagnosis was wrong. ⚠️ **`Status=4294967295,
+  isTerminal=YES` is NORMAL on this image** — measured 2026-09-11 across five
+  runs, it appears in every one, including the three that passed 52/52 (the
+  green 13:22 run booted 6m43s and ended with exactly that status).
+  ⛔ **Two fixes were built on that misread**: 2026-09-10 guarded
+  `bootstatus`'s exit code; 2026-09-11 saw the exit code was 0, made the STATUS
+  actionable, and **made the lane worse** by tearing down a simulator that was
+  merely slow. Both are reverted; the guard is back to the exit code alone.
+  ⛔ **The error in both was never running the control** — each looked at a
+  FAILING run and neither at a PASSING one, where the same status sits in the
+  log. The real failure is `No result file after 180s` with an empty app
+  console, and nothing yet separates a run that does that from one that does
+  not. ⚠️ **Re-running is the mitigation. Do not write a third guard without
+  first checking what a GREEN run prints.** → when the lane costs more than
+  re-running does.
 - **B76** ⚠️ **The watchlist recomputes 21 evaluations per saved row.** Measured
   2026-09-10 on desktop: **62 ms at 10 rows, 91 ms at 50, 277 ms at 200** — fine
   at the scale the fund is at, noticeable on a phone at the cap. ⚠️ **And the
@@ -447,11 +455,20 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   Anything published from here gets a whole-tree sweep, not a directory list.
   ⏳ **Needs Jason: delete `resale-os-prescrub-2` and `resale-os-prescrub-private`**
   — both private, both still holding the data, and the CLI token cannot delete.
-- **B54** ⚠️ **`store.state()` answers from a cache, and a test that reads it
-  is testing the engine against itself.** Cost a real hour in 5.5.1: a
-  round-trip test passed with the new column dropped on the write path. Every
-  storage assertion must use `derivedState()`. Worth a lint rather than a
-  convention — nothing enforces it. → Gate 5.
+- **B54** ⚠️ **`store.state()` answers from a cache, and a test that reads it is
+  testing the engine against itself.** Cost a real hour in 5.5.1: a round-trip
+  test passed with the new column dropped on the write path.
+  ⚡ **Measured 2026-09-11 (pre-scouted, not yet switched in): 75 `store.state()`
+  call sites against 7 `derivedState()`, and no lint.**
+  ⛔ **But the stated fix — "worth a lint" — is harder than it reads.**
+  `expect(store.state().balances.LIQUID)` is a perfectly good assertion *about
+  the engine*; it is only wrong as a claim about **persistence**. A blanket ban
+  would red-gate correct tests, so the rule to enforce is not "never call
+  `state()`" but "a test asserting something SURVIVED must read it back through
+  a path that did not write it" — which in practice means `derivedState()` or a
+  second `FundStore` over the same db, the pattern the settings contract case
+  already uses. **Decide the enforceable form before writing the check.**
+  → next after 6.7, per **D17**.
 - **B55** The migration-rebuild test hard-coded `[REBUILD]` as everything stage
   2 would run, so migration 006 broke it — and because the store was closed
   *after* the assertions, the real failure surfaced as an EBUSY from the temp

@@ -5191,3 +5191,46 @@ that already exists.** Filed as **B86**; not simply deletable, because
 
 The version bump removed → 1 red. The consequence stopped reading NAV → 2 red.
 Both restored and the restores verified by grep, not by assumption.
+
+## 2026-09-11 — the boot guard was wrong, and I made the lane worse before measuring
+
+⛔ **`Status=4294967295, isTerminal=YES` is NORMAL on this runner image.** Five
+runs measured: it appears in **every one**, including the three that passed
+52/52. The green 13:22 run booted for **6m43s** and ended with exactly that
+status, then ran the contract fine.
+
+So the guard I wrote an hour ago — which treats that status as a failed boot and
+responds with a shutdown and a retry — **fires on every run**, and on its first
+outing it tore down a simulator that was merely slow and turned a run red.
+⚠️ **My fix made the lane worse than the bug.** Reverted to the exit code alone.
+
+### ⛔ The error, and it is one this repo has a rule for
+
+Both fixes — 2026-09-10's and mine — looked at a **failing** run and neither
+looked at a **passing** one, where the same status is sitting in the log. The
+signal was never checked for discrimination; it was adopted because it appeared
+next to a failure.
+
+⚡ **And I did plant — the wrong thing.** The parser was planted against
+synthetic sick/healthy/unfamiliar text and behaved exactly as designed. What was
+never tested was the *premise it encoded*: that a non-zero terminal status means
+a bad boot. **A control over the parser is not a control over the claim**, which
+is the same shape as `roundtrip-through-one-encoder` and `run-the-control-on-the-verifier`.
+
+⚠️ **Third time today a mechanism I stated confidently was wrong**, after the
+run-contention hypothesis and the `!== undefined` plant. The difference is that
+those two were caught before they shipped and this one was not — because the
+first two were cheap to check locally and this one needed a 15-minute macOS run,
+so I reasoned instead of measuring. **The expensive check is the one that gets
+skipped, which is exactly when it matters most.**
+
+### What is actually known
+
+The failure is `No result file after 180s` with an **empty app console** and no
+crash report. Nothing yet separates a run that does that from one that does not
+— not the boot status, not the boot duration (the failing run booted in 3m15s and
+a passing one in 6m43s), not the device. **Roughly 3 in 5 pass.** Re-running is
+the mitigation and B87 carries it.
+
+⛔ **The rule for the next person, including me:** do not write a third guard
+without first reading what a GREEN run prints.

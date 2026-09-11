@@ -288,47 +288,35 @@ jobs:
           # SAME COMMIT passed on a re-run. A gate that fails randomly stops being
           # read, which is worse than one that fails loudly.
           #
-          # ⛔ **AND IT RECURRED, 2026-09-11 — because the fix read the wrong
-          # signal.** `xcrun simctl bootstatus -b` **exited 0** on a boot that
-          # printed `Status=4294967295, isTerminal=YES`, so the guard above
-          # never fired, the app was installed into a sick simulator, and the
-          # error again said "the app did not run the contract".
+          # ⛔ **AND THE WHOLE DIAGNOSIS ABOVE IS WRONG — MEASURED 2026-09-11.**
           #
-          # ⚠️ **The comment already named the status and the code checked `$?`.**
-          # The 2026-09-10 measurement recorded `ended status 4294967295` right
-          # here, and the control built from it watched the exit code instead —
-          # the same class as every other "verify the effect, not the exit" entry
-          # in this repo. **A control that has never been planted is not a
-          # control**, and this one was only ever planted against a boot that
-          # exits non-zero, which is not the failure that happens.
+          # `Status=4294967295, isTerminal=YES` is **NORMAL on this image**. It
+          # appears on every run of this lane, including the ones that go on to
+          # pass 52/52 — the successful 13:22 run booted for 6m43s and ended with
+          # exactly that status. It is not evidence of a sick boot and never was.
           #
-          # So: read the status it PRINTS, and confirm the device is really
-          # booted. ⚠️ Only an EXPLICITLY non-zero terminal status fails — an
-          # output shape we have not seen must not red-gate a healthy lane,
-          # because the contract itself is the real gate and this is a flake
-          # detector. Planted on the captured log text of the 2026-09-11
-          # failure: caught, with no false alarm on a healthy boot or on an
-          # unfamiliar shape.
+          # ⚠️ **Two fixes were built on that misread.** 2026-09-10 saw the status
+          # on a failing run and wrote a guard around `bootstatus`'s exit code;
+          # 2026-09-11 saw that the exit code was 0, made the STATUS actionable,
+          # and thereby turned a condition present in every run into a shutdown
+          # and retry. **The second fix made the lane worse** — it reddened a run
+          # by tearing down a simulator that was merely slow.
+          #
+          # ⛔ **The error was never running the control.** Both fixes looked at a
+          # FAILING run and neither looked at a PASSING one, where the same
+          # status is sitting in the log. This repo's own rule — *plant both
+          # directions* / *a control that has never been planted is not a
+          # control* — applied to the parser, which was tested against synthetic
+          # text, and not to the premise it encoded.
+          #
+          # So this is back to the exit code alone, which at least does not act
+          # on noise. ⚠️ **The real cause of "no result after 180s" is
+          # UNIDENTIFIED**; the lane is roughly 3-in-5 today and a re-run is the
+          # mitigation. Do not write a third guard without first checking what a
+          # GREEN run prints. → B87.
           boot_once() {
-            local out bad
             xcrun simctl boot "$DEVICE" 2>/dev/null || true
-            if ! out=$(xcrun simctl bootstatus "$DEVICE" -b 2>&1); then
-              echo "$out"
-              return 1
-            fi
-            echo "$out"
-            # ⛔ `|| true` is LOAD-BEARING. Under `set -euo pipefail` a `grep`
-            # that matches nothing exits 1, and a failing command substitution
-            # in an assignment aborts the step — so without it this guard would
-            # have killed every HEALTHY boot, which is the one outcome worse
-            # than the flake it exists to catch. Measured before pushing.
-            bad=$(echo "$out" | grep -oE 'Status=[0-9]+, isTerminal=YES' | grep -v 'Status=0,' | tail -1) || true
-            if [ -n "$bad" ]; then
-              echo "bootstatus exited 0 but reported: $bad"
-              return 1
-            fi
-            # The effect, not the exit: the device must actually be Booted.
-            xcrun simctl list devices | grep -F "$DEVICE" | grep -q '(Booted)'
+            xcrun simctl bootstatus "$DEVICE" -b
           }
           if ! boot_once; then
             echo "::warning::the simulator did not finish booting - shutting it down and retrying once"
