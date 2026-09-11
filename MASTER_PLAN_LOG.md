@@ -4326,3 +4326,44 @@ created yesterday, the second there all along.
 
 The queue had **two decomposed sections**, 6.1's beside the active 6.6's. 6.1's
 moved here, which is where a not-yet-active decomposition belongs.
+
+## 2026-09-11 — the eBay developer account was denied
+
+Not the Marketplace Insights refusal that was expected and planned for — **the
+developer account itself**, which takes Browse with it: no first-party active
+counts, no GTIN lookup.
+
+⚡ **Survivable, and checked rather than hoped.** SoldComps returns ACTIVE
+listings through `sold=false` (up to 200 per page, with `currentPrice`,
+`watcherCount` and the rest). So one vendor covers both halves of D12 and the
+denial costs the *route*, not the *data*.
+
+⚠️ **What it does buy is a single-vendor dependency.** Before, the design leaned
+on eBay first-party for finding and SoldComps for valuing; now everything comes
+from one small API. That makes D12's *"the manual path stays wired"* load-bearing
+rather than cautious, and it is worth re-reading before Gate 7 assumes a feed.
+
+⚠️ eBay's free Browse quota would also have been far more generous than 100
+requests a month. Worth one look at whether the denial states a reason or can be
+appealed — but not worth blocking on, now that the data has another source.
+
+### ⛔ B77 — the two caps push opposite ways, and one is unsafe
+
+The important finding, and it is not the denial.
+
+SoldComps caps **sold at 40/page** and **active at 200/page**. Hold time is
+`90 × (active + 1) / sold90`:
+
+- undercounting **SOLD** → fewer sales → **more** days → refuses a good item. **Safe.**
+- undercounting **ACTIVE** → fewer competitors → **fewer** days → accepts a bad one. **Unsafe.**
+
+Measured: an item with 500 active and 300 sold is a **150-day** hold. Read with
+active capped at 200 it reads **60 days** — inside GROWTH's ceiling, and wrong.
+Sell-through inflates the same way, `sold / (sold + active)`.
+
+⛔ **So `hasNextPage` on the ACTIVE query means the count is a FLOOR and the
+derived hold is a LOWER BOUND, and the gate must refuse to pass on it.** That is
+the reverse of the existing sell-through rule, where an absent ratio makes the
+gate *abstain* rather than fail an unknown — because there, not knowing is
+neutral, and here not knowing is optimistic. **The direction the unknown leans is
+what decides whether abstaining is safe.**
