@@ -6366,3 +6366,22 @@ set the precedent with its Sentry token.
 Next publish due **2026-11-30** (2026-09-11 + 80); the build expires **2026-12-10**
 (+90). Moved only now, after the publish landed — recording a deploy before it happens
 is how a remembered result becomes an unrun one.
+
+## 2026-09-11 — Data keys reads *set* on the phone
+
+🎯 **Jason:** *"Data keys is set."* The first thing about this build proven **on the
+device** rather than inferred from the yaml.
+
+It closes the one gap the publish entry named: the build path was *shown* to pass the
+environment through — nothing in the yaml clears it, and the React Native bundle phase
+inherits the build shell's variables — but no build had been *watched* carrying the key.
+A value in the team-wide `AppleConnect` group reaching a resale-os bundle is now a
+measured fact.
+
+⚡ **And B93 paid for itself on first use.** Its read-only Settings card was built so
+that exactly this question — *does this build carry the key?* — could be answered on
+the phone, because a key inlined at build time cannot be inspected any other way short
+of unpacking the binary. It answered.
+
+⏳ **Still open on the device:** the $25 through Money in (B95's first real use), and a
+real scan (6.11.6).

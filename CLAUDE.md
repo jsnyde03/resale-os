@@ -18,8 +18,9 @@ app now HOLDS a drop calendar and judges it; next is the release-feed adapter
 successfully"*) — everything through B95: the data route, the scanner, the
 allocation screen, the rules identity, 7.5's drops, and **Money in**. The deploy
 stopped being last by Jason's call, to try the scanner at Walmart.
-⏳ **Still to confirm ON THE PHONE, which no CI can:** Settings → Data keys reads
-*set*; Money in records the $25; and a real scan — **6.11.6**, the one thing the
+✅ **The market key reached the bundle** — Settings → Data keys reads *set* on the
+phone (Jason, 2026-09-11). ⏳ **Still to confirm ON THE PHONE, which no CI can:**
+Money in records the $25, and a real scan — **6.11.6**, the one thing the
 simulator lane cannot prove.
 
 ⚡ **D11's condition reads as met** — it said the fund starts buying when the
@@ -134,7 +135,7 @@ orientation.
 | | |
 |---|---|
 | ⏳ **The $25 CONTRIBUTION** | **D3, decided 2026-09-11: the bankroll goes $50 → $75.** ⛔ **Measured: at $50 the fund can buy NOTHING** — a $40 purchase with excellent evidence is refused by three capital gates, ceiling $20 against a $24.51 modelled downside. **$50 is the only bankroll where that is true**; at $75 the same rules permit a $30 buy returning $26.71. ⛔ **It needed code, and nobody had noticed — B95, 2026-09-11.** No screen could issue a contribution after the CLI was deleted at 5.10: import needs an empty ledger, and an ADJUSTMENT books owner money as a correction rather than as capital. **Money in** now exists — record it there once the next build is installed. Every figure here saying $50 stays true until it lands. |
-| ✅ **The deploy** | **Published 2026-09-11 at `a3a8c38`.** The market key went into Codemagic's **`AppleConnect`** group by Jason's choice — ⚠️ that group is **team-wide, imported by all four apps**, so the key sits in Hearthlight's, debt-app-v1's and GigWorkTracker's build environments too. None of them read it, so none embed it. A resale-os-only group was recommended and declined. ⏳ **Settings → Data keys** on the phone is what proves the key reached the bundle. ⚠️ **6.11.6 can only close on the device** — a simulator has no camera, so the scan is the first thing in this project the lane structurally cannot verify. |
+| ✅ **The deploy** | **Published 2026-09-11 at `a3a8c38`.** The market key went into Codemagic's **`AppleConnect`** group by Jason's choice — ⚠️ that group is **team-wide, imported by all four apps**, so the key sits in Hearthlight's, debt-app-v1's and GigWorkTracker's build environments too. None of them read it, so none embed it. A resale-os-only group was recommended and declined. ✅ **Settings → Data keys reads *set* on the phone** (Jason, 2026-09-11) — the key reached the bundle. ⚠️ **6.11.6 can only close on the device** — a simulator has no camera, so the scan is the first thing in this project the lane structurally cannot verify. |
 | **B26** | The operator's **state marginal rate** is still unverified (the local rate is confirmed). ⚡ Fixable in the app — the settings screen writes the tax profile, and a non-zero rate is refused without a stated basis. Ten minutes, and the tax reserve is computed from it. |
 | **Two repos** | Delete `resale-os-prescrub-2` and `resale-os-prescrub-private`. Both private, both still holding the scrubbed tax profile, and the CLI token cannot delete. History is bundled and restore-verified in the OneDrive backups folder. |
 | **D2** | The owner split (20/10/70) is still a default. ⚡ **B73 is closed — 6.7 gave it a screen**, so the thing that blocked answering it is gone. Still not live below $100 NAV, so decide it against real sales rather than in the abstract. |
