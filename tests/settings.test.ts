@@ -10,6 +10,8 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  allocationEdit,
+  allocationFieldsFrom,
   bpsFromPercent,
   bumpEdited,
   percentFromBps,
@@ -158,5 +160,110 @@ describe('the tax profile', () => {
   it('allows a zero rate with no basis, because there is nothing to explain', () => {
     const f = taxFieldsFrom(UNCONFIGURED_TAX_PROFILE);
     expect(taxEdit({ ...f, stateRatePercent: '0', stateRateBasis: '' }).next?.stateIncomeTaxBps).toBe(0);
+  });
+});
+
+describe('6.7 — the allocation block, which is what D2 needs', () => {
+  const alloc = () => allocationFieldsFrom(DEFAULT_POLICY);
+
+  it('opens on the stored split, as percentages a person typed', () => {
+    expect(alloc()).toEqual({
+      ownerPercent: '20',
+      operatingReservePercent: '10',
+      reinvestPercent: '70',
+      setAsideMinNav: '100.00',
+    });
+  });
+
+  it('saves a changed split and BUMPS the version', () => {
+    // ⛔ Policy lives in the database. The version is the only thing that can
+    // later detect a stored policy drifting from the code's.
+    const e = allocationEdit(DEFAULT_POLICY, { ...alloc(), ownerPercent: '30', reinvestPercent: '60' }, NAV);
+    expect(e.problems).toEqual([]);
+    expect(e.changed).toBe(true);
+    expect(e.next?.allocation.ownerBps).toBe(3_000);
+    expect(e.next?.allocation.reinvestBps).toBe(6_000);
+    expect(e.next?.version).not.toBe(DEFAULT_POLICY.version);
+  });
+
+  it('is a no-op when nothing moved, and does not bump', () => {
+    const e = allocationEdit(DEFAULT_POLICY, alloc(), NAV);
+    expect(e.changed).toBe(false);
+    expect(e.next).toBeNull();
+  });
+
+  it('⛔ refuses a split that does not add up, in the operator language', () => {
+    const e = allocationEdit(DEFAULT_POLICY, { ...alloc(), ownerPercent: '30' }, NAV);
+    expect(e.next).toBeNull();
+    // ⚠️ Not "must sum to 10000 bps" — that is not how anybody typed them.
+    expect(e.problems[0]).toContain('add up to 100%');
+    expect(e.problems[0]).toContain('110%');
+  });
+
+  it('⛔ defers to the engine validator for rules the form has never heard of', () => {
+    // The threshold must sit below the GROWTH promotion, or the fund could
+    // reach GROWTH while still retaining 100% of profit. The form does not
+    // know that rule; `validatePolicy` does, and it is exhaustive by
+    // construction — so the form must not carry a second copy of the rules.
+    const e = allocationEdit(DEFAULT_POLICY, { ...alloc(), setAsideMinNav: '9000.00' }, NAV);
+    expect(e.next).toBeNull();
+    expect(e.problems.join(' ')).toContain('setAsideMinNavCents');
+  });
+
+  it('refuses an owner share of zero — the owner is paid on every profit', () => {
+    const e = allocationEdit(
+      DEFAULT_POLICY,
+      { ...alloc(), ownerPercent: '0', reinvestPercent: '90' },
+      NAV,
+    );
+    expect(e.next).toBeNull();
+    expect(e.problems.length).toBeGreaterThan(0);
+  });
+
+  it('rejects unparseable input without touching the policy', () => {
+    for (const bad of [
+      { ownerPercent: 'twenty' },
+      { setAsideMinNav: 'a hundred' },
+      { reinvestPercent: '' },
+    ]) {
+      const e = allocationEdit(DEFAULT_POLICY, { ...alloc(), ...bad }, NAV);
+      expect(e.next, JSON.stringify(bad)).toBeNull();
+      expect(e.problems.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('6.7.2 — the split says what it multiplies into', () => {
+  const alloc = () => allocationFieldsFrom(DEFAULT_POLICY);
+
+  it('⚡ reports what stays in the fund and what leaves it', () => {
+    // A split is not a preference, it is a growth rate, and neither number
+    // states that alone.
+    const e = allocationEdit(DEFAULT_POLICY, alloc(), 20_000);
+    expect(e.consequence.reinvestBps).toBe(7_000);
+    expect(e.consequence.withdrawnBps).toBe(3_000);
+  });
+
+  it('⚠️ says the split is DORMANT below the threshold, which is where the fund is', () => {
+    // The live fund is $50 against a $100 threshold, so 20/10/70 currently
+    // moves no money at all — and an operator editing it deserves to know that
+    // before concluding the numbers did nothing.
+    const e = allocationEdit(DEFAULT_POLICY, alloc(), 5_000);
+    expect(e.consequence.splitIsDormant).toBe(true);
+    expect(e.consequence.startsAtCents).toBe(10_000);
+  });
+
+  it('and stops being dormant once the fund crosses it', () => {
+    // The control: "dormant" must track the NAV, not be constant.
+    expect(allocationEdit(DEFAULT_POLICY, alloc(), 10_000).consequence.splitIsDormant).toBe(false);
+    expect(allocationEdit(DEFAULT_POLICY, alloc(), 9_999).consequence.splitIsDormant).toBe(true);
+  });
+
+  it('reports the consequence of a REFUSED edit against the stored policy', () => {
+    // ⚠️ Not against the rejected one. A screen that showed the consequence of
+    // a split it refused to save would be describing a fund that does not exist.
+    const e = allocationEdit(DEFAULT_POLICY, { ...alloc(), ownerPercent: '30' }, 20_000);
+    expect(e.next).toBeNull();
+    expect(e.consequence.reinvestBps).toBe(DEFAULT_POLICY.allocation.reinvestBps);
   });
 });

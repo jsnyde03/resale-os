@@ -101,18 +101,20 @@ a feed and there is one vendor), and the queue does not idle while a question is
 out. This is real work, not filler: it is the thing standing between D2 and being
 answerable.
 
-- [ ] **6.7.1** The allocation fields + edit + validation in `src/ui/settings.ts`,
-      beside `policyEdit`. ⛔ **`validatePolicy` is exhaustive BY CONSTRUCTION** —
-      do not hand it a field list.
-- [ ] **6.7.2** ⚠️ **Show what the split MULTIPLIES into**, the way `policyEdit`
-      already shows the profit-floor/per-item reachability. A 20% owner cut of a
-      small profit is the difference between compounding and crawling, and the
-      set-aside threshold decides when it starts biting.
-- [ ] **6.7.3** The OTHER mode's rules, so GROWTH can be configured before the
-      fund reaches $500 rather than at the moment it crosses.
-- [ ] **6.7.4** Wire into the settings screen. ⛔ `setPolicy` stays the one door;
-      config never gains a route to the ledger.
-- [ ] **6.7.5** On-device verification.
+- [x] **6.7.1** ✅ **Done 2026-09-11.** `allocationFieldsFrom` / `allocationEdit`
+      — the split and the threshold, refused in the operator's words before
+      `validatePolicy` refuses them in the engine's.
+- [x] **6.7.2** ✅ **Done 2026-09-11.** `SplitConsequence`: what stays, what
+      leaves, and ⚡ **that the split is DORMANT at the live $50** — so an
+      operator editing it is not left concluding the numbers did nothing.
+- [x] **6.7.3** ✅ **Done 2026-09-11.** ⚡ **The model already took a mode** —
+      only the screen was pinned to `metrics.mode`, so GROWTH could not be
+      configured until the fund was already in it. A picker, and a warning when
+      editing a mode the fund is not in.
+- [x] **6.7.4** ✅ **Done 2026-09-11.** 672 tests (+12), both claims planted.
+      ⛔ **`allocation.tax` deliberately left off the screen** — read by nothing
+      outside `policy.ts` (**B86**).
+- [ ] **6.7.5** On-device verification — the case is written, waiting on a lane.
 
 **Exit:** every number D2 needs is editable on the phone, and the screen says
 what changing it costs.
@@ -132,7 +134,7 @@ what changing it costs.
 | 6.5 | **Not yet, or never?** — ⚡ the before-scan disproved the "watchlist that unlocks" premise: most refusals never clear at any bankroll | ✅ **Done 2026-09-10**, 50/50 on device |
 | 6.6 | **A gate that abstains must say so** (**B66**) | ✅ **Done 2026-09-11**, 52/52 on device |
 | 6.7 | **The allocation block has no screen** (**B73**) — owner split and the set-aside threshold, which is what **D2** needs | ⚡ **ACTIVE BUILD** |
-| 7 | Market Radar beta — scarcity, demand, momentum, market opportunity, confidence | ⚠️ Open — **[DECISION] with Jason**: D12 assumed a feed, and there is one vendor |
+| 7 | **Radar over the fund's OWN HISTORY** — scarcity, demand, momentum, confidence, from what the operator has actually seen. ⛔ Not market-wide; that premise died with **D16** | ⏸️ **PARKED until there is history** (**D17**) |
 | 7.5 | **Drop intel** — dated retail drops, monitoring and alerting. ⛔ Checkout automation is OUT, see **D13** | Open |
 | 8 | *(architecture only until 1–7 are reliable)* authorization states, drop intel, autonomy | Not started, not startable |
 
@@ -146,6 +148,7 @@ what changing it costs.
 |---|---|---|
 | D1 | What the tax reserve covers | ✅ **Incremental annual tax, 2026-09-08.** SE tax + federal brackets + QBI + state. ⚠️ Income tax abstains until a `TaxProfile` is set — **D7** |
 | D14 | Which gate set decides a purchase, given the two paths disagree | ✅ **One evaluator everywhere — 2026-09-10.** `evaluateOpportunity` gates every purchase, typed or scored; `assessQuote`'s candidate stops being a decision path. ⚠️ **Deliberately stricter on the live fund:** a buy typed with no comps and middling sell-through now needs **D4**'s override with a reason. Measured first — 64 divergences in 96 cases, both directions (**B58**) |
+| D17 | What Gate 7 becomes, now that its premise is gone | ⛔ **PARKED, and re-premised — 2026-09-11.** D12 chose *"Browse to find, SoldComps to value"* and **D16 deleted the finding half**, so Market Radar's input is one metered vendor at 2 requests per item. ⚡ **Gate 7 is re-premised as radar over the fund's OWN HISTORY** — D12's third leg, free, specific to what the operator actually encounters in stores, and better every flip — and **parked until there IS history**, because the fund has never bought anything. ⛔ **Building it now would mean guessing at its inputs.** ⚠️ Market-wide radar on the paid tier was considered and declined: 2,000 requests is 1,000 items a month, every tier caps at 60/min so a plan buys quota and never speed, and it would bet more of the product on the single vendor D16 just exposed. **Meanwhile the build stream takes the correctness backlog, starting with B54.** |
 | D16 | Whether to keep pursuing first-party eBay API access | ⛔ **NO — treat it as UNAVAILABLE, 2026-09-11.** The developer account was denied outright with a generic *"mismatched data"* reason, and Jason's reading is that eBay is issuing **blanket denials to individual developers**. ⚠️ **Do not re-apply, and do not design around getting in.** It is not an application-quality problem to fix. ⚡ This is what **D12** predicted — *"the resellers work around eBay and the direction of travel is tightening"* — arriving sooner than expected. Consequence: **SoldComps is the only automated route**, the manual path is not a fallback but a second leg, and `src/adapters/` stops being good practice and becomes the thing that makes a vendor swap survivable |
 | D15 | Whether a backup carries scoring history | ✅ **No — scores are DEVICE-LOCAL, 2026-09-10.** The export is the commands plus config, and **everything in it is verified by regenerating it**. Opportunities are neither, and not derivable — a score records what was decided, when, under which policy — so carrying them would spend that guarantee on advisory data. ⚠️ A lost phone loses the rejection histogram and the watchlist, and **none of the fund**. The app says so on the backups screen |
 | D13 | How far the app goes in online drops | ⛔ **Monitoring and alerting IN; checkout automation OUT — 2026-09-09.** Being first to KNOW is clean and is most of the edge; automating checkout violates retailer terms, and the penalty is order cancellations, account bans and flagged payment methods. **For a fund that is a capital event** — risking the accounts and payment rails the whole operation runs on, to win one console. ⛔ Nothing that defeats anti-bot systems: no CAPTCHA solving, fingerprint spoofing, proxy rotation or multiple accounts. ⚡ And the strategy points the same way: online drops are where the competition is scripts; **in-store allocation is where it is people, and Jason is in stores all day** |
@@ -385,6 +388,17 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   lies is worse than a request that costs. The honest fix is probably to say
   *"already looked up — press again to refresh"* rather than to silently serve
   a stale answer. → when the quota is actually felt, not before.
+- **B86** ⚠️ **`allocation.tax` is validated, required, and read by nothing.**
+  Found in 6.7's before-scan: `selfEmploymentBaseBps`, `selfEmploymentRateBps`,
+  `incomeTaxBps` and `deductHalfSelfEmploymentTax` appear **nowhere outside
+  `policy.ts`** — the flat model was replaced by the incremental annual one
+  (`core/tax/annual.ts`) and the config block survived it. ⛔ **Kept off the
+  settings screen deliberately**: a UI for a number that changes nothing is the
+  same trap as editing a `policy.ts` default on a fund that already exists.
+  ⚠️ **Not simply deletable** — `validatePolicy` requires it and stored policies
+  carry it, so removing it is a config migration, and this repo's rule is that a
+  repair path must not depend on the broken thing. → when a policy migration is
+  needed for another reason.
 - **B81** ⚠️ **One more page would turn some B77 refusals back into decisions.**
   ACTIVE caps at 200/page, so an item with 250 active is refused for being a
   floor when **one extra request** would have the true count. ⛔ Not general:

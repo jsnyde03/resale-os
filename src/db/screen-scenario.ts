@@ -25,7 +25,14 @@ import { purchaseCommandFrom } from '../core/capital/quote.js';
 import { evaluatePurchase } from '../scoring/purchase.js';
 import { itemIdFrom } from '../core/ids.js';
 import { adjustModel, reverseModel, sellModel, spendModel } from '../ui/forms.js';
-import { policyEdit, policyFieldsFrom, taxEdit, taxFieldsFrom } from '../ui/settings.js';
+import {
+  allocationEdit,
+  allocationFieldsFrom,
+  policyEdit,
+  policyFieldsFrom,
+  taxEdit,
+  taxFieldsFrom,
+} from '../ui/settings.js';
 import { evaluateForm, fillFromMarket } from '../screens/sourcing.js';
 import { buildScrapeUrl, readQuota } from '../adapters/soldcomps.js';
 import { parseCount } from '../core/counts.js';
@@ -871,6 +878,65 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
       ok(
         !guessed.gates.results.some((x) => x.code === 'SELL_THROUGH_TOO_LOW'),
         'an abstaining gate must not also report a verdict',
+      );
+    },
+  },
+  {
+    // ⛔ 6.7. The allocation block had no screen at all, and it is what D2 is
+    // decided against. Same discipline as the policy case above: a screen that
+    // appears to save proves nothing until a DIFFERENT store reads it off disk.
+    name: 'settings: the owner split survives, and a bad one is refused',
+    run: (db) => {
+      const store = funded(db, 50_000);
+      const before = store.policy();
+      const fields = allocationFieldsFrom(before);
+
+      // ⛔ A split that does not add up must be refused in the OPERATOR's words,
+      // and must leave the stored policy alone.
+      const bad = allocationEdit(before, { ...fields, ownerPercent: '30' }, 50_000);
+      ok(bad.next === null, 'a split summing to 110% must not be saveable');
+      ok(
+        (bad.problems[0] ?? '').includes('add up to 100%'),
+        `the refusal should speak percentages, got: ${bad.problems[0] ?? '<none>'}`,
+      );
+
+      const good = allocationEdit(
+        before,
+        { ...fields, ownerPercent: '25', reinvestPercent: '65' },
+        50_000,
+      );
+      ok(good.problems.length === 0, `the edit should parse: ${good.problems.join('; ')}`);
+      ok(good.next !== null, 'the edit should be a change');
+      store.setPolicy(good.next!);
+
+      // ⚠️ A SECOND store over the same database — B54.
+      const reopened = new FundStore(db, () => T0);
+      eq(reopened.policy().allocation.ownerBps, 2_500, 'the new owner share is on disk');
+      eq(reopened.policy().allocation.reinvestBps, 6_500, 'and so is the reinvested share');
+      eq(
+        reopened.policy().allocation.setAsideMinNavCents,
+        before.allocation.setAsideMinNavCents,
+        'the threshold was not quietly rewritten',
+      );
+      ok(
+        reopened.policy().version !== before.version,
+        'the version moved, or drift is undetectable',
+      );
+
+      // ⛔ Config is a separate door from the ledger. It moves no money.
+      eq(reopened.derivedState().balances.LIQUID, 50_000, 'a split change moves no money');
+      eq(reopened.derivedState().eventCount, store.state().eventCount, 'and records no event');
+
+      // ⚡ And the consequence tracks the fund, which is the half a person reads.
+      ok(
+        !allocationEdit(reopened.policy(), allocationFieldsFrom(reopened.policy()), 50_000)
+          .consequence.splitIsDormant,
+        'at $500 the split is live',
+      );
+      ok(
+        allocationEdit(reopened.policy(), allocationFieldsFrom(reopened.policy()), 5_000)
+          .consequence.splitIsDormant,
+        'at $50 - where the fund actually is - it is dormant',
       );
     },
   },

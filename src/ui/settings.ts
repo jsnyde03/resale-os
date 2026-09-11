@@ -285,3 +285,159 @@ export function taxEdit(fields: TaxFields): TaxEdit {
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// 6.7 — the allocation block
+// ---------------------------------------------------------------------------
+
+/**
+ * ⚡ **What D2 needs, and it had no screen (B73).**
+ *
+ * `policyEdit` above covers three fields of ONE mode. The `allocation` block —
+ * how after-tax profit is split, and the NAV below which it is not split at all
+ * — was uneditable on the device, and it is exactly what **D2** (the 20/10/70
+ * owner split) has to be decided against.
+ *
+ * ⛔ **`allocation.tax` is deliberately NOT here.** Its fields are read nowhere
+ * outside `policy.ts` — the flat model was replaced by the incremental annual
+ * one — so a form for them would edit a number that changes nothing, which is
+ * the same trap as editing a `policy.ts` default on a fund that already exists.
+ * Backlog **B86**.
+ */
+export interface AllocationFields {
+  /** Percent of AFTER-TAX profit paid to the owner. */
+  readonly ownerPercent: string;
+  readonly operatingReservePercent: string;
+  readonly reinvestPercent: string;
+  /** NAV below which nothing is set aside and everything compounds. */
+  readonly setAsideMinNav: string;
+}
+
+/**
+ * ⚠️ **What the numbers MULTIPLY into, shown before they are saved.**
+ *
+ * The same principle as `policyEdit`'s reachability: a split is not a
+ * preference, it is a growth rate. Taking 30% off every profit is the
+ * difference between a fund that compounds and one that crawls, and the
+ * set-aside threshold decides the bankroll at which that starts happening.
+ * ⛔ Neither number states that on its own.
+ */
+export interface SplitConsequence {
+  /** Share of after-tax profit that stays in the fund, in bps. */
+  readonly reinvestBps: Bps;
+  /** Share that leaves it — owner plus operating reserve. */
+  readonly withdrawnBps: Bps;
+  /** True while the fund is below the threshold, so nothing is withdrawn yet. */
+  readonly splitIsDormant: boolean;
+  /** The NAV at which the split starts applying. */
+  readonly startsAtCents: Cents;
+}
+
+export interface AllocationEdit {
+  readonly problems: readonly string[];
+  readonly next: Policy | null;
+  readonly changed: boolean;
+  readonly consequence: SplitConsequence;
+}
+
+export function allocationFieldsFrom(policy: Policy): AllocationFields {
+  const a = policy.allocation;
+  return {
+    ownerPercent: percentFromBps(a.ownerBps),
+    operatingReservePercent: percentFromBps(a.operatingReserveBps),
+    reinvestPercent: percentFromBps(a.reinvestBps),
+    setAsideMinNav: formatCents(a.setAsideMinNavCents).replace('$', ''),
+  };
+}
+
+function consequenceOf(a: Policy['allocation'], navCents: Cents): SplitConsequence {
+  return {
+    reinvestBps: a.reinvestBps,
+    withdrawnBps: (a.ownerBps + a.operatingReserveBps) as Bps,
+    splitIsDormant: navCents < a.setAsideMinNavCents,
+    startsAtCents: a.setAsideMinNavCents,
+  };
+}
+
+export function allocationEdit(
+  stored: Policy,
+  fields: AllocationFields,
+  navCents: Cents,
+): AllocationEdit {
+  const problems: string[] = [];
+  const current = stored.allocation;
+  const unchanged = (): AllocationEdit => ({
+    problems,
+    next: null,
+    changed: false,
+    consequence: consequenceOf(current, navCents),
+  });
+
+  const ownerBps = bpsFromPercent(fields.ownerPercent);
+  if (ownerBps === undefined) problems.push('Owner share must be a percentage, like 20');
+  const operatingReserveBps = bpsFromPercent(fields.operatingReservePercent);
+  if (operatingReserveBps === undefined) {
+    problems.push('Operating reserve must be a percentage, like 10');
+  }
+  const reinvestBps = bpsFromPercent(fields.reinvestPercent);
+  if (reinvestBps === undefined) problems.push('Reinvest share must be a percentage, like 70');
+
+  let setAsideMinNavCents: Cents | undefined;
+  try {
+    setAsideMinNavCents = parseDollars(fields.setAsideMinNav.trim());
+  } catch {
+    problems.push('The set-aside threshold must be an amount like 100.00');
+  }
+
+  if (problems.length > 0) return unchanged();
+
+  // ⚠️ Said in the operator's language BEFORE `validatePolicy` says it in the
+  // engine's. The three shares are the thing a person gets wrong, and
+  // "must sum to 10000 bps" is not how anybody typed them.
+  const sum = (ownerBps as Bps) + (operatingReserveBps as Bps) + (reinvestBps as Bps);
+  if (sum !== 10_000) {
+    problems.push(
+      `Owner, operating reserve and reinvest must add up to 100% — ` +
+        `these add up to ${(sum / 100).toFixed(0)}%`,
+    );
+    return unchanged();
+  }
+
+  const edited: Policy['allocation'] = {
+    ...current,
+    ownerBps: ownerBps as Bps,
+    operatingReserveBps: operatingReserveBps as Bps,
+    reinvestBps: reinvestBps as Bps,
+    setAsideMinNavCents: setAsideMinNavCents as Cents,
+  };
+
+  const changed =
+    edited.ownerBps !== current.ownerBps ||
+    edited.operatingReserveBps !== current.operatingReserveBps ||
+    edited.reinvestBps !== current.reinvestBps ||
+    edited.setAsideMinNavCents !== current.setAsideMinNavCents;
+
+  // ⛔ Bump on every policy change, exactly as `policyEdit` does. It is the only
+  // thing that can later detect a stored policy drifting from the code's.
+  const next: Policy = {
+    ...stored,
+    version: changed ? bumpEdited(stored.version) : stored.version,
+    allocation: edited,
+  };
+
+  // The engine's own validator, not a second opinion — it knows rules this form
+  // does not, such as the threshold having to sit below the GROWTH promotion.
+  try {
+    validatePolicy(next);
+  } catch (err) {
+    problems.push(err instanceof Error ? err.message : String(err));
+    return unchanged();
+  }
+
+  return {
+    problems,
+    next: changed ? next : null,
+    changed,
+    consequence: consequenceOf(edited, navCents),
+  };
+}

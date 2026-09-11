@@ -5141,3 +5141,53 @@ answerable**, and D2 is due at $100 NAV — four to six flips away.
 genuine correctness gap and is overdue — it was filed "→ Gate 5", which closed.
 It loses to 6.7 only because 6.7 unblocks a dated decision. **Filed here so the
 next replenishment does not have to rediscover the comparison.**
+
+## 2026-09-11 — 6.7, the allocation block
+
+`allocationFieldsFrom` / `allocationEdit` beside `policyEdit`, and a **The
+split** section on the settings screen. ⚡ **This is what D2 is decided against**,
+and until now it was the one policy block with no way to change it on the device.
+
+### The two refusals, and which one speaks first
+
+⚠️ **The form says "these add up to 110%" before `validatePolicy` says "must sum
+to 10000 bps".** The three shares are the thing a person gets wrong, and the
+engine's message is not in the units anybody typed. ⛔ But the form does **not**
+carry a second copy of the rules: the threshold having to sit below the GROWTH
+promotion is a rule the form has never heard of, and it is left entirely to
+`validatePolicy` — which is exhaustive by construction, so it catches a field
+this form does not know exists.
+
+### ⚡ 6.7.2 — the split is DORMANT at the fund's actual bankroll
+
+The consequence is said **before** the fields, not after. The live fund is $50
+against a $100 threshold, so 20/10/70 currently moves no money at all — an
+operator who edits it without knowing that concludes the numbers did nothing.
+`splitIsDormant` tracks the NAV, and a test pins both sides of the boundary
+($9,999 dormant, $10,000 live) so it cannot quietly become a constant.
+
+⚠️ **The consequence of a REFUSED edit is reported against the STORED policy**,
+not the rejected one. A screen describing the consequences of a split it declined
+to save would be describing a fund that does not exist.
+
+### ⚡ 6.7.3's premise was wrong in the cheap direction
+
+`policyFieldsFrom` and `policyEdit` **always took a mode**. Only the screen was
+pinned to `metrics.mode`, so GROWTH's rules could not be set until the fund had
+already reached GROWTH — the worst possible moment to think about them. The
+sub-step needed no model work at all, just a picker and a line saying that
+editing a mode the fund is not in changes nothing today.
+
+### ⛔ `allocation.tax` is validated, required, and read by nothing
+
+Found in the before-scan and deliberately kept off the screen. Its four fields
+appear nowhere outside `policy.ts` — the flat model was replaced by the
+incremental annual one and the config block outlived it. **A form for a number
+that changes nothing is the same trap as editing a `policy.ts` default on a fund
+that already exists.** Filed as **B86**; not simply deletable, because
+`validatePolicy` requires it and stored policies carry it.
+
+### Two plants
+
+The version bump removed → 1 red. The consequence stopped reading NAV → 2 red.
+Both restored and the restores verified by grep, not by assumption.

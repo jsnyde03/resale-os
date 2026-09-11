@@ -4,8 +4,11 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } fro
 
 import {
   FILING_STATUSES,
+  allocationEdit,
+  allocationFieldsFrom,
   policyEdit,
   policyFieldsFrom,
+  type AllocationFields,
   policyStatus,
   taxEdit,
   taxFieldsFrom,
@@ -14,7 +17,11 @@ import {
   type TaxFields,
 } from '../../src/ui/settings.js';
 import { formatCents } from '../../src/core/money.js';
-import { DEFAULT_POLICY } from '../../src/core/capital/policy.js';
+import {
+  BANKROLL_MODES,
+  DEFAULT_POLICY,
+  type BankrollMode,
+} from '../../src/core/capital/policy.js';
 import { useFund } from '../src/fund/FundProvider.js';
 import { Button, C, Card, H1, Muted, Row } from '../src/ui/theme.js';
 import { Field } from '../src/ui/fields.js';
@@ -34,9 +41,16 @@ import { Field } from '../src/ui/fields.js';
 export default function Settings() {
   const { state, metrics, setPolicy, setTaxProfile } = useFund();
   const stored = state.policy;
-  const mode = metrics.mode;
+
+  // ⚡ **6.7.3: which mode's rules are being edited, not just the active one.**
+  // `policyFieldsFrom` and `policyEdit` always took a mode; only this screen
+  // was fixed to `metrics.mode`, so GROWTH's rules could not be set until the
+  // fund had already reached GROWTH — the worst possible moment to think about
+  // them. Defaults to the active mode, which is the old behaviour.
+  const [mode, setMode] = useState<BankrollMode>(metrics.mode);
 
   const [fields, setFields] = useState<PolicyFields>(() => policyFieldsFrom(stored, mode));
+  const [alloc, setAlloc] = useState<AllocationFields>(() => allocationFieldsFrom(stored));
   const [tax, setTax] = useState<TaxFields>(() => taxFieldsFrom(state.taxProfile));
   const [saved, setSaved] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -47,6 +61,25 @@ export default function Settings() {
     [stored, mode, fields, metrics.navCents],
   );
   const taxResult = useMemo(() => taxEdit(tax), [tax]);
+  const allocResult = useMemo(
+    () => allocationEdit(stored, alloc, metrics.navCents),
+    [stored, alloc, metrics.navCents],
+  );
+
+  /** Switching mode reloads that mode's stored rules, discarding an unsaved edit. */
+  function pickMode(next: BankrollMode) {
+    setMode(next);
+    setFields(policyFieldsFrom(stored, next));
+    setSaved(null);
+    setRefusal(null);
+  }
+
+  function saveAllocation() {
+    if (!allocResult.next) return;
+    const out = setPolicy(allocResult.next);
+    setRefusal(out.ok ? null : out.refusal);
+    setSaved(out.ok ? 'Split saved.' : null);
+  }
 
   function savePolicy() {
     if (!edit.next) return;
@@ -60,6 +93,7 @@ export default function Settings() {
     setRefusal(out.ok ? null : out.refusal);
     if (out.ok) {
       setFields(policyFieldsFrom(DEFAULT_POLICY, mode));
+      setAlloc(allocationFieldsFrom(DEFAULT_POLICY));
       setSaved("Adopted the code's defaults.");
     }
   }
@@ -100,10 +134,41 @@ export default function Settings() {
           ) : null}
 
           <Card>
-            <Row label="Mode" value={mode} />
+            <Row label="Mode now" value={metrics.mode} />
             <Row label="Bankroll" value={formatCents(metrics.navCents)} tone="dim" />
             <Row label="Rules version" value={status.storedVersion} tone="dim" />
           </Card>
+
+          {/* ⚡ 6.7.3. GROWTH's rules could not be set until the fund had already
+              reached GROWTH — the worst possible moment to think about them. */}
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: C.dim, fontSize: 13 }}>Editing the rules for</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {BANKROLL_MODES.map((m) => (
+                <Pressable
+                  key={m}
+                  onPress={() => pickMode(m)}
+                  style={{
+                    paddingVertical: 8,
+                    paddingHorizontal: 12,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: mode === m ? C.text : C.line,
+                  }}
+                >
+                  <Text style={{ color: mode === m ? C.text : C.dim, fontSize: 13 }}>{m}</Text>
+                </Pressable>
+              ))}
+            </View>
+            {mode === metrics.mode ? null : (
+              /* ⚠️ Editing a mode the fund is not in changes nothing today. Say
+                 so, or a saved change reads as having had no effect. */
+              <Muted>
+                The fund is in {metrics.mode}. Changing {mode}&apos;s rules is allowed and takes
+                effect when the fund gets there — it does not change what it will buy today.
+              </Muted>
+            )}
+          </View>
 
           <Field
             label={`Max per item, as % of bankroll (${mode})`}
@@ -164,6 +229,75 @@ export default function Settings() {
             onPress={savePolicy}
             tone="primary"
             disabled={!edit.changed || edit.next === null}
+          />
+
+          <View style={{ height: 8 }} />
+          <H1>The split</H1>
+          <Muted>
+            How profit is divided after tax, and the bankroll below which it is not divided at
+            all. ⛔ These are the numbers D2 is decided against.
+          </Muted>
+
+          {/* ⚠️ Said before the fields, not after. The live fund is below the
+              threshold, so a split edited here moves no money yet — an operator
+              who does not know that concludes the numbers did nothing. */}
+          {allocResult.consequence.splitIsDormant ? (
+            <Card>
+              <Muted>
+                Nothing is set aside yet. Below{' '}
+                {formatCents(allocResult.consequence.startsAtCents)} of bankroll the whole
+                after-tax profit compounds, so this split starts applying when the fund gets
+                there. Tax still accrues — that is an obligation, not a distribution.
+              </Muted>
+            </Card>
+          ) : null}
+
+          <Field
+            label="Owner, as % of after-tax profit"
+            value={alloc.ownerPercent}
+            onChangeText={(v) => setAlloc({ ...alloc, ownerPercent: v })}
+            placeholder="20"
+            keyboardType="decimal-pad"
+          />
+          <Field
+            label="Operating reserve, as %"
+            value={alloc.operatingReservePercent}
+            onChangeText={(v) => setAlloc({ ...alloc, operatingReservePercent: v })}
+            placeholder="10"
+            keyboardType="decimal-pad"
+          />
+          <Field
+            label="Reinvested, as %"
+            value={alloc.reinvestPercent}
+            onChangeText={(v) => setAlloc({ ...alloc, reinvestPercent: v })}
+            placeholder="70"
+            keyboardType="decimal-pad"
+            hint={`${(allocResult.consequence.reinvestBps / 100).toFixed(0)}% stays in the fund, ${(allocResult.consequence.withdrawnBps / 100).toFixed(0)}% leaves it.`}
+          />
+          <Field
+            label="Start splitting at a bankroll of"
+            value={alloc.setAsideMinNav}
+            onChangeText={(v) => setAlloc({ ...alloc, setAsideMinNav: v })}
+            placeholder="100.00"
+            keyboardType="decimal-pad"
+            hint="Below this, everything after tax compounds. Must sit below the GROWTH promotion."
+          />
+
+          {allocResult.problems.length > 0 ? (
+            <Card style={{ borderWidth: 1, borderColor: C.warn }}>
+              {allocResult.problems.map((p) => (
+                <Text key={p} style={{ color: C.warn, fontSize: 14, paddingVertical: 3 }}>
+                  {p}
+                </Text>
+              ))}
+            </Card>
+          ) : null}
+
+          <Button
+            label={allocResult.changed ? 'Save the split' : 'Nothing changed'}
+            onPress={saveAllocation}
+            tone="primary"
+            disabled={!allocResult.changed || allocResult.next === null}
           />
 
           <View style={{ height: 8 }} />
