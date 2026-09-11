@@ -173,11 +173,18 @@ buying.
       settled the id question: a drop is in the future, so the screen
       recomputes. 774 tests (+17), and a 56th device case that has not run on
       hardware.
-- [ ] **7.5.5** ⚡ **ACTIVE.** The feed adapter — which source, per vertical, behind
-      `src/adapters/` (**D19**). Sneakers, consoles, LEGO, cards.
-      ⛔ **Structured sources only** (JSON/RSS/iCal): the phone has no DOM, so
-      an HTML scrape is regex over markup and breaks **silently**. Manual entry
-      is the per-vertical fallback where no structured source exists.
+- [ ] **7.5.5** ⛔ **BLOCKED — the switch-in scan found no reachable source.**
+      Per vertical: **cards** has the one properly-documented free API with a
+      `releaseDate` field (pokemontcg.io) and it returned **502 then 500 when
+      queried on 2026-09-11** — a hobbyist API, down at the moment of asking;
+      **LEGO** has Brickset API v3 (JSON) but it needs an account and a
+      requested key, so nothing can be verified without Jason; **sneakers** and
+      **consoles** have no free structured source found at all. ⚠️ **And the
+      decisive property is unverified for both survivors: whether either lists
+      releases that have NOT happened yet.** A catalogue of what already came
+      out is not a calendar. **Needs Jason: request a free Brickset key.**
+      ⛔ Structured sources only — the phone has no DOM, so an HTML scrape is
+      regex over markup and breaks silently.
 - [ ] **7.5.6** Alerting. ⚠️ `expo-notifications` is a second native module;
       **D13 bounds this to monitoring and alerting, never checkout.**
 - [ ] **7.5.7** On-device verification.
@@ -276,12 +283,20 @@ ever announces that the day arrived. A threshold the app already computes does.
 
 Filed, not forgotten. Nothing here is in a gate until it is promoted.
 
-- **B93** ⛔ **A failure message tells the operator to do something impossible.**
-  `UNAVAILABLE_WORDING.AUTH` says *"check it in Settings"*, and the market key
-  is `EXPO_PUBLIC_SOLDCOMPS_KEY` — an env var baked at build time, with no
-  settings field and no way to fix it on the device. ⚠️ Two screens now read
-  `process.env` inline (sourcing, drops) and a third will. One place that says
-  where the key comes from, and wording that matches it. Surfaced by 7.5.4.
+- ~~**B93**~~ ✅ **Closed 2026-09-11.** The impossible advice is gone, the three
+  screens read one module, and Settings reports which keys this build carries —
+  read-only, because they cannot be changed on a device. ⚠️ **The filing said
+  two screens and "a third will"; the third already existed** (scan, on the
+  barcode key). Detail in the log.
+- **B94** ⛔ **Both vendor keys ship in PLAIN TEXT inside the app.** Expo inlines
+  every `EXPO_PUBLIC_*` variable into the client bundle and its own docs say not
+  to put secrets there. B93 made the app honest about this; it did not fix it.
+  ⚠️ **And the obvious fix is a trap**: `portable.ts` exports config **wholesale**
+  (`SELECT key, value_json FROM config`, no whitelist), so a key stored there
+  travels in every backup and every export — files that leave the phone. A real
+  fix means runtime entry plus storage that a backup cannot carry
+  (`expo-secure-store`, a second native module) — **a decision, not a text
+  field.** ⚠️ Blast radius today is one operator's own TestFlight binary.
 - **B91** ⚠️ **A dated shortfall inherits `SCAN_NAVS_CENTS`'s grid.** 7.5.2 tells
   the operator the next bankroll on that ladder at which a drop clears — so at
   small NAV it can say *"you need $100 by Dec 1"* when $92 would do, and the

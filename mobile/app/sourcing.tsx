@@ -10,6 +10,7 @@ import {
   type SourcingForm,
 } from '../../src/screens/sourcing.js';
 import { lookUpMarket } from '../../src/adapters/soldcomps.js';
+import { SOLDCOMPS_KEY } from '../src/config/keys.js';
 import { applyScan, scanOutcome } from '../../src/screens/scan.js';
 import { opportunityIdFrom } from '../../src/core/ids.js';
 import { formatCents } from '../../src/core/money.js';
@@ -170,7 +171,7 @@ export default function Sourcing() {
    * a secret store. An absent key is reported as an absent key rather than
    * spent on a request that will come back 401.
    */
-  const apiKey = process.env['EXPO_PUBLIC_SOLDCOMPS_KEY'] ?? '';
+  const apiKey = SOLDCOMPS_KEY;
 
   /**
    * ⛔ **Look it up FILLS the fields. It does not check, and it cannot decide.**

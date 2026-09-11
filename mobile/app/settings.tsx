@@ -22,6 +22,7 @@ import {
   DEFAULT_POLICY,
   type BankrollMode,
 } from '../../src/core/capital/policy.js';
+import { vendorKeyStatus } from '../src/config/keys.js';
 import { useFund } from '../src/fund/FundProvider.js';
 import { Button, C, Card, H1, Muted, Row } from '../src/ui/theme.js';
 import { Field } from '../src/ui/fields.js';
@@ -386,6 +387,26 @@ export default function Settings() {
           ) : null}
 
           {saved && !refusal ? <Muted>{saved}</Muted> : null}
+
+          {/* ⛔ READ-ONLY, and that is the honest shape. The keys are inlined
+              into the build by Metro, so there is nothing here to edit — and
+              storing them in `config` instead would put a live credential into
+              every backup, since the export takes config wholesale. The screen
+              says which build has what, and stops there. */}
+          <H1>Data keys</H1>
+          <Card>
+            {vendorKeyStatus().map((k) => (
+              <View key={k.id} style={{ paddingVertical: 6 }}>
+                <Row label={k.label} value={k.present ? 'set' : 'not set'} tone={k.present ? 'good' : 'dim'} />
+                <Muted>{k.detail}</Muted>
+              </View>
+            ))}
+            <View style={{ height: 8 }} />
+            <Muted>
+              Set at build time and shipped inside the app, so they are not secrets and cannot be
+              changed on the device. Changing one is a rebuild.
+            </Muted>
+          </Card>
 
           <Link href="/" style={{ color: C.faint, paddingTop: 8 }}>
             ← back

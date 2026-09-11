@@ -8,6 +8,7 @@ import { lookUpMarket } from '../../src/adapters/soldcomps.js';
 import { evaluateOpportunity } from '../../src/scoring/evaluate.js';
 import { formatCents } from '../../src/core/money.js';
 import { centsOrNothing, Field } from '../src/ui/fields.js';
+import { SOLDCOMPS_KEY } from '../src/config/keys.js';
 import { useFund } from '../src/fund/FundProvider.js';
 import { Button, C, Card, H1, Muted, Row } from '../src/ui/theme.js';
 
@@ -91,9 +92,9 @@ export default function DropsScreen() {
    * price, and it simply has no verdict yet. Same rule as the aisle screen.
    */
   async function value(dropId: string, searchFor: string) {
-    const apiKey = process.env['EXPO_PUBLIC_SOLDCOMPS_KEY'] ?? '';
-    if (apiKey === '') {
-      setNote('No market key set — add EXPO_PUBLIC_SOLDCOMPS_KEY to value a drop.');
+    // ⛔ Baked at build time, so there is nothing to fix on the device.
+    if (SOLDCOMPS_KEY === '') {
+      setNote('This build has no market key, so a drop cannot be valued automatically.');
       return;
     }
     if (category.trim() === '') {
@@ -105,7 +106,7 @@ export default function DropsScreen() {
     try {
       // ⛔ `new`, always. A retail drop is sealed by definition, and B90
       // measured what mixed-condition comps do to the median: 234x spread.
-      const result = await lookUpMarket(searchFor, { apiKey }, 'new');
+      const result = await lookUpMarket(searchFor, { apiKey: SOLDCOMPS_KEY }, 'new');
       if (!result.ok) {
         setNote(`${result.detail} — the drop is unchanged.`);
         return;

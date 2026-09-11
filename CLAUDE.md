@@ -51,7 +51,7 @@ CHIPS"*, so a mis-scan succeeds *wrongly*. The title on screen beside the object
 in hand is the only check on that, and it is the operator's.
 
 Live on a real **$50** bankroll — ⏳ **$75 decided, awaiting a $25 CONTRIBUTION**
-(**D3**). **774 tests, 47 files.** `npm run check` runs **six** gates: source
+(**D3**). **781 tests, 48 files.** `npm run check` runs **six** gates: source
 bytes, import direction, phone bundle, **the PLAN**, typecheck, tests.
 
 ---
@@ -173,7 +173,7 @@ margin play needing hold tolerance a $50 fund does not have. Backlog **B28**.
 ### Five gates run on every check
 
 ```
-npm run check    # source bytes · imports · PHONE BUNDLE · PLAN · typecheck · 774 tests
+npm run check    # source bytes · imports · PHONE BUNDLE · PLAN · typecheck · 781 tests
 ```
 
 ⚡ **`lint:plan` is new, 2026-09-11, and it exists because nothing read the one

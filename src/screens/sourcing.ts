@@ -456,7 +456,10 @@ const UNAVAILABLE_WORDING: Readonly<Record<MarketFailureReason, string>> = {
   QUOTA_EXCEEDED: "This month's lookups are used up — type the counts from eBay",
   RATE_LIMITED: 'Too many lookups in a minute — wait a moment, or type the counts',
   UNPARSEABLE: 'The market data came back unreadable — type the counts from eBay',
-  AUTH: 'The data key was refused — check it in Settings, or type the counts',
+  // ⛔ It used to say "check it in Settings". There is no such field and there
+  // cannot be one without a storage decision (@see screens/keys.ts): the key is
+  // baked into the build. Advice nobody can follow is worse than none.
+  AUTH: 'The data key was refused — it is set at build time, so type the counts',
   VENDOR: 'The data source is having trouble — type the counts from eBay',
 };
 

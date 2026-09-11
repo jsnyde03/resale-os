@@ -5,6 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { scanOutcome, type ScanOutcome } from '../../src/screens/scan.js';
 import { lookUpProduct } from '../../src/adapters/upcitemdb.js';
+import { UPCITEMDB_KEY } from '../src/config/keys.js';
 import { Button, C, Card, H1, Muted } from '../src/ui/theme.js';
 
 /**
@@ -31,7 +32,7 @@ export default function Scan() {
   const [outcome, setOutcome] = useState<ScanOutcome | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const apiKey = process.env['EXPO_PUBLIC_UPCITEMDB_KEY'] ?? '';
+  const apiKey = UPCITEMDB_KEY;
 
   /**
    * ⚠️ **Guarded against the camera's firehose.** `onBarcodeScanned` fires many

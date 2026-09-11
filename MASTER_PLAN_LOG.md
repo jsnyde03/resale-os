@@ -6129,3 +6129,77 @@ monitor, and 7.6 stays what the research reframed it as — **making the
 judgement instant when someone else's alert fires**, which needs no proxies at
 all. Jason's own experience is the strongest evidence for the deferral: he has
 built these before, and reports they take *"scraping and proxies"*.
+
+## 2026-09-11 — B93: the app was giving advice nobody could follow
+
+### What it actually was
+
+`UNAVAILABLE_WORDING.AUTH` said *"The data key was refused — check it in
+Settings, or type the counts."* ⛔ **There is no such field, and there cannot
+be one without a storage decision.** The key is `EXPO_PUBLIC_SOLDCOMPS_KEY`,
+which Metro inlines at build time, so a refused key is fixed by a rebuild. A
+sentence is the one kind of defect no gate here catches: it typechecks, it
+tests, and it sends a person to a screen that will never have the answer.
+
+### ⛔ The before-scan found the fix was bigger than the filing, three ways
+
+1. **The filing undercounted its own sites.** It said "two screens read
+   `process.env` inline, and a third will". **The third already existed** —
+   `scan.tsx`, on the barcode key. Sixth measured instance of an enumerated
+   site-list coming up short on this portfolio.
+2. **There are two keys, not one.** SoldComps and UPCitemdb, and their absences
+   mean **opposite** things: without the market key every count is typed by
+   hand, while UPCitemdb's trial tier answers without one at all, so absence
+   there is normal. Reporting both as "missing" would be wrong twice.
+3. ⛔ **Both keys ship in plain text inside the app.** Expo's own documentation:
+   *"Do not store sensitive info... these variables will be visible in
+   plain-text in your compiled application."* That is a real property of what is
+   shipping now, and B93 as filed did not mention it.
+
+### ⚠️ And the obvious fix is a trap, which is why it was not taken
+
+Putting the key in `config` so Settings could edit it looks like the clean
+answer. `portable.ts` exports config **wholesale** — `SELECT key, value_json
+FROM config`, no whitelist — so a key stored there would travel in **every
+backup and every export**, which are files that leave the phone. This project
+has already been one `git add -A` away from publishing a tax profile; adding a
+live vendor credential to the same payload would be the same mistake with a
+different field.
+
+So the split: **make the app honest now, and file the storage decision as
+B94.** What shipped is one module for the keys, three screens reading it, a
+corrected message, and a **read-only** Settings card that says which keys this
+build carries and that changing one is a rebuild.
+
+### Where the logic lives, and why it is split in two
+
+`src/screens/keys.ts` holds every fact — the vendors, what each absence costs,
+how a status reads — and is pure, so the Node suite tests it.
+`mobile/src/config/keys.ts` holds three **literal** `process.env` reads and
+nothing else, because ⛔ **Metro inlines by matching the text of the access**:
+`process.env[someVariable]` works in Node and returns undefined in a bundle.
+⚠️ **That file is the part the suite structurally cannot exercise**, and it is
+deliberately one line per key so the untestable surface is as small as the
+constraint allows.
+
+### The tests drive the real path
+
+The wording assertions go through `fillFromMarket` with each of the six failure
+reasons, rather than reading the constant — ⛔ **a message the screen never
+reaches is not the message the screen shows.** The second assertion pins the
+rule the fix had to preserve: all six still end by pointing at the manual path.
+
+### Planted
+
+Two: the impossible advice restored (red), and whitespace counted as a key
+(red). ⚠️ The second is the subtler defect — a build setting the variable to
+`""` or a stray space yields a key the adapter sends and the vendor refuses,
+surfacing mid-decision as AUTH rather than as "no key", which sends the
+operator after the wrong problem.
+
+### State at close
+
+**781 tests, 48 files, six gates green.** 7.5.5 stays **blocked** on a reachable
+drop source — pokemontcg.io answered 502 then 500 today, and Brickset needs a
+key only Jason can request. ⏳ The deploy is still the largest thing waiting:
+31+ commits, and the whole of 7.5 has never run on hardware.
