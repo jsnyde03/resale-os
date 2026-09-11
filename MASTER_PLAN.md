@@ -182,7 +182,15 @@ buying.
       **consoles** have no free structured source found at all. ⚠️ **And the
       decisive property is unverified for both survivors: whether either lists
       releases that have NOT happened yet.** A catalogue of what already came
-      out is not a calendar. **Needs Jason: request a free Brickset key.**
+      out is not a calendar. **Needs Jason: request a free Brickset key**
+      — 100 `getSets` calls a day, ample. ⚠️ **Brickset states the API is for apps
+      that "enhance the Brickset experience", and NOT for scraping the database or
+      building competing sites.** Resale OS clears both prohibitions — a handful of
+      sets, no public surface, nothing republished — and is honestly not an
+      enhancement to their community either, so the request says so plainly and
+      lets them decline. ⛔ **If they decline, that is the answer** (**D16**): LEGO
+      falls back to the manual entry 7.5.4 already supports, which fits a few drops
+      a month.
       ⛔ Structured sources only — the phone has no DOM, so an HTML scrape is
       regex over markup and breaks silently.
 - [ ] **7.5.6** Alerting. ⚠️ `expo-notifications` is a second native module;
