@@ -132,58 +132,49 @@ as stale, and the histogram says when it is mixing rule sets. Detail in the log.
 
 ---
 
-### Gate 6.11 — THE SCAN FLOW (D18) ⚡ **ACTIVE BUILD**
+### Gate 6.11 — THE SCAN FLOW ✅ **BUILT 2026-09-11** *(6.11.6 awaits the deploy)*
 
-🎯 **Jason 2026-09-11:** *"Without scanning at Walmart it'll be too tedious to go
-through the clearance rack and type everything in… Scanning is vital to this app
-until I actually get recommendations of what to purchase."*
-
-⛔ **SoldComps takes no barcode** — verified, `keyword` only — so this needs a
-SECOND vendor. ⚡ **Already de-risked:** UPCitemdb's keyless trial round-tripped
-three real UPCs to title, brand and category.
-
-⛔ **And B89 is the shape of the whole item.** On one real product, the raw
-resolver title and the set-number keyword gave medians **68% apart** — and that
-median becomes the resale price. **A scan cannot silently produce an answer.**
-
-- [x] **6.11.1** ✅ **Done 2026-09-11.** `core/product.ts` + the UPCitemdb
-      adapter, against captured bytes. ⛔ **Two instincts the real response
-      corrected**: `model` is the UPC repeated back, not a model number; and an
-      all-zeros barcode RESOLVES, to tortilla chips.
-- [x] **6.11.2** ✅ **Done 2026-09-11.** `keywordFor` proposes and never
-      imposes — the set-number reading is offered as an `alternative`, because
-      **B89** measured the two 68% apart. Editing it is 6.11.4's screen.
-- [x] **6.11.3** ✅ **Done 2026-09-11. Closes B90.** The operator's condition
-      drives `itemCondition` on the sold search, so comps describe the thing in
-      hand — 3× spread instead of 234×, and a dispersion term that is no longer
-      zero. Resale fills from the median **only** when the comps match and the
-      field is blank. 710 tests (+6), both claims planted.
-      ⚠️ **Category-from-the-resolver moves to 6.11.4**, where the scan exists to
-      supply it.
-- [x] **6.11.4** ✅ **Done 2026-09-11.** `expo-camera` 56.0.8, `app/scan.tsx`,
-      and `screens/scan.ts` holding every decision. ⚡ **B84 shipped with it** —
-      a *"Search eBay as"* field, separate from the name, because **B89** made it
-      a prerequisite rather than a nicety.
-- [x] **6.11.5** ✅ **Done 2026-09-11.** All five failures say what to do
-      instead; only the two that clear by themselves offer a retry. A refused
-      camera is a normal screen, not an error.
-- [ ] **6.11.6** ⚙️ **Written; the lane covers everything BELOW the camera** —
-      keyword, bucket, what a scan may fill, and that a failed scan changes
-      nothing. ⚠️ **The camera itself needs a real device**, so this closes at
-      the deploy, not on the lane.
-
-**Exit:** a clearance item goes from barcode to verdict with one number typed,
-the keyword visible, and no step that breaks when the scan fails.
+⚡ **Closes D18, B84, B89.** Barcode → identity → a keyword that is **proposed
+and editable** → market → verdict, with the tag price the only typed field.
+⛔ A scan never overwrites a judgement and never picks the keyword: two
+defensible searches from one barcode measured **68% apart** in median sold price.
+⚠️ **6.11.6 is the one item the lane structurally cannot close** — a simulator
+has no camera — so it verifies at the deploy, on a real device with a real
+barcode. Everything below the camera is covered. Detail in the log.
 
 ---
 
-## Queue---
+### Gate 7.5 — DROP INTEL ⚡ **ACTIVE BUILD**
 
-## Queue---
+🎯 **Jason 2026-09-11:** *"Most of my highest returns were not off the clearance
+rack previously. They were online drops."*
 
-## Queue---
+⚡ **A drop has no discovery problem** — product, retailer, date and price are
+announced publicly before it happens, so **D16 does not touch it**. ⛔ **It has a
+VALUATION problem**: the thing has never been sold, so it is priced by analogy,
+and `compConfidence` measures **precision, not accuracy** — a tight comp set for
+last year's model scores near the top while describing something nobody is
+buying.
 
-## Queue---
+- [x] **7.5.1** ✅ **Done 2026-09-11.** `core/drop.ts` + `CompEvidence.analogous`,
+      which **caps** an analogy rather than scaling it. ⛔ Caught a real bug: a
+      drop happening **today** read as passed, because a date was diffed against
+      a moment. 736 tests (+14).
+- [ ] **7.5.2** The screen model: what is coming, what is a buy **at MSRP**, and
+      ⚡ **what the bankroll needs by WHEN** — a drop shortfall is dated, unlike
+      6.5's "not yet, or never".
+- [ ] **7.5.3** ⛔ **[DECISION] Where the calendar comes from.** Manual entry, a
+      scraped release feed, or a vertical-specific source — Jason named sneakers,
+      consoles, LEGO and cards, and the source differs per vertical.
+- [ ] **7.5.4** Storage, so a drop survives the app closing.
+- [ ] **7.5.5** Alerting. ⚠️ `expo-notifications` is a second native module;
+      **D13 bounds this to monitoring and alerting, never checkout.**
+- [ ] **7.5.6** On-device verification.
+
+**Exit:** the app says what is coming, what it would pay, and what the fund must
+reach by the date — and never tries to buy anything.
+
+---
 
 ## Queue
 
@@ -201,9 +192,9 @@ the keyword visible, and no step that breaks when the scan fails.
 | 6.8 | **A test may not assert on the cache** (**B54**) | ✅ **Done 2026-09-11**, 53/53 on device |
 | 6.9 | **A leaked handle was replacing real failures** (**B55**) | ✅ **Done 2026-09-11** |
 | 6.10 | **The rules got an identity** (**B88**) | ✅ **Done 2026-09-11**, 54/54 on device |
-| 6.11 | **The scan flow** (**D18**) — barcode → identity → keyword → verdict | ⚡ **ACTIVE BUILD** |
+| 6.11 | **The scan flow** (**D18**) — barcode → identity → keyword → verdict | ✅ **Built 2026-09-11**; 6.11.6 needs a real device |
 | 7 | **Radar over the fund's OWN HISTORY** — scarcity, demand, momentum, confidence, from what the operator has actually seen. ⛔ Not market-wide; that premise died with **D16** | ⏸️ **PARKED until there is history** (**D17**) |
-| 7.5 | **Drop intel** — dated retail drops, monitoring and alerting. ⛔ Checkout automation is OUT, see **D13** | Open |
+| 7.5 | **Drop intel** — dated retail drops, monitoring and alerting. ⛔ Checkout automation is OUT, see **D13** | ⚡ **ACTIVE BUILD** |
 | 8 | *(architecture only until 1–7 are reliable)* authorization states, drop intel, autonomy | Not started, not startable |
 
 **Gate exit criteria are in the log**, one entry per gate.

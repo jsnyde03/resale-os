@@ -5707,3 +5707,50 @@ same way is how a fund learns to ignore its own screen.
 6.5's "not yet, or never". A clearance item refused on capital is refused at this
 bankroll forever; a drop says **"you need this much by then"**, and whether that
 is reachable is a fact about time rather than about rules.
+
+### ⛔ Jason asked "did you decompose 7.5?" and the answer was no
+
+The plan edit threw on a bad anchor. **The log append and the commit that
+followed it were separated by NEWLINES rather than `&&`, so they ran anyway** —
+and `origin/master` carried a log entry and a commit message describing a
+decomposition the queue did not contain, while the queue row still said "Open".
+
+⚠️ **That exact failure is recorded in this file from the morning of the same
+day**, along with its fix — *"chained with `&&`, a failed edit aborts the commit
+instead of shipping a log entry describing work the queue does not contain"* —
+and the observation that **"a rule holds when it is built into the mechanism; as
+a thing to remember it lasted about ten minutes."** This time it lasted a day.
+
+### ⛔ And the plan had been corrupted for at least eight commits
+
+Checking the anchor turned up **five `## Queue` headings**, four of them
+`## Queue---` with a horizontal rule fused on. Every plan edit that inserted a
+section before the queue had left another marker behind, and **every one of those
+commits was pushed**.
+
+⚡ **Nothing reads MASTER_PLAN.md.** Every other artefact in this repo is gated —
+source bytes, import direction, the phone bundle, types, 736 tests — and the one
+document that says what is being built was checked by eye. Two structural
+failures shipped in one session and **the one that got caught was caught by Jason
+reading it**.
+
+### `npm run lint:plan`, and what it deliberately does not do
+
+Four structural checks: no duplicate or malformed `##` headings, exactly one
+decomposed section, the queue table and the decomposition agreeing, and unique
+sub-step ids.
+
+⛔ **It found a real inconsistency on its first run** — 6.11's row still claimed
+ACTIVE BUILD after its section was collapsed.
+
+⚠️ **And planting it corrected the check itself.** My first version looked only
+for DUPLICATE headings and reported "clean" on a single `## Queue---`, counting
+the broken heading as a legitimate new section. `## Queue---` is not a duplicate
+of `## Queue`; it is a different, malformed heading. **Planting the corruption
+that actually shipped — rather than an approximation of it — is what found the
+gap**, which is the same lesson as the boot guard four hours earlier: a control
+built from a description of a failure is not a control against the failure.
+
+⚠️ **What it does NOT check, deliberately:** whether an item is terse, whether a
+decomposition is sensible, whether the wording is honest. No script judges prose,
+and a gate that implied otherwise would feel like coverage it does not have.
