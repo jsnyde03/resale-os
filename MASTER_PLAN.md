@@ -422,6 +422,23 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   carry it, so removing it is a config migration, and this repo's rule is that a
   repair path must not depend on the broken thing. → when a policy migration is
   needed for another reason.
+- **B88** ⛔ **`Policy.version` VERSIONS THE NUMBERS, NOT THE RULES — and
+  staleness is detected from it alone.** `watchlist.ts:89` is
+  `c.policyVersion !== state.policy.version`, so a stored score is "current"
+  whenever the stored config matches. ⚠️ **Today proved that is not enough**:
+  6.1.0 added `VELOCITY_COUNTS_UNBOUNDED` and 6.6 changed how every gate is
+  evaluated, both with `Policy.version` untouched at `2026-09-08.5`. **Scores
+  recorded before today therefore read as scored under today's rules, and were
+  not.** ⚡ Worst concrete effect: **6.2's rejection histogram** mixes pre- and
+  post-6.1.0 rows and under-counts the new code — the chart is the instrument for
+  *"why is nothing passing?"*, so a silent mix is the wrong kind of wrong.
+  ⛔ **Bumping `Policy.version` is the wrong fix** — it is stored config, and a
+  code change does not rewrite a stored row. The fix is to record a rules
+  identity derived from the CODE (a hash of `CONSTRAINT_CODES` plus the
+  evaluator's shape) alongside each score, so staleness covers rules as well as
+  numbers. ⚠️ **The live fund has zero purchases but may hold scored
+  walk-aways**, which is exactly what the histogram counts. → before the
+  histogram is trusted for a decision.
 - **B81** ⚠️ **One more page would turn some B77 refusals back into decisions.**
   ACTIVE caps at 200/page, so an item with 250 active is refused for being a
   floor when **one extra request** would have the true count. ⛔ Not general:
