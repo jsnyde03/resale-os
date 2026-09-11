@@ -16,6 +16,7 @@ import {
   countOrNothing,
   reverseModel,
   sellModel,
+  contributionModel,
   spendModel,
 } from '@/ui/forms.js';
 import type { ItemRecord } from '@/core/capital/state.js';
@@ -180,6 +181,46 @@ describe('money out', () => {
       itemId: 'pin-0001',
     });
     expect(m.command(T0)).toEqual({ type: 'OWNER_PAYOUT', amountCents: 2_000, occurredAt: T0 });
+  });
+});
+
+describe('money in (B95)', () => {
+  // D3's case: the live $50 fund, and the $25 that takes it to $75.
+  const AT_50 = { navCents: 5_000, promoteAtCents: 50_000 };
+
+  it('records exactly the contribution that was typed', () => {
+    // Asserted against the value that went in, not a second trip through the
+    // same model — a round trip cannot see a field the model drops.
+    const m = contributionModel({ amount: '25.00' }, AT_50);
+    expect(m.ready).toBe(true);
+    expect(m.command(T0)).toEqual({ type: 'CONTRIBUTION', amountCents: 2_500, occurredAt: T0 });
+  });
+
+  it('⛔ refuses zero, which the engine would accept and the chain would keep forever', () => {
+    const m = contributionModel({ amount: '0' }, AT_50);
+    expect(m.ready).toBe(false);
+    expect(m.command(T0)).toBeNull();
+  });
+
+  it('is not ready on a half-typed number, or on nothing', () => {
+    expect(contributionModel({ amount: '2.' }, AT_50).ready).toBe(false);
+    expect(contributionModel({ amount: '' }, AT_50).ready).toBe(false);
+  });
+
+  it('says what the bankroll becomes before anything is written', () => {
+    expect(contributionModel({ amount: '25.00' }, AT_50).navAfterCents).toBe(7_500);
+  });
+
+  it("⚠️ flags a contribution that switches the rules, and D3's does not", () => {
+    // $50 + $25 stays BOOTSTRAP. A slipped zero — $2,500 — crosses $500 into
+    // GROWTH and changes every verdict after it.
+    expect(contributionModel({ amount: '25.00' }, AT_50).crossesIntoGrowth).toBe(false);
+    expect(contributionModel({ amount: '2500.00' }, AT_50).crossesIntoGrowth).toBe(true);
+  });
+
+  it('does not flag a fund that is already past the line', () => {
+    const past = { navCents: 60_000, promoteAtCents: 50_000 };
+    expect(contributionModel({ amount: '25.00' }, past).crossesIntoGrowth).toBe(false);
   });
 });
 

@@ -262,9 +262,10 @@ reach by the date — and never tries to buy anything.
 2026-09-11). ⛔ **Until it lands, the fund can buy nothing**: measured, BOOTSTRAP
 at $50 NAV refuses a $40 purchase carrying excellent evidence, and its ceiling
 is $20 against a $24.51 modelled downside. At $75 the same rules permit a $30
-buy returning $26.71. ⚠️ **No code changes with this** — it is a ledger event on
-the phone, and every figure in the docs that says $50 stays true until it is
-recorded.
+buy returning $26.71. ⛔ **It needed code, and nobody had noticed** (**B95**): no screen could issue
+a contribution after the CLI was deleted at 5.10. **Money in** now exists —
+record it there once the next build is installed. Every figure in the docs that
+says $50 stays true until it is recorded.
 
 ---
 
@@ -291,6 +292,11 @@ ever announces that the day arrived. A threshold the app already computes does.
 
 Filed, not forgotten. Nothing here is in a gate until it is promoted.
 
+- ~~**B95**~~ ✅ **Closed 2026-09-11.** ⛔ **The fund could not receive money on
+  the phone.** No screen issued a contribution after 5.10, so D3's $25 sat under
+  "waiting on Jason" while being impossible to record. **Money in** mirrors
+  Money out: zero refused, the after-figure shown before the button, and a
+  warning when an amount would cross into GROWTH. Found by the deploy check.
 - ~~**B93**~~ ✅ **Closed 2026-09-11.** The impossible advice is gone, the three
   screens read one module, and Settings reports which keys this build carries —
   read-only, because they cannot be changed on a device. ⚠️ **The filing said

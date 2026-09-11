@@ -23,6 +23,7 @@ import type { Account } from '../core/ledger/accounts.js';
 import type {
   AdjustmentCommand,
   BusinessExpenseCommand,
+  ContributionCommand,
   ExpenseCategory,
   OwnerPayoutCommand,
   SaleCommand,
@@ -149,6 +150,61 @@ export function spendModel(fields: SpendFields): SpendModel {
         occurredAt,
       };
     },
+  };
+}
+
+// --- money in -------------------------------------------------------------
+
+/**
+ * ⛔ **B95: the fund had no way to receive money on the phone.** The CLI's
+ * contribution command went with the desktop at 5.10 and nothing replaced it,
+ * so D3's $25 could not be recorded at all. Import needs an empty ledger, and
+ * an ADJUSTMENT would book owner money as a correction rather than as capital.
+ */
+export interface ContributionFields {
+  readonly amount: string;
+}
+
+export interface ContributionContext {
+  readonly navCents: Cents;
+  readonly promoteAtCents: Cents;
+}
+
+export interface ContributionModel {
+  readonly amountCents: Cents | undefined;
+  readonly ready: boolean;
+  /** What the bankroll becomes. Shown before anything is written. */
+  readonly navAfterCents: Cents | undefined;
+  /**
+   * ⚠️ **True when this contribution switches the fund's RULES.** Crossing
+   * `promoteAtCents` moves BOOTSTRAP to GROWTH — a higher minimum profit and a
+   * smaller per-item share — so a slipped zero ($2,500 for $25) is not just a
+   * wrong number: it quietly changes every verdict after it.
+   */
+  readonly crossesIntoGrowth: boolean;
+  readonly command: (occurredAt: string) => ContributionCommand | null;
+}
+
+export function contributionModel(
+  fields: ContributionFields,
+  context: ContributionContext,
+): ContributionModel {
+  const parsed = centsOrNothing(fields.amount);
+  // ⛔ **Zero is not a contribution.** The engine accepts it — it refuses only
+  // a negative — and the ledger is append-only over a hash chain, so a $0.00
+  // event would sit in the fund's history permanently, meaning nothing.
+  const amountCents = parsed !== undefined && parsed > 0 ? parsed : undefined;
+  const navAfterCents = amountCents === undefined ? undefined : context.navCents + amountCents;
+  return {
+    amountCents,
+    ready: amountCents !== undefined,
+    navAfterCents,
+    crossesIntoGrowth:
+      navAfterCents !== undefined &&
+      context.navCents < context.promoteAtCents &&
+      navAfterCents >= context.promoteAtCents,
+    command: (occurredAt) =>
+      amountCents === undefined ? null : { type: 'CONTRIBUTION', amountCents, occurredAt },
   };
 }
 

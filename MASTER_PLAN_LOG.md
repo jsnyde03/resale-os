@@ -6265,3 +6265,62 @@ Python edit and the commit message. Bash fed the commit message to Python, which
 failed on a `SyntaxError`. **Python parses before it runs, so nothing was
 written**, and the `&&` chain stopped before the commit — verified with `git
 status` rather than assumed. The script and the message now live in files.
+
+## 2026-09-11 — B95: the fund could not receive money on the phone
+
+### How it was found
+
+Preparing the deploy for Jason's Walmart trip. The one check that mattered for
+that trip was whether the fund could reach $75 — at $50 it buys nothing (D3,
+measured), so every scan would come back refused and read as the scanner being
+broken. CLAUDE.md said the $25 needed *"no code — it is a ledger event on the
+phone."* ⛔ **That was false, and had been since 5.10 deleted the CLI.**
+
+⚠️ **The first search was directory-scoped** — `mobile/app` and `src/ui` — and
+a result from a directory list is exactly how a class hides. It was re-run from
+the repo root before anything was claimed: `CONTRIBUTION` is issued **only** by
+the test scenarios. No screen, no form, no screen model.
+
+### Why the two things that look like paths are not
+
+- **Import** needs an **empty** ledger — it refuses rather than merges, because
+  two ledgers interleaved would break the hash chain. That is how the original
+  $50 arrived, and it cannot top up a live fund.
+- **"The books are wrong"** posts an `ADJUSTMENT`. Booking owner money there
+  records a **correction**, not **contributed capital** — wrong in the reports,
+  and wrong for tax, where contributed capital must never read as income.
+
+### ⚠️ A waiting list that could not be satisfied
+
+This is the pattern this project keeps meeting — a waiting list decays one way
+— with a worse shape: the item was not stale, it was **impossible**, and it was
+presented as a human's to do. Nothing checks that a "waiting on Jason" row is
+actually doable by Jason.
+
+### What shipped
+
+`contributionModel` beside `spendModel`:
+- ⛔ **Zero is refused.** The engine refuses only a negative, and the ledger is
+  append-only over a hash chain, so a $0.00 event would sit in the fund's history
+  permanently, meaning nothing.
+- **The after-figure is shown before the button** — the only defence a permanent
+  write has against a typo is being seen first.
+- ⚠️ **`crossesIntoGrowth`** — a slipped zero ($2,500 for $25) crosses $500 into
+  GROWTH, which raises the minimum profit and shrinks the per-item share. That is
+  not a wrong number; it is a silent change to every verdict after it.
+
+**Money in** beside Money out on the home screen; six tests asserted against
+the values that went in; and a device case running D3's exact case — $50 to $75
+— through the model the screen uses and the store it commits to, asserting on
+`derivedState()` rather than the cache (6.8).
+
+### Planted
+
+The zero guard removed, and the GROWTH crossing forced false — each red on its
+own test, restored and re-verified green.
+
+### State at close
+
+**788 tests, 48 files, six gates green.** Money in needs the next build
+to reach the phone, and the build still needs `EXPO_PUBLIC_SOLDCOMPS_KEY` added
+to a Codemagic group first.

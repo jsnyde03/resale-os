@@ -145,7 +145,16 @@ function Position() {
             <Button label="Sell" onPress={() => router.push('/sell')} />
           </View>
         </View>
-        <Button label="Money out" onPress={() => router.push('/spend')} />
+        {/* ⛔ B95: "Money in" did not exist, so the fund could not receive the
+            contribution D3 decided. It sits beside its opposite on purpose. */}
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flex: 1 }}>
+            <Button label="Money in" onPress={() => router.push('/contribute')} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button label="Money out" onPress={() => router.push('/spend')} />
+          </View>
+        </View>
       </View>
 
       <View style={{ flexDirection: 'row', gap: 10 }}>

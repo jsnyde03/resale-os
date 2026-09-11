@@ -24,7 +24,7 @@ import { computeMetrics } from '../core/capital/metrics.js';
 import { purchaseCommandFrom } from '../core/capital/quote.js';
 import { evaluatePurchase } from '../scoring/purchase.js';
 import { itemIdFrom } from '../core/ids.js';
-import { adjustModel, reverseModel, sellModel, spendModel } from '../ui/forms.js';
+import { adjustModel, contributionModel, reverseModel, sellModel, spendModel } from '../ui/forms.js';
 import {
   allocationEdit,
   allocationFieldsFrom,
@@ -1211,6 +1211,37 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
       );
       ok(row.line.includes('LEGO Store'), 'the line says where');
       eq(row.valuationAgeDays, 0, 'and the market reading is reported as todays');
+    },
+  },
+  {
+    // ⛔ B95 on the device. The fund could not receive money on the phone, and
+    // this is D3's exact case — $50 to $75 — through the model the screen uses
+    // and the store the screen commits to, on Apple's SQLite. Assertions read
+    // `derivedState()`, never the cache (6.8).
+    name: 'money in: a contribution raises the bankroll, and zero is refused',
+    run: (db) => {
+      const store = funded(db, 5_000);
+      const before = computeMetrics(store.derivedState());
+      eq(before.navCents, 5_000, 'the live $50 fund');
+
+      const context = {
+        navCents: before.navCents,
+        promoteAtCents: store.derivedState().policy.thresholds.promoteAtCents,
+      };
+      ok(!contributionModel({ amount: '0' }, context).ready, 'zero is not a contribution');
+
+      const model = contributionModel({ amount: '25.00' }, context);
+      eq(model.navAfterCents, 7_500, 'the screen says $75 before anything is written');
+      ok(!model.crossesIntoGrowth, "and D3's $25 does not change the rules");
+
+      const command = model.command(T0);
+      ok(command !== null, 'a real amount produces a command');
+      if (command === null) return;
+      store.commit(command);
+
+      const after = computeMetrics(store.derivedState());
+      eq(after.navCents, 7_500, 'the bankroll is $75');
+      eq(store.derivedState().mode, 'BOOTSTRAP', 'and still under the BOOTSTRAP rules');
     },
   },
 ];
