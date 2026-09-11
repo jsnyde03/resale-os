@@ -4531,3 +4531,80 @@ metered quota, B80's keyword. 6.6's sub-steps moved here.
 ⚠️ **The `What needs a human` table had become a changelog** — four of seven rows
 struck through. Trimmed to the three that are actually live; the rest is in this
 log where completed work belongs.
+
+## 2026-09-11 — 6.1.1's before-scan, and four more requests against the real API
+
+Switch-in for **6.1.1**. Verified the item's premises against the code rather
+than reading them, per the pre-authored-plan rule, and all four hold:
+`src/adapters/` really is empty and `check-import-direction.mjs` really does
+red-gate a layer with source and no rules; `check-phone-bundle.mjs` discovers its
+roots by scanning `mobile/`, so the adapter is swept the day a screen imports it;
+the consumers are `soldLast90Days` / `activeListings` / `compPricesCents` on
+`OpportunityInput`; the key is `EXPO_PUBLIC_SOLDCOMPS_KEY` in `mobile/.env.local`.
+
+### ⛔ B77 cannot be satisfied in the adapter — 6.1.0 inserted ahead of it
+
+`HOLD_TOO_LONG` is `candidate.expectedDaysToSale <= p.maxHoldDays` and
+`PurchaseCandidate` has no way to say *"this number is a lower bound."* When
+ACTIVE is capped with `hasNextPage`, **both** derived numbers move the unsafe way
+at once — the hold is a floor and sell-through is a ceiling — so both gates
+wrongly PASS. That is a `core → domain → scoring` change with tests, not a line
+in the client, and it needs no network, so it goes first as **6.1.0**.
+
+### ⛔ The contract was measured and then never written down
+
+Four requests were spent on 2026-09-11 and the findings survived as prose. The
+**base URL, the auth scheme and the parameter names did not** — this session had
+to find them again from the vendor's docs. ⚠️ **A measurement that only a
+sentence survives is a measurement that will be bought twice.** The contract now
+lives in the adapter's types and in captured fixtures under
+`tests/fixtures/soldcomps/`, which are verbatim response bytes.
+
+### ⛔ B82 — the two halves of the ratio measure different populations
+
+The serious one, and nothing in the plan predicted it.
+
+| call | `totalResults` | `autoSelectedCategory` |
+|---|---|---|
+| sold, no category | `"147764"` | `null` |
+| sold, `categoryId=183447` | `"122956"` | `null` |
+| active, `count=200` | `"240,000+"` | **`183447` LEGO (R) Building Toys** |
+| active, `categoryId=0` | `"240,000+"` | **still `183447`** |
+
+The ACTIVE call restricts itself to a category it chooses; the SOLD call counts
+everything. **Both report in a way that reads like "no restriction applied"** —
+sold says `autoSelectedCategory: null`, which is indistinguishable from "I did
+not narrow anything" because that is exactly what it means, while the other half
+of the same ratio narrowed silently. Pinning the category moved the sold total
+**17%**, and `categoryId=0` does not disable auto-selection.
+
+Both gates that refuse most real candidates are downstream of this:
+`90 × (active+1)/sold` and `sold/(sold+active)`. ⚡ **The fix costs nothing** —
+call ACTIVE first, read the category it declares, pin SOLD to it. Both calls were
+being made anyway; only the order changes.
+
+⚠️ **Not directionally biased**, same as B80: here sold was measured broadly and
+active narrowly, but which way the error leans depends on the keyword. The risk
+is a confident, correctly-computed number about **two different markets**.
+
+### Three smaller corrections, all from bytes rather than docs
+
+⛔ **The vendor's own docs misname the usage headers.** They document
+`X-Usage-Current` / `X-Usage-Limit`; the wire sends `x-usage-limit`,
+`x-usage-remaining`, `x-usage-used` and `x-usage-reset`. **B78's naming was right
+and the docs are wrong** — which is the second time on this item that the
+measured thing beat the written one.
+
+⚠️ **`totalResults` has a third documented form: `null`.** B79 named `"122956"`
+and `"240,000+"`; the vendor documents `string or null`. A null total is the same
+rejection path as an unparseable one, and it must be reachable in a test.
+
+⚠️ **`totalItems: 39` beside an undocumented `scrapedCount: 40`.** The sold
+response asked for 40, claims it scraped 40, and returned 39. Not dangerous — the
+count the gates use is `totalResults` — but it means `totalItems` is not a
+reliable stand-in for `items.length`, and the adapter should take neither on
+trust.
+
+**Quota: 4 requests spent (2 for fixtures, 2 to measure B82's mechanism rather
+than assert it), 92 of 100 remaining.** Jason approved 2; the second pair bought
+the finding above, which is the one that would have shipped.

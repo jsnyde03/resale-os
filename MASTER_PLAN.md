@@ -47,18 +47,25 @@ wired.
 - [ ] **6.1** ⚡ **ACTIVE BUILD — the data route.** ⛔ eBay is gone (**D16**), so
       **SoldComps is the only automated source** and serves both halves. The
       contract is MEASURED, not assumed — four real requests on 2026-09-11.
+  - [ ] **6.1.0** ⛔ **B77's channel, and it is not in the adapter.**
+        `PurchaseCandidate` cannot say *"this number is a lower bound"*, so a
+        capped ACTIVE count makes the hold a floor **and** sell-through a
+        ceiling — **both gates wrongly PASS**. Carry the flag `core → domain →
+        scoring` and make the gate refuse. No network, no key, no quota.
   - [ ] **6.1.1** The client behind an ADAPTER in `src/adapters/` — empty since
         the beginning, and it red-gates on arrival until its import rules are
-        declared. **2 requests per item**: `sold=true` for comps and the count,
-        `sold=false` for the active count.
-        ⛔ **B79 first — the parse is the dangerous part.** `totalResults` is
-        `"133392"` on sold and **`"72,000+"`** on active; `parseInt` gives **72**
-        and `Number` gives **NaN**. A total that will not parse is REJECTED, never
+        declared. `GET api.sold-comps.com/v1/scrape`, `Authorization: Bearer`.
+        ⛔ **ACTIVE FIRST, then SOLD pinned to the category ACTIVE declares**
+        (**B82**) — the two calls measure different populations otherwise, and
+        the ratio is not a ratio of anything. Costs no extra request.
+        ⛔ **B79 — the parse is the dangerous part.** `totalResults` is
+        `"122956"` on sold and **`"240,000+"`** on active, and the vendor
+        documents **`null`** as a third case; `parseInt` gives **240** and
+        `Number` gives **NaN**. A total that will not parse is REJECTED, never
         defaulted, and `+` means "at least".
-        ⚠️ **B77**: an ACTIVE undercount is the UNSAFE direction — a floor makes
-        the hold a LOWER bound and the gate must refuse to pass on it.
-        ⚠️ **B80**: show what was searched and how many matched — the keyword
-        decides which market is measured.
+        ⚠️ **B80**: return what was searched, which category, and how many
+        matched — the keyword decides which market is measured.
+        ⚠️ Fixtures are **captured bytes**, `tests/fixtures/soldcomps/`.
   - [ ] **6.1.2** ⛔ **Offline-first, and the API never gates.** A shop with no
         signal is the normal case. ⚡ **And quota is a second kind of absent**
         (**B78**): `x-usage-remaining` on every call, and a `quota_exceeded`
@@ -69,7 +76,6 @@ wired.
 
 **Exit:** the screen fills what it can from SoldComps, says where every number
 came from, and answers exactly as well as it does today when there is no signal.
-from, and answers exactly as well as it does today when the network does not.
 
 - [x] **6.2** ✅ **Done 2026-09-10. Closes B3.** *What is stopping you* — the
       binding gate, from the record. ⚡ **The codes are stored STRUCTURALLY now**;
@@ -377,6 +383,24 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   — the broad one was *refused*). The risk is **misattribution, not optimism**: a
   confident number about a different item. → the screen must show what was
   searched and how many matched, so a wrong keyword is visible. → **6.1.1**.
+- **B81** ⚠️ **One more page would turn some B77 refusals back into decisions.**
+  ACTIVE caps at 200/page, so an item with 250 active is refused for being a
+  floor when **one extra request** would have the true count. ⛔ Not general:
+  72,000 active would need 360 requests, and the quota is 100/month. The rule
+  worth having is *page once when `hasNextPage` is set and page 2 is likely to
+  end it*, which needs a measured hit rate the fund does not have yet. → when
+  6.1 has run against real racks, not before.
+- **B82** ⛔ **THE TWO HALVES OF THE RATIO MEASURE DIFFERENT POPULATIONS, AND THE
+  RESPONSE THAT IS WRONG IS THE ONE THAT LOOKS CLEAN.** Measured 2026-09-11:
+  the ACTIVE call silently restricts to a category it picks itself
+  (`autoSelectedCategory`), the SOLD call counts everything and reports
+  `autoSelectedCategory: null` — which reads as *"no restriction"* on both.
+  Pinning the category moved the sold total **147,764 → 122,956, 17%**, and
+  `categoryId=0` does **not** turn auto-selection off. `sold/(sold+active)` and
+  `90 × (active+1)/sold` are both computed across two populations.
+  ⚡ **Fix is free**: call ACTIVE first, pin SOLD to the category it declares.
+  → folded into **6.1.1**, which is why this is filed as measured rather than
+  deferred.
 - **B77** ⛔ **THE TWO CAPS PUSH OPPOSITE WAYS, and one of them is unsafe.**
   SoldComps caps SOLD at 40/page and ACTIVE at 200/page. Hold time is
   `90 × (active + 1) / sold90`, so **undercounting SOLD refuses a good item
