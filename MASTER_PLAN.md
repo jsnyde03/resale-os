@@ -460,22 +460,17 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
 - ~~**B82**~~ ✅ **Closed 2026-09-11 in 6.1.1.** ACTIVE is called first and SOLD is pinned to the category it declares, so both halves of the ratio count the same population.
 - ~~**B77**~~ ✅ **Closed 2026-09-11 in 6.1.0.** `VELOCITY_COUNTS_UNBOUNDED` — a count that is a floor makes the hold a LOWER bound and sell-through an UPPER one, and the gate refuses to pass on it. ⚠️ Its worked example was wrong (the `+ 1` was dropped); the log has the corrected arithmetic.
 - ~~**B74**~~ ✅ **Answered 2026-09-11 by real requests, and spent in 6.1.1.** `totalResults` is populated on a SOLD search, so the count costs one request and an item costs two. ⚠️ It IGNORES `soldAfter` — the total is sold-in-90 by accident of eBay's ~90-day retention rather than by our parameter, which is **luck, and luck changes**. Detail in the log.
-- **B69** ⚡ **Barcode scanning in the aisle** (Jason, 2026-09-10). The SCAN is
-  the easy part — `expo-camera` does it offline, one screen. ⛔ **But a barcode
-  is a product identity, not a price**, and the sourcing screen's binding fields
-  are asking price (the tag in front of you — always typed), resale, sold-in-90
-  and comps. A UPC supplies **none** of them without the eBay data route, which
-  is **D12**, and sold comps are the gated half of D12. ⚡ **The offline-first
-  win is different and better: scan → OWN HISTORY.** A UPC is a stable key, so
-  the third leg of D12 — "own history to accumulate" — works on the device with
-  no network and gets better every flip. ⚠️ **Scoped to RETAIL CLEARANCE by Jason, 2026-09-10** — Walmart
-  racks, not thrift. That **removes** the no-barcode caveat (new retail is fully
-  barcoded) and **improves** the data route: sealed product is fungible, so a
-  GTIN maps to an exact comp set and Browse API's `gtin` filter beats keyword
-  search. ⚡ **But the deciding number is sell-through, which is D12's gated
-  half** — measured 2026-09-10: clearance flips clear profit and ROI easily and
-  are refused on HOLD_TOO_LONG. The scan makes the query clean; it does not make
-  the data available. → Gate 6, AFTER D12's data route.
+- **B69** ⚡ **Barcode scanning in the aisle** (Jason, 2026-09-10). ⛔ **NOT
+  BUILT** — verified 2026-09-11: no `expo-camera` dependency, no scan code
+  anywhere. Roughly one screen; `expo-camera` reads a barcode offline.
+  ⚠️ **Its blocking trigger ("after D12's data route") FIRED today when 6.1
+  shipped — and re-reading it, HALF ITS VALUE DIED WITH D16.** The entry argued
+  a GTIN beats a keyword because **Browse API's `gtin` filter** would take it;
+  Browse is gone, and SoldComps takes a **`keyword`** — a UPC pasted in as a
+  keyword matches only listings whose seller happened to type it. ⚡ **The
+  surviving justification is the better one and is not ready either**: scan →
+  OWN HISTORY, where a UPC is a stable key. **The fund has zero purchases, so
+  that history is empty.** → after the fund has bought things, not before.
 - ~~**B70**~~ ✅ **Closed 2026-09-10 in 6.0.1.**
 - ~~**B71**~~ ✅ **Closed 2026-09-10 in 6.0.2.**
 - ~~**B68**~~ ✅ **Closed 2026-09-10 in 6.0.3.** ⚠️ The backup half is **6.0.5**.
