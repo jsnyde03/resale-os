@@ -20,8 +20,10 @@ allocation screen, the rules identity, 7.5's drops, and **Money in**. The deploy
 stopped being last by Jason's call, to try the scanner at Walmart.
 ✅ **The market key reached the bundle** — Settings → Data keys reads *set* on the
 phone (Jason, 2026-09-11). ⏳ **Still to confirm ON THE PHONE, which no CI can:**
-Money in records the $25, and a real scan — **6.11.6**, the one thing the
-simulator lane cannot prove.
+Money in records the $25. ✅ **The camera reads barcodes on the device** —
+6.11.6's half that no simulator can reach. ⚠️ **But Jason reports the prices it
+led to "don't seem right."** The likeliest cause is **B96**, fixed in code and
+not yet rebuilt; the diagnosis is open.
 
 ⚡ **D11's condition reads as met** — it said the fund starts buying when the
 phone can *decide*, not just record, and it now decides with data it fetched
@@ -53,7 +55,7 @@ CHIPS"*, so a mis-scan succeeds *wrongly*. The title on screen beside the object
 in hand is the only check on that, and it is the operator's.
 
 Live on a real **$50** bankroll — ⏳ **$75 decided, awaiting a $25 CONTRIBUTION**
-(**D3**). **788 tests, 48 files.** `npm run check` runs **six** gates: source
+(**D3**). **794 tests, 49 files.** `npm run check` runs **six** gates: source
 bytes, import direction, phone bundle, **the PLAN**, typecheck, tests.
 
 ---
@@ -175,7 +177,7 @@ margin play needing hold tolerance a $50 fund does not have. Backlog **B28**.
 ### Five gates run on every check
 
 ```
-npm run check    # source bytes · imports · PHONE BUNDLE · PLAN · typecheck · 788 tests
+npm run check    # source bytes · imports · PHONE BUNDLE · PLAN · typecheck · 794 tests
 ```
 
 ⚡ **`lint:plan` is new, 2026-09-11, and it exists because nothing read the one

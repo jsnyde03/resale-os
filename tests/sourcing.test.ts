@@ -514,7 +514,10 @@ describe('6.1.3 — the network fills fields, and never decides', () => {
   it('B80 — says which market was measured, keyword and category', () => {
     const { status } = fillFromMarket(GOOD, reading());
     if (status.kind !== 'FILLED') throw new Error('expected FILLED');
-    expect(status.measured).toBe('"lego star wars" in LEGO (R) Building Toys');
+    // ⛔ B96: the line now names the condition the prices came from. Literal on
+    // purpose: the guard file checks the words through the same table the code
+    // uses, so this is the one place they are pinned verbatim.
+    expect(status.measured).toBe('"lego star wars" in LEGO (R) Building Toys, every condition mixed');
     expect(status.anyFloored).toBe(true);
   });
 
@@ -526,7 +529,7 @@ describe('6.1.3 — the network fills fields, and never decides', () => {
       }),
     );
     if (status.kind !== 'FILLED') throw new Error('expected FILLED');
-    expect(status.measured).toBe('"lego star wars" in all categories');
+    expect(status.measured).toBe('"lego star wars" in all categories, every condition mixed');
   });
 
   it('⛔ a failure leaves the form EXACTLY as it was', () => {

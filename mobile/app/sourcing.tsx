@@ -213,6 +213,11 @@ export default function Sourcing() {
         setSold(out.form.sold90);
         setActive(out.form.active);
         if (out.form.comps !== undefined) setComps(out.form.comps);
+        // ⛔ B97: the model computes the resale median and returns it, and this
+        // line was missing — so the box stayed blank after every lookup. Safe to
+        // apply unconditionally: the model fills only a blank, and otherwise
+        // returns the operator's own value.
+        setResale(out.form.resale);
       }
       setFill(out.status);
     } finally {
@@ -302,6 +307,29 @@ export default function Sourcing() {
 
           <Button label="Scan a barcode" onPress={() => router.push('/scan')} />
 
+          {/* ⛔ B96: ABOVE the lookup, because the lookup draws its prices from
+              whatever condition is set at the moment it is tapped — and below
+              it, the natural top-to-bottom order looked up on "Not sure" every
+              time, pulling sealed, used and parts into one set of prices.
+              ⚠️ BELOW the scan button, not above it: the scan returns by pushing
+              a fresh screen, so a condition chosen before scanning is lost.
+              ⚡ B71: words, not basis points, and "Not sure" stays the default —
+              narrowing on the operator's behalf would be guessing. */}
+          <Chips
+            label="Condition"
+            options={CONDITIONS}
+            labels={CONDITION_LABELS}
+            value={condition}
+            onChange={edit(setCondition)}
+          />
+          <Chips
+            label="Shipping it"
+            options={HASSLES}
+            labels={HASSLE_LABELS}
+            value={hassle}
+            onChange={edit(setHassle)}
+          />
+
           {/* ⚡ 6.1.3. Between the name and the counts, because it fills the
               counts and it searches on the name. ⛔ It is a SECOND button, not
               part of "Check it" — a lookup spends metered requests and a check
@@ -320,6 +348,14 @@ export default function Sourcing() {
                       confident, correctly computed number about another item,
                       so the words that were searched are shown, not implied. */}
                   <Text style={{ color: C.text, fontSize: 13 }}>Measured {fill.measured}</Text>
+                  {fill.provenance.compCondition === 'any' ? (
+                    /* ⛔ B96. These prices are sealed, used and parts in one set,
+                       and nothing else on the screen would say so. */
+                    <Text style={{ color: C.warn, fontSize: 13 }}>
+                      Every condition is mixed in these prices. Set Condition and look up
+                      again.
+                    </Text>
+                  ) : null}
                   <Muted>
                     {fill.provenance.soldItemsSeen} sold and {fill.provenance.activeItemsSeen}{' '}
                     listed seen · sold since {fill.provenance.soldAfter}
@@ -380,23 +416,6 @@ export default function Sourcing() {
             keyboardType="decimal-pad"
             hint="Comma separated, optional. The biggest single term in confidence — and confidence caps the score."
             invalid={problemFor('comps') !== undefined}
-          />
-
-          {/* ⚡ B71. Words, not basis points — and "Not sure" is the default, so
-              the operator who skips this gets exactly the old behaviour. */}
-          <Chips
-            label="Condition"
-            options={CONDITIONS}
-            labels={CONDITION_LABELS}
-            value={condition}
-            onChange={edit(setCondition)}
-          />
-          <Chips
-            label="Shipping it"
-            options={HASSLES}
-            labels={HASSLE_LABELS}
-            value={hassle}
-            onChange={edit(setHassle)}
           />
 
           <Button label="Check it" onPress={check} tone="primary" />

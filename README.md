@@ -12,7 +12,7 @@ boundaries as the bankroll grows.
 deterministic capital engine, the ledger, opportunity scoring, prediction
 accuracy and verified backups — **all of it runs on the device**, verified 55/55
 against Apple's SQLite in CI and shipped to TestFlight. **The desktop was deleted
-on 2026-09-10**: no CLI, no web app, no dev server. 788 tests green.
+on 2026-09-10**: no CLI, no web app, no dev server. 794 tests green.
 
 ⚡ **The app decides, it does not only record.** It gives a price ceiling and the
 rule that set it; says what would FIX a refusal rather than only naming it; says
@@ -55,7 +55,7 @@ Requires Node >= 22.5 (for the built-in `node:sqlite` — there is nothing to co
 
 ```bash
 npm install
-npm run check          # six gates: bytes, imports, phone bundle, plan, types, 788 tests
+npm run check          # six gates: bytes, imports, phone bundle, plan, types, 794 tests
 cd mobile && npx expo start
 ```
 
@@ -339,7 +339,7 @@ src/core/drop.ts    a dated retail drop, and why an analogy to last
                year's model is CAPPED rather than trusted  [Gate 7.5]
 src/market/    scarcity, demand, momentum, radar            [Gate 7]
 mobile/        the Expo app; the engine is imported from src/, unchanged
-tests/         788 tests; financial logic weighted heaviest
+tests/         794 tests; financial logic weighted heaviest
 ```
 
 A visually impressive screen with incorrect bankroll math is unacceptable, so

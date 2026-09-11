@@ -486,6 +486,20 @@ export const COMPS_FOR: Readonly<Record<Condition, CompCondition>> = {
 };
 
 /**
+ * ⛔ **B96: which condition the prices came from, in the operator's words.**
+ *
+ * The "Measured" line named the search and the category and not the condition —
+ * so a lookup made on "Not sure" produced sealed, used and parts in one set of
+ * prices with nothing on the screen to say so. Jason's first real scan came back
+ * with prices that "don't seem right", and the screen had no way to tell him why.
+ */
+export const COMP_CONDITION_WORDS: Readonly<Record<CompCondition, string>> = {
+  new: 'new condition only',
+  used: 'used condition only',
+  any: 'every condition mixed',
+};
+
+/**
  * ⚠️ **The median, not the mean.** One $465 outlier in a set of sealed comps
  * would drag a mean well past anything the item will actually fetch, and the
  * confidence scorer already punishes dispersion separately.
@@ -576,7 +590,7 @@ export function fillFromMarket(
       filled,
       provenance: reading.provenance,
       quota: reading.quota,
-      measured: `"${reading.provenance.keyword}" in ${where}`,
+      measured: `"${reading.provenance.keyword}" in ${where}, ${COMP_CONDITION_WORDS[reading.provenance.compCondition]}`,
       anyFloored: reading.sold90.isFloor || reading.active.isFloor,
     },
   };

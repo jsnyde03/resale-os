@@ -6412,3 +6412,132 @@ and no test reads a screen in order.
 **Not fixed now:** the phone is already running a build, and a fix needs another. Jason
 was given the workaround — set Condition first — and the three candidate fixes are on
 the backlog entry.
+
+## 2026-09-11 — B97: the resale price the lookup computes never reaches the box
+
+🎯 **Jason:** *"I don't understand the what it sells for field."* Explaining it meant
+saying where its value comes from, and checking that claim found it comes from nowhere.
+
+### The defect
+
+`fillFromMarket` — 6.11.3's B90 work, tested in the Node suite — computes the median
+sold price and returns it in `out.form.resale` whenever the condition is known and the
+box is blank. `sourcing.tsx`'s lookup copies back `sold90`, `active` and `comps` from
+that returned form. ⛔ **It never copies `resale`.** `setResale` appears exactly twice in
+the file: the `useState` and the field's own `onChangeText`. So on the phone the box
+stays blank after every lookup, on every condition, and *Check it* stops at *"The
+resale price is required"*.
+
+⚠️ **My Walmart guide had told Jason the lookup fills it.** Corrected in the same
+conversation, before the trip — with a workaround that is exactly what the fix will do:
+read the Sold prices box and type the middle one.
+
+### Why 56/56 did not see it
+
+The device case *"sourcing: a scan proposes, and never decides"* calls
+`fillFromMarket(...)` and hands the **returned form** straight to `evaluateForm`. It
+never passes through the screen's state, which is the only place the value is lost.
+⛔ The scenario file says so in its own header — *"This is not a rendering test. It
+cannot see whether the price box is wired to price."* The limitation was documented;
+nothing was built for the gap it named.
+
+### ⚡ The sibling was checked, line by line, before any claim
+
+The same screen receives the scan's product name, category and search through
+navigation parameters — the same shape: a model computes, a screen must copy. It was
+read to the last line rather than trusted: `applyScan` computes, and lines 154–156 copy
+name, category and search into their boxes. **One defect, not two.**
+
+### The class, and the fix that would close it rather than this instance
+
+**Second tested-but-unwired helper found today** — the analogy cap (7.5.2) was the
+first. Both had a correct, tested model and a missing last mile in a caller the suite
+cannot run. The one-line fix closes B97. ⚡ **The class fix is to move the last mile
+out of the `.tsx`**: a pure `applyFill(state, out)` in `src/screens/` that returns the
+next field values, so the Node suite tests the *application* and the screen only
+spreads the result. Candidate for the next build alongside B96.
+
+## 2026-09-11 — B96 and B97 fixed in code; the camera works; the prices are in question
+
+🎯 **Jason:** *"Fix both now, rebuild before going"* — then, mid-fix: *"The camera
+works. I'm just not sure about the validity of the search. The prices don't seem
+right."*
+
+### B97 — one missing line
+
+`setResale(out.form.resale)` in the lookup's FILLED branch. Safe to apply
+unconditionally: `fillFromMarket` fills resale only into a blank, and otherwise
+returns the operator's own value untouched.
+
+### B96 — where Condition goes, and why not the obvious place
+
+Condition and Shipping now sit **between Scan and Look up**. ⚠️ **Not above Scan**,
+which was the first instinct: the scan returns to the form by *pushing a fresh
+screen*, so a condition chosen before scanning is lost. Above the lookup is where it
+has to be; below the scan is where it can survive.
+
+⚡ **And the prices now say which condition they came from.** The *Measured* line
+named the search and the category and never the condition, so a lookup made on "Not
+sure" produced sealed, used and parts in one set with nothing on the screen to say
+so. `COMP_CONDITION_WORDS` names it on every lookup, and the screen warns in amber when
+every condition is mixed. That piece was deferred as polish until Jason's report made
+it necessary: **the screen had no way to tell him why his prices looked wrong.**
+
+### The guard, and why its two sides are different
+
+`tests/sourcing-wiring.test.ts`. The fields the lookup fills come from **running**
+`fillFromMarket`; the wiring comes from **reading** `sourcing.tsx`, with line endings
+normalised first. A field the model starts filling with no setter mapped fails, and a
+model that stops filling `resale` fails the first assertion rather than shrinking the
+loop and passing by checking less. It also pins Condition **above** the lookup and
+**below** the scan.
+
+⚠️ **The free control was not available.** The obvious move — run the new tests
+against the unfixed code first — fails at import, because `COMP_CONDITION_WORDS` only
+exists after the fix, and a file that will not load proves nothing per claim.
+
+### ⚠️ The Measured wording WAS pinned — and my search said it was not
+
+Before changing the *Measured* line I checked whether any test pinned its wording, and
+reported that none did. **Two did.** The check was a grep piped through `head -12`: the
+first twelve hits were comments in files alphabetically ahead of `sourcing.test.ts`, so
+the list stopped before the two exact-string assertions that mattered. A second filter
+meant to drop comment lines never matched anything either, because grep's output lines
+begin with the file name, not the code. The change reddened both tests; the full suite
+named exactly those two and nothing else; an untruncated grep agreed.
+
+Both were updated to the new wording as **literal strings**, which makes them the only
+place the condition words are pinned verbatim — the guard file checks them through the
+same table the code uses. ⛔ **A truncated search hides a class**, again: the rule was
+already written down, and a `| head` defeated it anyway.
+
+### Planted, in both directions
+
+Round 1 planted four claims at once, each observed by its own test — resale not
+copied, Condition below the lookup, *Measured* without the condition, the warning
+gone — and each red. Round 2 planted the **other** direction of the order claim,
+Condition above Scan, and it red on its own. Both restored, the plant text grepped
+gone, and green again.
+
+### ⏳ The prices — open, and not assumed to be B96
+
+The adapter was read first, because it could be checked without Jason: it takes
+`soldPrice`, which excludes shipping, and the fee model handles postage separately.
+One known skew is commented in the code — a free-shipping listing folds postage into
+its price and a paid-shipping one does not — which widens the spread but cannot make
+prices look *wrong*.
+
+So the suspects, in order: **B96** (a first lookup on "Not sure" is almost certain
+given the old layout), then **B89** (the broad search measures the product family —
+68% apart on one product), then the vendor itself. Jason was asked which condition
+was set, which search he chose, and what the *Measured* line and the prices said.
+⛔ **Not rebuilt yet**: if the cause is not B96, its fix should ride the same build.
+
+### The class stays open — B98
+
+The guard catches a dropped field in **this** screen. The class — a screen copying a
+model's result field by field — is fixed by one form-state object, or a pure
+`applyFill` the suite can run. Filed rather than squeezed into a build Jason is
+waiting on.
+
+**794 tests, 49 files, six gates green.**

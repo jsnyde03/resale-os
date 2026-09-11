@@ -132,7 +132,7 @@ as stale, and the histogram says when it is mixing rule sets. Detail in the log.
 
 ---
 
-### Gate 6.11 — THE SCAN FLOW ✅ **BUILT 2026-09-11** *(published 2026-09-11; 6.11.6 awaits a real scan)*
+### Gate 6.11 — THE SCAN FLOW ✅ **BUILT 2026-09-11** *(camera verified on the device 2026-09-11; the prices it led to are under diagnosis)*
 
 ⚡ **Closes D18, B84, B89.** Barcode → identity → a keyword that is **proposed
 and editable** → market → verdict, with the tag price the only typed field.
@@ -292,17 +292,19 @@ ever announces that the day arrived. A threshold the app already computes does.
 
 Filed, not forgotten. Nothing here is in a gate until it is promoted.
 
-- **B96** ⛔ **The aisle screen invites the worst-case lookup.** *Look up the
-  market* sits ABOVE *Condition*, which defaults to *Not sure*, and the lookup
-  reads the condition **at the moment it is tapped** — so the natural
-  top-to-bottom order (scan, then look up) draws comps from **any** condition:
-  the mixed market B90 measured at a 234x spread, a dispersion term of zero,
-  and **no resale fill**, because `fillFromMarket` withholds resale for `any`.
-  ⚠️ **Changing the condition afterwards does not refetch**, so correcting it
-  costs a second lookup — 2 more requests of ~50 a month. Fix at the next
-  build: Condition above the lookup, or a lookup that will not run on *Not
-  sure*, or a refetch when the condition changes. **Until then: set Condition
-  first.** Found 2026-09-11 writing Jason's Walmart guide.
+- **B98** ⚠️ **The class behind B97 is still open: a screen copies a model's
+  result field by field.** The guard catches a dropped field in the aisle screen
+  and nowhere else. The class fix is one form-state object per screen — a single
+  `setForm(out.form)` cannot drop a field — or a pure `applyFill` in
+  `src/screens/` that the suite can run. Second tested-but-unwired helper found on
+  2026-09-11, after the analogy cap.
+- ~~**B97**~~ ✅ **Closed 2026-09-11.** The resale price the lookup computes now
+  reaches the box — one missing `setResale`. A guard test reads the screen and
+  fails if any field the lookup fills is not copied back. Detail in the log.
+- ~~**B96**~~ ✅ **Closed 2026-09-11.** Condition sits between Scan and Look up —
+  not above Scan, because the scan returns on a fresh screen — and the prices say
+  which condition they came from, with a warning when every condition is mixed.
+  Pinned by the same guard file. Detail in the log.
 - ~~**B95**~~ ✅ **Closed 2026-09-11.** ⛔ **The fund could not receive money on
   the phone.** No screen issued a contribution after 5.10, so D3's $25 sat under
   "waiting on Jason" while being impossible to record. **Money in** mirrors
