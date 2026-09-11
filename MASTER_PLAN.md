@@ -342,13 +342,16 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   saying so, which is the class this project keeps being bitten by. Cache by
   `(input, policy version, NAV)` or page it, and make the cap speak. → when the
   list gets long, not before.
-- **B74** ⚠️ **SoldComps: `totalItems` is the count on the CURRENT PAGE, not a
-  grand total.** Reading it as the sold count returns the page size — a plausible
-  wrong number, which is the worst kind. The real count needs paginating until
-  `hasNextPage` is false, and each page costs quota. ⚡ **A page is 240**, and the
-  clearance rule needs `sold ≥ 4.3 × (active + 1)`, so one request settles almost
-  every real case: an exact count when `hasNextPage` is false, otherwise a floor
-  of 240 that clears any realistic ceiling. → **6.1.2**, before a line is written.
+- **B74** ⛔ **SoldComps: a SOLD page caps at 40, and `totalItems` is the count on
+  the CURRENT PAGE.** ⚠️ **I said 240 and that was wrong** — 240 is the ACTIVE
+  limit; `count` is 1-40 for sold. The clearance rule needs `sold ≥ 4.3 × (active
+  + 1)`, so **10 active listings need 48 sold — more than one page can report.**
+  One request can only ever prove "at least 40", which does not clear it.
+  ⚡ **Three ways out, and the first is free:** `totalResults` (documented as
+  "string or null") may carry the grand total — **unknown until a real response
+  is seen**; or page twice (2 requests × 100/month free = 50 items); or treat 40
+  as a floor and say so. ⚡ `soldAfter=YYYY-MM-DD` gives the 90-day window exactly,
+  so no client-side date filtering. → decide against a REAL response, not the docs.
 - **B69** ⚡ **Barcode scanning in the aisle** (Jason, 2026-09-10). The SCAN is
   the easy part — `expo-camera` does it offline, one screen. ⛔ **But a barcode
   is a product identity, not a price**, and the sourcing screen's binding fields
