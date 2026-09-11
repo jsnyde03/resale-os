@@ -128,7 +128,7 @@ describe('three profit numbers that must not be conflated', () => {
 
     const capitalised = expenseBreakdown(store.db).filter((l) => l.capitalized === 1);
     expect(capitalised.reduce((a, l) => a + l.totalCents, 0)).toBe(700);
-    expect(store.state().items.i1!.landedCostCents).toBe(1_700);
+    expect(store.derivedState().items.i1!.landedCostCents).toBe(1_700);
   });
 
   it('reports charge-offs and recoveries separately', () => {

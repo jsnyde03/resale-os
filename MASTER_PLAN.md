@@ -113,21 +113,20 @@ the right one.** `expect(store.state().balances.LIQUID)` is a perfectly good
 assertion *about the engine*; it is only wrong as a claim about **persistence**.
 A blanket ban would red-gate correct tests.
 
-- [ ] **6.8.1** ⚠️ **[DECISION-SHAPED, mine]** Define the enforceable rule. The
-      candidate: *a test asserting something SURVIVED must read it back through a
-      path that did not write it* — `derivedState()`, or a second `FundStore`
-      over the same db, the pattern the settings contract case already uses.
-      **Write the rule before writing the check.**
-- [ ] **6.8.2** Classify the 75 sites against that rule and fix the ones that are
-      genuinely persistence claims. ⚠️ Expect the list to undercount — an
-      enumerated audit list has come up short on five consecutive items here.
-- [ ] **6.8.3** The check itself, whatever 6.8.1 decides it can be. ⛔ If it
-      cannot be made to fail safe, say so and leave it a convention rather than
-      shipping a gate that red-gates correct tests — **that is the mistake the
-      boot guard just made** (**B87**).
-- [ ] **6.8.4** Plant it: a persistence assertion rewritten to read the cache
-      must red. ⛔ **And run the control** — a correct test must stay green.
-- [ ] **6.8.5** On-device verification.
+- [x] **6.8.1** ✅ **Done 2026-09-11.** The rule is narrower than the backlog
+      said: **a test may not ASSERT on `state()`** — passing it to a scorer is
+      fine, because that claim is about the engine. 75 sites became **29**.
+- [x] **6.8.2** ✅ **Done 2026-09-11.** All 29 swapped to `derivedState()`.
+      ⚡ **One reddened** — and it was right to: the case whose whole subject is
+      that the cache goes stale. Exempted by name, and given the control it was
+      missing.
+- [x] **6.8.3** ✅ **Done 2026-09-11.** `lint:imports` bans the assertion,
+      with a `cache-assertion` marker **on the line** as the named exception.
+- [x] **6.8.4** ✅ **Done 2026-09-11.** Planted three ways: the ban fires, a
+      legitimate non-assertion use stays legal (**the control**), and removing
+      a marker reds.
+- [ ] **6.8.5** On-device verification — the scenario files changed, so the lane
+      covers it.
 
 **Exit:** a test cannot claim something persisted while reading the engine's
 cache, and the check that says so has been planted in both directions.

@@ -83,7 +83,7 @@ describe('reversing a business expense', () => {
       });
 
       // The exact symptom from button-up: the ledger came back, the table did not.
-      expect(store.state().balances.LIQUID).toBe(5_000);
+      expect(store.derivedState().balances.LIQUID).toBe(5_000);
       expect(suppliesTotal(store)).toBe(0);
       expect(profitReport(store.db).businessExpenseCents).toBe(0);
       expect(profitReport(store.db).operatingProfitCents).toBe(0);
@@ -115,7 +115,7 @@ describe('reversing a business expense', () => {
   it('restores the business income the expense consumed, so tax reserves against the truth', () => {
     withStore((store) => {
       const expenseId = spendOnSupplies(store);
-      expect(store.state().ytdNetBusinessIncomeCents).toBe(-150);
+      expect(store.derivedState().ytdNetBusinessIncomeCents).toBe(-150);
 
       store.commit({
         type: 'ADJUSTMENT',
@@ -125,7 +125,7 @@ describe('reversing a business expense', () => {
         reversesEventId: expenseId,
         occurredAt: T0,
       });
-      expect(store.state().ytdNetBusinessIncomeCents).toBe(0);
+      expect(store.derivedState().ytdNetBusinessIncomeCents).toBe(0);
     });
   });
 
@@ -251,7 +251,7 @@ describe('reversing a business expense', () => {
       // correction, not an expense reversal, and conflating them would make
       // every adjustment silently rewrite the expense history.
       expect(suppliesTotal(store)).toBe(150);
-      expect(store.state().ytdNetBusinessIncomeCents).toBe(-150);
+      expect(store.derivedState().ytdNetBusinessIncomeCents).toBe(-150);
     });
   });
 });

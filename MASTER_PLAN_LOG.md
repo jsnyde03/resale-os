@@ -5278,3 +5278,57 @@ about the engine and only wrong as a claim about persistence. So 6.8.1 is
 cannot be made to fail safe, leave it a convention" — ⛔ **because shipping a
 gate that fires on correct input is the mistake the boot guard made four hours
 ago, and it is fresh enough to be worth naming in the plan.**
+
+## 2026-09-11 — 6.8: a test may not assert on the engine's cache (B54)
+
+⛔ **The backlog's stated fix was wrong, and the switch-in scan said so before
+anything was built.** "Worth a lint" implied banning `store.state()` in tests.
+Measured: **75 call sites**, of which **16 are legitimate non-assertion uses** —
+passing the state into a scorer, where the claim is about the engine and not
+about storage. A blanket ban would have red-gated correct tests.
+
+⚡ **The rule that IS enforceable is narrower: a test may not ASSERT on
+`state()`.** That cut 75 sites to **29**, and it is mechanically checkable
+because an assertion has a name — `expect(`, `eq(`, `ok(`.
+
+### ⚡ The swap was a free audit, and one site reddened for the right reason
+
+All 29 were swapped to `derivedState()` and the suite run. **One failed:** the
+engine-scenario case named *"a second store writes, and the first cannot see it
+until told"*, whose assertion message is literally *"the stale cache is still the
+old answer"*.
+
+⛔ **That case asserts on the cache on purpose** — its whole subject is that the
+cache goes stale when a second instance writes, so reading the database would
+assert the opposite of the point. **The exception predicted in 6.8.3 showed up on
+the first try**, which is the best evidence available that a blanket ban would
+have been wrong.
+
+⚠️ **And that case was missing its own control.** It proved the cache said 50,000
+and, after `invalidate()`, said 60,000 — but never that **the database held
+60,000 all along**. Without that, the case passes for a store that silently lost
+the second write. The control is now there, and **placed where it can
+discriminate**: between the second write and the invalidate, where the cache and
+the database disagree. ⛔ My first attempt put it after `invalidate()`, where the
+two already agree — **a control placed where it cannot discriminate is not a
+control**, and I caught that by reading it back rather than by it failing.
+
+### The exemption is named, and the marker goes ON the line
+
+`cache-assertion`, on the line or the one directly above. ⚠️ **My first version
+put the marker at the top of a six-line comment block and the lint refused it** —
+correctly. An exemption three lines from the thing it exempts is one nobody
+re-reads, so the marker moved onto the assertion. **Three exemptions exist in the
+whole tree**, all in the one case that is about the cache.
+
+### Three plants, including the control
+
+| plant | result |
+|---|---|
+| a persistence assertion rewritten to read the cache | **1 violation** ✓ |
+| a legitimate non-assertion use of `state()` | **0 violations** ✓ (the control) |
+| an exemption marker removed | **1 violation** ✓ |
+
+⚡ **The middle row is the one that matters**, and it is the row the boot guard
+never had: proof that the check does not fire on correct input. B87 is four hours
+old and this item was written to not repeat it.

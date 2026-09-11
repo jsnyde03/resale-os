@@ -145,9 +145,9 @@ describe('settling an expense whose cash already came back', () => {
       const returnId = undeclaredReturn(store, 150);
 
       // The state the live fund is in: ledger right, books wrong.
-      expect(store.state().balances.LIQUID).toBe(5_000);
+      expect(store.derivedState().balances.LIQUID).toBe(5_000);
       expect(profitReport(store.db).businessExpenseCents).toBe(150);
-      expect(store.state().ytdNetBusinessIncomeCents).toBe(-150);
+      expect(store.derivedState().ytdNetBusinessIncomeCents).toBe(-150);
 
       store.commit({
         type: 'EXPENSE_CORRECTION',
@@ -158,10 +158,10 @@ describe('settling an expense whose cash already came back', () => {
         occurredAt: T0,
       });
 
-      expect(store.state().balances.LIQUID).toBe(5_000);
+      expect(store.derivedState().balances.LIQUID).toBe(5_000);
       expect(profitReport(store.db).businessExpenseCents).toBe(0);
       expect(profitReport(store.db).operatingProfitCents).toBe(0);
-      expect(store.state().ytdNetBusinessIncomeCents).toBe(0);
+      expect(store.derivedState().ytdNetBusinessIncomeCents).toBe(0);
       expect(expenseReversalDrift(store.db)).toEqual([]);
       expect(reconcile(store)).toEqual({ ok: true, differences: [] });
     });
@@ -230,7 +230,7 @@ describe('settling an expense whose cash already came back', () => {
       settle(first, 100);
       settle(second, 50);
       expect(profitReport(store.db).businessExpenseCents).toBe(0);
-      expect(store.state().ytdNetBusinessIncomeCents).toBe(0);
+      expect(store.derivedState().ytdNetBusinessIncomeCents).toBe(0);
       expect(expenseReversalDrift(store.db)).toEqual([]);
     });
   });

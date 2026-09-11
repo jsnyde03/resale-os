@@ -142,8 +142,8 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
         sold: 90,
       });
       eq(failures, [], 'a purchase this size should pass every gate');
-      eq(store.state().balances.INVENTORY_AT_COST, 1_000, 'inventory after the buy');
-      eq(store.state().balances.LIQUID, 49_000, 'liquid after the buy');
+      eq(store.derivedState().balances.INVENTORY_AT_COST, 1_000, 'inventory after the buy');
+      eq(store.derivedState().balances.LIQUID, 49_000, 'liquid after the buy');
       const item = store.derivedState().items[itemId];
       ok(item !== undefined, 'the item should exist on disk');
       eq(item?.overrodeGates, undefined, 'a clean purchase records no override');
@@ -167,7 +167,7 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
       }
       ok(refused, 'an override with no reason must be refused');
       store.invalidate();
-      eq(store.state().eventCount, before, 'a refusal must leave the ledger untouched');
+      eq(store.derivedState().eventCount, before, 'a refusal must leave the ledger untouched');
     },
   },
   {
@@ -469,7 +469,7 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
       // ⛔ 30 days, derived from the two timestamps. `accuracy` ignores a sale
       // whose hold is undefined.
       eq(sold?.daysToSale, 30, 'the hold, derived rather than typed');
-      eq(store.state().balances.INVENTORY_AT_COST, 0, 'nothing left on the shelf');
+      eq(store.derivedState().balances.INVENTORY_AT_COST, 0, 'nothing left on the shelf');
       eq(reconcile(store), { ok: true, differences: [] }, 'reconcile after a sale');
     },
   },
@@ -486,7 +486,7 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
       ok(model.ready, 'an expense with an amount and a category is ready');
       store.commit(model.command(T0)!);
 
-      eq(store.state().balances.LIQUID, 49_550, 'liquid after the expense');
+      eq(store.derivedState().balances.LIQUID, 49_550, 'liquid after the expense');
       eq(profitReport(db).businessExpenseCents, 450, 'the analytic expense row');
       eq(reconcile(store), { ok: true, differences: [] }, 'reconcile after an expense');
     },
@@ -509,7 +509,7 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
       }
       ok(refused, 'paying out more than is payable must be refused');
       store.invalidate();
-      eq(store.state().eventCount, before, 'a refusal must leave the ledger untouched');
+      eq(store.derivedState().eventCount, before, 'a refusal must leave the ledger untouched');
     },
   },
   {

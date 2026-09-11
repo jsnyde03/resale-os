@@ -227,7 +227,7 @@ describe('a rejected command leaves the database untouched', () => {
 
     expect(store.events().length).toBe(before.events);
     expect(store.db.all('SELECT * FROM items').length).toBe(before.items);
-    expect(store.state().balances).toEqual(before.balances);
+    expect(store.derivedState().balances).toEqual(before.balances);
   });
 });
 
@@ -347,7 +347,7 @@ describe('expense records', () => {
 
     // The capitalised half is already inside book value, so counting both would
     // double-charge the item by $4.20.
-    expect(store.state().items.i1!.landedCostCents).toBe(1_420);
+    expect(store.derivedState().items.i1!.landedCostCents).toBe(1_420);
   });
 
   it('scopes a business expense to the business, not to an item', () => {
@@ -396,13 +396,13 @@ describe('the full business scenario reconciles to the cent', () => {
 
     // and the fund is honest about the loss it took
     expect(m.navCents).toBeLessThan(15_000 + profitPin);
-    expect(store.state().items['funko-01']!.realizedProfitCents).toBe(-1_800 + 833);
+    expect(store.derivedState().items['funko-01']!.realizedProfitCents).toBe(-1_800 + 833);
   });
 
   it('is still BOOTSTRAP, because $150 did not become $500', () => {
     const store = freshStore();
     runBusiness(store);
-    expect(store.state().mode).toBe('BOOTSTRAP');
-    expect(store.state().policy.version).toBe(DEFAULT_POLICY.version);
+    expect(store.derivedState().mode).toBe('BOOTSTRAP');
+    expect(store.derivedState().policy.version).toBe(DEFAULT_POLICY.version);
   });
 });

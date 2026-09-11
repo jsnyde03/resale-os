@@ -88,7 +88,7 @@ export const ENGINE_SCENARIO: readonly ScenarioCase[] = [
     run: (db, openScratch) => {
       const store = freshStore(db);
       store.commit({ type: 'CONTRIBUTION', amountCents: 50_000, occurredAt: T0 });
-      eq(store.state().balances.LIQUID, 50_000, 'liquid after contribution');
+      eq(store.derivedState().balances.LIQUID, 50_000, 'liquid after contribution');
       // The cache is the engine's answer; this is the postings scan.
       eq(store.derivedState().balances.LIQUID, 50_000, 'liquid, derived cold');
     },
@@ -108,7 +108,7 @@ export const ENGINE_SCENARIO: readonly ScenarioCase[] = [
         expectedResaleCents: 3_900,
         occurredAt: T0,
       });
-      eq(store.state().balances.INVENTORY_AT_COST, 1_500, 'inventory after purchase');
+      eq(store.derivedState().balances.INVENTORY_AT_COST, 1_500, 'inventory after purchase');
 
       store.commit({
         type: 'SALE',
@@ -119,8 +119,8 @@ export const ENGINE_SCENARIO: readonly ScenarioCase[] = [
         daysToSale: 7,
         occurredAt: T0,
       });
-      eq(store.state().balances.INVENTORY_AT_COST, 0, 'inventory after sale');
-      ok(store.state().items['pin-01']?.state === 'SOLD', 'item should be SOLD');
+      eq(store.derivedState().balances.INVENTORY_AT_COST, 0, 'inventory after sale');
+      ok(store.derivedState().items['pin-01']?.state === 'SOLD', 'item should be SOLD');
       eq(store.verifyChain(), { ok: true }, 'hash chain after a sale');
     },
   },
@@ -357,15 +357,31 @@ export const ENGINE_SCENARIO: readonly ScenarioCase[] = [
     run: (db, openScratch) => {
       const store = freshStore(db);
       store.commit({ type: 'CONTRIBUTION', amountCents: 50_000, occurredAt: T0 });
-      eq(store.state().balances.LIQUID, 50_000, 'liquid, cached');
+
+      // ⛔ **This case IS about the cache.** 6.8 bans asserting on `state()`
+      // because it answers from the engine rather than the database — but the
+      // whole subject here is that the cache goes stale when another instance
+      // writes, so reading the DATABASE would assert the opposite of the point.
+      // ⚠️ The marker goes ON the line, not in this block: an exemption three
+      // lines from what it exempts is one nobody re-reads.
+      eq(store.state().balances.LIQUID, 50_000, 'liquid, cached'); // cache-assertion
 
       // A different instance over the SAME database — what an import is.
       const other = new FundStore(db, () => '2026-09-09T13:00:00.000Z');
       other.commit({ type: 'CONTRIBUTION', amountCents: 10_000, occurredAt: T0 });
 
-      eq(store.state().balances.LIQUID, 50_000, 'the stale cache is still the old answer');
+      eq(store.state().balances.LIQUID, 50_000, 'the stale cache is still the old answer'); // cache-assertion
+
+      // ⚡ **The control the original case did not have, and it only works
+      // HERE** — between the second write and the invalidate, where the cache
+      // and the database disagree. After `invalidate()` they agree, so the same
+      // assertion down there would pass for a store that had silently lost the
+      // second write. **A control placed where it cannot discriminate is not a
+      // control.**
+      eq(store.derivedState().balances.LIQUID, 60_000, 'the database had it all along');
+
       store.invalidate();
-      eq(store.state().balances.LIQUID, 60_000, 'after invalidate, the real balance');
+      eq(store.state().balances.LIQUID, 60_000, 'after invalidate, the real balance'); // cache-assertion
       eq(reconcile(store), { ok: true, differences: [] }, 'reconcile after a second writer');
     },
   },
@@ -395,7 +411,7 @@ export const ENGINE_SCENARIO: readonly ScenarioCase[] = [
         refused = true;
       }
       ok(refused, 'an override with no reason must be refused');
-      eq(store.state().items['pin-00'], undefined, 'the refused purchase must not exist');
+      eq(store.derivedState().items['pin-00'], undefined, 'the refused purchase must not exist');
 
       store.commit({
         type: 'PURCHASE',

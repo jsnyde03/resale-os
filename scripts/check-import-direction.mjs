@@ -212,6 +212,46 @@ for (const entry of readdirSync(join(ROOT, 'src'))) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// ⛔ 6.8 (B54) — A TEST MAY NOT ASSERT ON THE ENGINE'S CACHE.
+//
+// `store.state()` answers from a cache that `commit()` fills with the ENGINE's
+// next state, because re-deriving from the ledger after every write would make
+// a batch O(n²). That is a sound optimisation and a trap for any assertion: a
+// test that writes and then asserts on `state()` is asking the engine whether
+// the engine was right, and **a round-trip test passed in 5.5.1 with a column
+// dropped on the write path** because of exactly this.
+//
+// ⚠️ **The rule is narrower than "never call state()", and that matters.**
+// Passing `store.state()` into a scorer is fine — the claim there is about the
+// engine. It is only wrong inside an ASSERTION, where the claim is about what
+// was stored. A blanket ban was measured and would red-gate correct tests:
+// 16 non-assertion uses are legitimate, and one case asserts on the cache **on
+// purpose** because its whole subject is that the cache goes stale when a
+// second instance writes.
+//
+// ⛔ So the exception is named rather than guessed: a `cache-assertion` comment
+// on the line or the line above. That makes an exemption a deliberate, greppable
+// diff instead of an oversight — the same shape as MONEY_EXEMPT above.
+const CACHE_ASSERTION = /\b(?:expect|eq|ok)\(\s*[A-Za-z_][A-Za-z0-9_]*\.state\(\)/;
+const CACHE_EXEMPT = /cache-assertion/;
+
+for (const dir of ['tests', 'src/db']) {
+  if (!existsSync(join(ROOT, dir))) continue;
+  for (const file of walk(join(ROOT, dir))) {
+    const rel = toPosix(relative(ROOT, file));
+    const lines = readFileSync(file, 'utf8').split(/\r?\n/);
+    lines.forEach((line, i) => {
+      if (!CACHE_ASSERTION.test(line)) return;
+      if (CACHE_EXEMPT.test(line) || CACHE_EXEMPT.test(lines[i - 1] ?? '')) return;
+      failures.push(
+        `${rel}:${i + 1} asserts on the engine's CACHE — use derivedState(), or a second ` +
+          `FundStore over the same db. (Deliberate? mark the line "cache-assertion".)`,
+      );
+    });
+  }
+}
+
 if (failures.length > 0) {
   console.error('Import-direction violations:');
   for (const f of failures) console.error(`  ${f}`);
