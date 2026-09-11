@@ -468,10 +468,21 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   ⏳ **Needs Jason: delete `resale-os-prescrub-2` and `resale-os-prescrub-private`**
   — both private, both still holding the data, and the CLI token cannot delete.
 - ~~**B54**~~ ⚡ **Promoted to Gate 6.8, 2026-09-11.** Measured at switch-in: 75 `store.state()` sites against 7 `derivedState()`, no lint.
-- **B55** The migration-rebuild test hard-coded `[REBUILD]` as everything stage
-  2 would run, so migration 006 broke it — and because the store was closed
+- **B55** ⚠️ **Two classes, both measured 2026-09-11 (pre-scouted, not switched
+  in).** The migration-rebuild test hard-coded `[REBUILD]` as everything stage 2
+  would run, so migration 006 broke it — and because the store was closed
   *after* the assertions, the real failure surfaced as an EBUSY from the temp
-  directory cleanup. Both fixed in 5.5.1. Audit the other suites for
-  hard-coded migration lists and for handles closed inside a `try`.
+  directory cleanup. Both fixed in 5.5.1; the audit was never done.
+  ⛔ **Seven sites still close a handle inside the TRY body** —
+  `migration-rebuild.test.ts:136`, `reporting.test.ts:160/171/208/232/247`,
+  `views.test.ts:156`. **If an assertion between the open and the close fails,
+  the close never runs**, the handle leaks into the `finally`, and `rmSync`
+  throws EBUSY over the top of the real failure. ⚠️ `rmSync` currently papers
+  over it with `maxRetries: 5` — which hides the leak rather than removing it.
+  ⚡ The fix has a pattern already in the tree: `views.test.ts:236`'s
+  `try { fn(store); } finally { store.close(); }`.
+  ⚠️ Second class: `migration-rebuild.test.ts` still pins migration NAMES in
+  nine places; check which of those are load-bearing and which go stale on the
+  next migration. → next after 6.8, per **D17**.
 - ~~**B20**~~ ✅ **Superseded 2026-09-10 by 5.12.** `policy set` is deleted; the
   need it named is now the whole missing surface.
