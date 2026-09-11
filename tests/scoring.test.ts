@@ -352,6 +352,16 @@ describe('evaluateOpportunity, end to end', () => {
     );
     expect(e.result.recommendation).not.toBe('BUY');
     expect(e.result.reasons.join(' ')).toMatch(/CONFIDENCE_TOO_LOW/);
+
+    // ⛔ **The sell-through gate ABSTAINS rather than failing an unknown.** An
+    // operator guess has no ratio to report, and a zero would refuse it for
+    // being unpopular rather than for being unevidenced. Asserted here because
+    // `quote.candidate` used to carry this assertion and is being deleted as
+    // dead — ⚠️ **coverage moves BEFORE the thing it covered goes.**
+    expect(e.gates.results.map((r) => r.code)).not.toContain('SELL_THROUGH_TOO_LOW');
+    // The control: with comps, the gate is present and evaluated.
+    const withComps = evaluateOpportunity(goodOpportunity(), fund.state);
+    expect(withComps.gates.results.map((r) => r.code)).toContain('SELL_THROUGH_TOO_LOW');
   });
 
   it('every reason is a generated string, never empty', () => {

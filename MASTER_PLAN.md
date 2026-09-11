@@ -87,11 +87,10 @@ and `boundsAreOptimistic` unconditionally. So four of the five optional fields
 are optional only because Gate 1 predated Gate 2. **This is prevention, not
 repair.**
 
-- [ ] **6.6.1** Make the four always-supplied fields **required**, so a caller
-      that forgets one fails to compile rather than losing a gate.
-      ⛔ **`boundsAreOptimistic` is mine, added at 6.1.0** — checked with
-      `=== true`, so an omitting caller gets no refusal. I added an instance of
-      the class this item exists to remove.
+- [x] **6.6.1** ✅ **Done 2026-09-11.** The four are required; a caller that
+      forgets one fails to compile. ⛔ **`quote.candidate` deleted as dead** —
+      D14 removed the only thing that assessed it, and it could not have
+      satisfied the rule. 656 tests (+3); coverage moved BEFORE the deletion.
 - [ ] **6.6.2** Make `sellThroughBps` — the ONE genuine abstention — **say so**
       rather than be absent, carrying its reason. After 6.6.1 nothing else is
       ever absent, so "absent" stops being ambiguous by construction.

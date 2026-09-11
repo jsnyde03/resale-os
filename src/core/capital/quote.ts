@@ -67,7 +67,6 @@ export interface PurchaseQuote {
   readonly expectedRoiBps: Bps;
   readonly modeledDownsideCents: Cents;
   readonly velocity: VelocityEstimate;
-  readonly candidate: PurchaseCandidate;
   /** Whether the expected gross was supplied or assumed. */
   readonly grossWasAssumed: boolean;
 }
@@ -103,18 +102,24 @@ export function quotePurchase(input: PurchaseQuoteInput): PurchaseQuote {
     landedCostCents - estimateNetProceeds(applyBps(expectedGrossCents, FIRE_SALE_BPS), model).netCents,
   );
 
-  const candidate: PurchaseCandidate = {
-    category: input.category,
-    landedCostCents,
-    expectedDaysToSale: velocity.expectedDaysToSale,
-    modeledDownsideCents,
-    expectedNetProfitCents: expectedProfitCents,
-    expectedRoiBps: landedCostCents === 0 ? 0 : toBps(expectedProfitCents, landedCostCents),
-    confidenceBps: velocity.confidenceBps,
-    // ⚠️ Present only for comps. An operator estimate has no ratio to test, and
-    // supplying a zero would fail the gate on an unknown rather than abstain.
-    ...(velocity.source === 'COMPS' ? { sellThroughBps: velocity.sellThroughBps } : {}),
-  };
+  // ⛔ **`candidate` was here and it was deleted at 6.6.1 (2026-09-11).**
+  //
+  // It was the argument `assessQuote` passed to `assessPurchase`, and D14
+  // deleted `assessQuote` on 2026-09-10 — after which NOTHING in `src/` ever
+  // assessed it. Only tests read it, which is the worst state for a field to be
+  // in: ⚠️ **a tested export reads as a blessed one**, and this was a second,
+  // weaker way to build the object that decides whether money moves.
+  //
+  // ⚡ It also could not survive 6.6.1. The whole point of that step is that a
+  // caller who cannot supply every gate field fails to COMPILE, and this
+  // candidate genuinely has no buy score — it is the exact shape the rule
+  // exists to refuse. Deleting it leaves `evaluateOpportunity` as the one place
+  // a `PurchaseCandidate` is built.
+  //
+  // ⚠️ Its one assertion worth keeping — that sell-through abstains for an
+  // operator estimate — moved to `tests/scoring.test.ts` against
+  // `evaluateOpportunity`, with a control, BEFORE this was removed.
+  const expectedRoiBps = landedCostCents === 0 ? 0 : toBps(expectedProfitCents, landedCostCents);
 
   return {
     landedCostCents,
@@ -122,10 +127,9 @@ export function quotePurchase(input: PurchaseQuoteInput): PurchaseQuote {
     feeModel: model,
     estimate,
     expectedProfitCents,
-    expectedRoiBps: candidate.expectedRoiBps,
+    expectedRoiBps,
     modeledDownsideCents,
     velocity,
-    candidate,
     grossWasAssumed,
   };
 }

@@ -17,6 +17,14 @@ function candidate(overrides: Partial<PurchaseCandidate> = {}): PurchaseCandidat
     modeledDownsideCents: 400,
     expectedNetProfitCents: 1_200,
     expectedRoiBps: 12_000,
+    // ⛔ **Required since 6.6.1**, and these defaults all PASS — so a test that
+    // wants a gate to fire still has to say so, exactly as before. What changed
+    // is that a test can no longer omit a field and silently not evaluate a
+    // gate, which is what made B58's 64 divergences invisible.
+    confidenceBps: 9_000,
+    buyScore: 90,
+    riskScore: 10,
+    boundsAreOptimistic: false,
     ...overrides,
   };
 }
@@ -372,5 +380,51 @@ describe('VELOCITY_COUNTS_UNBOUNDED — an optimistic unknown is refused, not wa
     // absence must not be read as a refusal that already happened.
     const a = assessPurchase(fund().state, candidate({ boundsAreOptimistic: true }));
     expect(failed(a)).toEqual(['VELOCITY_COUNTS_UNBOUNDED']);
+  });
+});
+
+describe('6.6.1 — a gate can no longer be skipped by accident', () => {
+  const fund = () => Fund.withBankroll(7_500);
+
+  /**
+   * ⛔ The four fields that were optional only because Gate 1 predated Gate 2.
+   * Making them required means TypeScript refuses a caller that forgets one —
+   * **that is the real control**, and it fired the moment this file's own
+   * helper stopped compiling.
+   *
+   * ⚠️ **What this adds, measured rather than assumed.** Planting a re-added
+   * `if (candidate.x !== undefined)` guard on its own reds NOTHING, because a
+   * required field is never undefined and the guard is a no-op. What these DO
+   * catch is the realistic regression — 6.6.1 being reverted: the field going
+   * optional again, the guard returning, and a caller dropping it. Planted all
+   * three together and two of the three tests below went red.
+   */
+  const ALWAYS_EVALUATED: readonly ConstraintCode[] = [
+    'CONFIDENCE_TOO_LOW',
+    'BUY_SCORE_TOO_LOW',
+    'RISK_SCORE_TOO_HIGH',
+    'VELOCITY_COUNTS_UNBOUNDED',
+  ];
+
+  it('evaluates all four on a candidate that passes everything', () => {
+    const codes = assessPurchase(fund().state, candidate()).results.map((r) => r.code);
+    for (const code of ALWAYS_EVALUATED) expect(codes, code).toContain(code);
+  });
+
+  it('and on one that fails everything — presence is not conditional on outcome', () => {
+    const codes = assessPurchase(
+      fund().state,
+      candidate({ confidenceBps: 0, buyScore: 0, riskScore: 100, boundsAreOptimistic: true }),
+    ).results.map((r) => r.code);
+    for (const code of ALWAYS_EVALUATED) expect(codes, code).toContain(code);
+  });
+
+  it('⚠️ sell-through is still the ONE that may be absent, and only that one', () => {
+    // 6.6.2 makes it SAY so rather than be absent. Until then, this pins the
+    // fact that exactly one gate can go missing — so if a second one ever
+    // starts disappearing, this test names it instead of a verdict being wrong.
+    const evaluated = new Set(assessPurchase(fund().state, candidate()).results.map((r) => r.code));
+    const missing = CONSTRAINT_CODES.filter((c) => !evaluated.has(c));
+    expect(missing).toEqual(['SELL_THROUGH_TOO_LOW']);
   });
 });

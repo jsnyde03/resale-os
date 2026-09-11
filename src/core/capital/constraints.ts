@@ -45,8 +45,22 @@ export interface ConstraintResult {
 
 /**
  * What a constraint check needs to know about a candidate purchase.
- * Scores are optional: Gate 1 evaluates the capital gates alone, and Gate 2
- * supplies the score-dependent ones.
+ *
+ * ⛔ **EVERY FIELD IS REQUIRED, and that is the whole point (6.6.1, B66).**
+ *
+ * `assessPurchase` silently skips any gate whose field is `undefined`, and the
+ * code could not tell a deliberate abstention from a forgotten field — nor
+ * could a reader. That is not hypothetical: it cost 64 divergences in 96 cases
+ * when two screens gated the same purchase differently (**B58**, **D14**).
+ *
+ * ⚠️ **The scores used to be optional because Gate 1 predated Gate 2**, and
+ * that reason expired. `evaluateOpportunity` is now the ONLY place a candidate
+ * is built — `quote.candidate` was deleted at 6.6.1 as dead — and it supplies
+ * all of them, every time. So a caller that forgets one now fails to compile
+ * instead of quietly losing a gate.
+ *
+ * The one thing that may genuinely be unknown is `sellThroughBps`, and 6.6.2
+ * makes it SAY so rather than be absent.
  */
 export interface PurchaseCandidate {
   readonly category: string;
@@ -56,9 +70,9 @@ export interface PurchaseCandidate {
   readonly modeledDownsideCents: Cents;
   readonly expectedNetProfitCents: Cents;
   readonly expectedRoiBps: Bps;
-  readonly confidenceBps?: Bps;
-  readonly buyScore?: number;
-  readonly riskScore?: number;
+  readonly confidenceBps: Bps;
+  readonly buyScore: number;
+  readonly riskScore: number;
   /**
    * Sell-through from comps. Omitted for an operator estimate, where there is
    * no ratio to test — the gate abstains rather than failing an unknown.
@@ -76,7 +90,7 @@ export interface PurchaseCandidate {
    * leans is what decides whether abstaining is safe.** `VelocityEstimate`
    * carries it as `boundsAreOptimistic`; backlog **B77**.
    */
-  readonly boundsAreOptimistic?: boolean;
+  readonly boundsAreOptimistic: boolean;
 }
 
 export interface ConstraintAssessment {
@@ -225,7 +239,7 @@ export function assessPurchase(
 
   // Score-dependent gates: only evaluated when a score was supplied. An absent
   // score is not a silent pass — the caller decides whether to score first.
-  if (candidate.confidenceBps !== undefined) {
+  {
     results.push(
       result(
         'CONFIDENCE_TOO_LOW',
@@ -259,7 +273,7 @@ export function assessPurchase(
   // unchanged — firing here as well would add a refusal that is not binding,
   // and 6.2's histogram counts refusals to find the one that is.
   {
-    const optimistic = candidate.boundsAreOptimistic === true;
+    const optimistic = candidate.boundsAreOptimistic;
     // An absent gate abstained, which did not stop anything either.
     const letThrough = (code: ConstraintCode): boolean =>
       results.find((r) => r.code === code)?.passed !== false;
@@ -281,7 +295,7 @@ export function assessPurchase(
     );
   }
 
-  if (candidate.buyScore !== undefined) {
+  {
     results.push(
       result(
         'BUY_SCORE_TOO_LOW',
@@ -293,7 +307,7 @@ export function assessPurchase(
     );
   }
 
-  if (candidate.riskScore !== undefined) {
+  {
     results.push(
       result(
         'RISK_SCORE_TOO_HIGH',

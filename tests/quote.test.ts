@@ -114,22 +114,21 @@ describe('velocity, and what it is honest about', () => {
     });
     expect(q.velocity.source).toBe('COMPS');
     expect(q.velocity.sellThroughBps).toBe(5_000);
-    expect(q.candidate.sellThroughBps).toBe(5_000);
   });
 
-  // ⛔ The gate reads `sellThroughBps` and a zero would fail it. An operator
-  // guess has no ratio to report, so the field is ABSENT and the gate abstains
-  // rather than refusing an unknown.
-  it('omits sell-through entirely for an operator estimate', () => {
+  // ⚠️ **This used to assert on `q.candidate`, which was deleted at 6.6.1 as
+  // dead** — D14 removed the only thing that assessed it. The assertion that
+  // mattered (the sell-through gate ABSTAINS for an operator estimate rather
+  // than failing it on a zero) moved to `tests/scoring.test.ts`, against
+  // `evaluateOpportunity`, with a control, before the field was removed.
+  it('reports an operator estimate as an estimate, with no ratio', () => {
     const q = quotePurchase({
       category: 'TOYS',
       purchasePriceCents: 1_000,
       operatorDaysEstimate: 10,
     });
     expect(q.velocity.source).toBe('OPERATOR_ESTIMATE');
-    expect(q.candidate.sellThroughBps).toBeUndefined();
-    expect('sellThroughBps' in q.candidate).toBe(false);
-    expect(q.candidate.expectedDaysToSale).toBe(10);
+    expect(q.velocity.expectedDaysToSale).toBe(10);
   });
 
   it('defaults to a 7-day guess when told nothing at all', () => {

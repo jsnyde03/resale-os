@@ -4931,3 +4931,49 @@ remains, and it supplies four of the five optional fields unconditionally. So
 those four are optional only because Gate 1 predated Gate 2 — make them required
 and a forgetting caller fails to compile; make `sellThroughBps`, the one genuine
 abstention, say so; and "absent" stops being ambiguous by construction.
+
+### 6.6.1 — the four fields are required, and a dead second builder is gone
+
+`confidenceBps`, `buyScore`, `riskScore` and `boundsAreOptimistic` are now
+required on `PurchaseCandidate`. A caller that forgets one **fails to compile**
+instead of quietly losing a gate.
+
+### ⛔ `quote.candidate` was a second way to build the object that decides money
+
+Found by the switch-in scan. `quotePurchase` still returned a
+`PurchaseCandidate`, and **nothing in `src/` had assessed it since D14 deleted
+`assessQuote` on 2026-09-10** — only tests read it.
+
+⚠️ **That is the worst state for a field to be in.** This project already wrote
+the rule, in the very comment recording `assessQuote`'s deletion: *"it is deleted
+rather than deprecated because it had tests, and a tested export reads as a
+blessed one."* The rule was applied to the function and not to the argument it
+took.
+
+⚡ **And it could not have survived 6.6.1 anyway.** The point of required fields
+is that a caller unable to supply them fails to compile, and this candidate
+genuinely has no buy score — it is the exact shape the rule exists to refuse.
+Deleting it leaves `evaluateOpportunity` as the single place a candidate is
+built.
+
+⚠️ **Coverage moved before the thing it covered.** Its one assertion worth
+keeping — that sell-through ABSTAINS for an operator estimate rather than failing
+on a zero — was added to `tests/scoring.test.ts` against `evaluateOpportunity`,
+**with a control proving the gate is present when there are comps**, and only
+then was the field removed.
+
+### ⚠️ The plant showed my control was weaker than the comment I wrote on it
+
+Planted a re-added `if (candidate.confidenceBps !== undefined)` guard and
+**nothing went red** — because a required field is never `undefined`, so the
+guard is a no-op. The comment claimed the test caught exactly that.
+
+Planted the realistic regression instead — 6.6.1 reverted for one field: optional
+again, guard back, helper dropping it — and **two of the three tests went red**.
+The comment now says what the plant showed rather than what I expected it to.
+
+⛔ **The real control here is TypeScript, not the test**, and it fired
+immediately: making the fields required stopped this file's own helper from
+compiling. The tests are the behavioural half, and they are worth having for the
+revert case — but calling them the control would have been the fourth time this
+session that a written claim outran a measured one.
