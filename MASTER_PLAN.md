@@ -485,9 +485,15 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   may decline to run declares it with a reason; every code is accounted for as
   a result or an abstention.
 - ~~**B65**~~ ✅ **Closed 2026-09-10 in 5.10.3**, alongside **B62**.
-- **B57** The app has no icon — a white square on the home screen. Cosmetic,
-  and only visible because a CI screenshot caught it. → before any TestFlight
-  build (**5.9**).
+- **B57** ⏸️ **Deferred indefinitely by Jason, 2026-09-11: not important unless
+  this is ever published for public consumption.** The app has no icon — a white
+  square on the home screen. ⛔ **Its old trigger was wrong from the start**:
+  *"before any TestFlight build"* imported an assumption from public app
+  development, where a build implies an audience. Here TestFlight is only how the
+  app reaches the operator's own phone, and `CLAUDE.md` has said **"no SaaS, no
+  App Store, no multi-user"** since day one. ⚠️ A cosmetic item became "overdue"
+  purely because its trigger described somebody else's project.
+  → **only if this is ever published publicly.**
 - **B56** ⚠️ **The pre-publish scrub covered `src/` and `data/` and MISSED the
   planning docs.** `MASTER_PLAN`, the log, `CLAUDE.md` and `FINANCIAL_SPEC` were
   public for a day carrying filing status, income, county and a
