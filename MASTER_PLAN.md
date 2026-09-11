@@ -74,37 +74,48 @@ the screen warns when growing would LOSE a buy. Detail in the log.
 
 ---
 
-### Gate 6.6 — A GATE THAT ABSTAINS MUST SAY SO (B66) ⚡ **ACTIVE BUILD**
+### Gate 6.6 — A GATE THAT ABSTAINS MUST SAY SO ✅ **DONE 2026-09-11, 52/52 on device**
 
-`assessPurchase` skips any gate whose field is `undefined`, and **the code cannot
-tell a deliberate abstention from a forgotten field — nor can a reader.**
+⚡ **Closes B66.** Every gate field is required, so a caller that forgets one
+fails to compile; the one gate that may decline to run **declares it with a
+reason**, and the screen says *"not tested"* rather than showing a figure. Every
+code is now accounted for as a result or an abstention, swept across 11 candidate
+shapes.
 
-⚠️ **The switch-in scan found BOTH premises stale, and they make the item
-smaller and sharper.** D14 already deleted `assessQuote`, so "catastrophic across
-a whole surface" is history: there is exactly **one** production construction
-site, `evaluate.ts:111`, and it supplies `confidenceBps`, `buyScore`, `riskScore`
-and `boundsAreOptimistic` unconditionally. So four of the five optional fields
-are optional only because Gate 1 predated Gate 2. **This is prevention, not
-repair.**
+⚠️ **Both of its premises were stale and the switch-in scan caught both** — D14
+had already removed the second surface, so this was prevention, not repair. ⛔ It
+also deleted `quote.candidate`, a second way to build the object that decides
+whether money moves, which nothing had assessed since D14. Detail, and the three
+plants (one of which corrected me), in the log.
 
-- [x] **6.6.1** ✅ **Done 2026-09-11.** The four are required; a caller that
-      forgets one fails to compile. ⛔ **`quote.candidate` deleted as dead** —
-      D14 removed the only thing that assessed it, and it could not have
-      satisfied the rule. 656 tests (+3); coverage moved BEFORE the deletion.
-- [x] **6.6.2** ✅ **Done 2026-09-11.** `abstained(reason)` — the one gate that
-      may decline to run declares it, `ConstraintAssessment.abstentions` carries
-      it, and the screen says *"not tested"* instead of showing a figure.
-- [x] **6.6.3** ✅ **Done 2026-09-11.** Every code is accounted for as a result
-      **or** an abstention, swept across 11 candidate shapes — a code with no
-      gate now reds two tests. ⚠️ A compile-time version was considered and
-      **not** built; the reasoning is in the log.
-- [x] **6.6.4** ✅ **Done 2026-09-11.** Planted three ways: the 6.6.1 revert
-      (2 red), a code with no gate (2 red), and a re-added guard alone
-      (**0 red — the plant corrected the claim**).
-- [ ] **6.6.5** On-device verification — the case is written, pushing for it.
+### Gate 6.7 — THE ALLOCATION BLOCK HAS NO SCREEN (B73) ⚡ **ACTIVE BUILD**
 
-**Exit:** a gate cannot be skipped by accident, and one that abstains on purpose
-says which and why.
+Settings edits **three fields of ONE mode** — verified 2026-09-11: `PolicyFields`
+is `maxPerItemPercent`, `minProfit`, `maxHoldDays`, off `policy.modes[mode]`.
+⛔ **The whole `allocation` block is uneditable** — the owner split and the
+set-aside NAV threshold — and **that block is what D2 needs.** D2 is due at $100
+NAV, four to six flips away.
+
+⚠️ **Chosen as the active build because Gate 7's SCOPE is Jason's** (D12 assumed
+a feed and there is one vendor), and the queue does not idle while a question is
+out. This is real work, not filler: it is the thing standing between D2 and being
+answerable.
+
+- [ ] **6.7.1** The allocation fields + edit + validation in `src/ui/settings.ts`,
+      beside `policyEdit`. ⛔ **`validatePolicy` is exhaustive BY CONSTRUCTION** —
+      do not hand it a field list.
+- [ ] **6.7.2** ⚠️ **Show what the split MULTIPLIES into**, the way `policyEdit`
+      already shows the profit-floor/per-item reachability. A 20% owner cut of a
+      small profit is the difference between compounding and crawling, and the
+      set-aside threshold decides when it starts biting.
+- [ ] **6.7.3** The OTHER mode's rules, so GROWTH can be configured before the
+      fund reaches $500 rather than at the moment it crosses.
+- [ ] **6.7.4** Wire into the settings screen. ⛔ `setPolicy` stays the one door;
+      config never gains a route to the ledger.
+- [ ] **6.7.5** On-device verification.
+
+**Exit:** every number D2 needs is editable on the phone, and the screen says
+what changing it costs.
 
 ---
 
@@ -119,8 +130,9 @@ says which and why.
 | 5 | **The phone is the system** — engine ported, ledger on-device, desktop retired | ✅ **Done 2026-09-10**, phase after-scan included |
 | 6 | **Sourcing: the app values and recommends** — ⛔ the FINDING half was struck as UNAVAILABLE, not deferred (**D16**, Jason 2026-09-11); the operator finds | ✅ **Done 2026-09-11**, 51/51 on device |
 | 6.5 | **Not yet, or never?** — ⚡ the before-scan disproved the "watchlist that unlocks" premise: most refusals never clear at any bankroll | ✅ **Done 2026-09-10**, 50/50 on device |
-| 6.6 | **A gate that abstains must say so** (**B66**) — `assessPurchase` cannot tell a deliberate abstention from a missing field, and neither can a reader | ⚡ **ACTIVE BUILD** |
-| 7 | Market Radar beta — scarcity, demand, momentum, market opportunity, confidence | ⚠️ Open — **re-read D12 first**: it assumed a feed, and there is one vendor |
+| 6.6 | **A gate that abstains must say so** (**B66**) | ✅ **Done 2026-09-11**, 52/52 on device |
+| 6.7 | **The allocation block has no screen** (**B73**) — owner split and the set-aside threshold, which is what **D2** needs | ⚡ **ACTIVE BUILD** |
+| 7 | Market Radar beta — scarcity, demand, momentum, market opportunity, confidence | ⚠️ Open — **[DECISION] with Jason**: D12 assumed a feed, and there is one vendor |
 | 7.5 | **Drop intel** — dated retail drops, monitoring and alerting. ⛔ Checkout automation is OUT, see **D13** | Open |
 | 8 | *(architecture only until 1–7 are reliable)* authorization states, drop intel, autonomy | Not started, not startable |
 
@@ -331,12 +343,7 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   ⛔ **Not deleted:** `opportunities.recommendation` has a CHECK naming all four
   and old rows may carry them. Pinned by `tests/verdict-reachability.test.ts`,
   which asserts the INVARIANT rather than the dead code. → read before **6.5**.
-- **B73** ⚠️ **Settings covers three fields of ONE mode.** 5.12 edits the ACTIVE
-  mode's per-item cap, profit floor and hold ceiling. Not editable: the OTHER
-  mode (so GROWTH's rules cannot be set before the fund reaches $500), and the
-  whole `allocation` block — owner split and the set-aside NAV threshold. ⚡
-  **That block is what D2 needs**, and D2 is due at $100 NAV, which is four to
-  six flips away. → before D2 is answered.
+- ~~**B73**~~ ⚡ **Promoted to Gate 6.7, 2026-09-11.** Premises verified against the code first.
 - ~~**B75**~~ ✅ **Recurred 2026-09-11, diagnosed, and fixed for the right
   reason.** ⛔ **The 2026-09-10 fix read the wrong signal**: `simctl bootstatus`
   **exits 0** on a boot that prints `Status=4294967295, isTerminal=YES`, so the

@@ -5091,3 +5091,53 @@ shape nobody has seen passes — and the whole step syntax-checked with `bash -n
 shape must not red-gate a healthy lane: the contract itself is the real gate and
 this is a flake detector, so the omission is deliberately allowed to fall toward
 not-checking rather than toward not-trusting.
+
+### Gate 6.6 closed — 52/52 on device, and the case ran by name
+
+6.6.5 is the green run above: **52 cases, 51 from Gate 6 plus this gate's**, and
+the new case is in the log by name — *"gates: every rule is accounted for — as a
+result, or as a declared abstention"*.
+
+### ⚡ The gate-level after-scan: what 6.6 was actually about
+
+⛔ **Both of its premises were stale, and the switch-in scan caught both before a
+line was written.** D14 had already deleted the second surface, so "catastrophic
+across a whole surface" was history and this was **prevention, not repair** —
+which changed the shape of every sub-step. That is now three items in a row
+(6.1.0, 6.1.2, 6.6) where verifying the plan against the code changed what got
+built.
+
+⚡ **The most valuable thing it found was not in its own scope.** `quote.candidate`
+— a second way to construct the object that decides whether money moves, unused
+in production since D14, still typed and still tested. The rule against exactly
+that was written *in this repo, in the comment recording D14's deletion*, and
+applied to the function while its argument survived. ⚠️ **A rule applied to the
+half you are looking at** — the same shape as the plan-hygiene miss earlier
+today, where the terseness rule governed the active items and not the backlog.
+
+### ⚠️ Three plants, and the one that failed to red was the useful one
+
+Recorded because the instinct is to treat a non-reddening plant as a dud. A
+re-added `!== undefined` guard reddened nothing, which **proved my comment wrong
+rather than the code right** — with the field required the guard is a no-op, and
+I had written that the test caught exactly that case. The real control for 6.6.1
+is `tsc`, which fired the moment the test helper stopped compiling.
+
+### Replenishment — 6.7, and why not Gate 7
+
+⛔ **Gate 7's SCOPE is a decision for Jason, not an execution detail.** D12 chose
+*"Browse API to find, SoldComps to value"* and D16 removed the first half, so
+Market Radar's premise — a feed to compute scarcity and momentum over — is now a
+single small vendor metered at 100 requests a month. That is worth asking about
+rather than assuming.
+
+So the active build is **6.7 (B73)**, promoted with its premises verified against
+the code: `PolicyFields` really is three fields off one mode, and the `allocation`
+block really has no screen. ⚡ **It is the thing standing between D2 and being
+answerable**, and D2 is due at $100 NAV — four to six flips away.
+
+⚠️ **Runner-up, and why it lost:** **B54** (every storage assertion must use
+`derivedState()`; nothing enforces it, and it cost a real hour in 5.5.1) is a
+genuine correctness gap and is overdue — it was filed "→ Gate 5", which closed.
+It loses to 6.7 only because 6.7 unblocks a dated decision. **Filed here so the
+next replenishment does not have to rediscover the comparison.**
