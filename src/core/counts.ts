@@ -1,6 +1,12 @@
 /**
- * `totalResults` — one field, three forms, and two of the naive parses are
+ * A market count — one field, three forms, and two of the naive parses are
  * catastrophic.
+ *
+ * ⚡ **The notation is the same whether a person typed it or a vendor sent it**,
+ * which is why this lives in `core` beside `parseDollars` rather than in the
+ * adapter it was written for. eBay shows *"240,000+ results"*; the data route
+ * passes that through; an operator reading the screen in a shop types the same
+ * thing. One parse, one meaning, both callers.
  *
  * ⛔ **This is the most dangerous line of code in the data route**, which is why
  * it is a file of its own with no network in it. Measured against the real API
@@ -31,21 +37,21 @@
  */
 
 /** A count that parsed, and whether the source meant "at least". */
-export interface ParsedTotal {
+export interface ParsedCount {
   readonly ok: true;
   readonly value: number;
   /** The source said `"240,000+"`: the true value is unknown and larger. */
   readonly isFloor: boolean;
 }
 
-export interface UnparseableTotal {
+export interface UnparseableCount {
   readonly ok: false;
   /** What arrived, so a refusal can show it rather than describe it. */
   readonly raw: string;
   readonly reason: string;
 }
 
-export type TotalResult = ParsedTotal | UnparseableTotal;
+export type CountResult = ParsedCount | UnparseableCount;
 
 /**
  * Either a bare run of digits, or comma-grouped thousands — optionally followed
@@ -54,9 +60,9 @@ export type TotalResult = ParsedTotal | UnparseableTotal;
  */
 const TOTAL_RE = /^(\d{1,3}(?:,\d{3})*|\d+)(\+?)$/;
 
-const bad = (raw: string, reason: string): UnparseableTotal => ({ ok: false, raw, reason });
+const bad = (raw: string, reason: string): UnparseableCount => ({ ok: false, raw, reason });
 
-export function parseTotalResults(raw: unknown): TotalResult {
+export function parseCount(raw: unknown): CountResult {
   // ⚠️ `null` is the documented third form, and it is a refusal rather than a
   // zero. "The vendor does not know how many" and "there are none" are
   // different facts, and only one of them is safe to feed a gate.

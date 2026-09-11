@@ -368,3 +368,75 @@ describe('the id a saved score is filed under', () => {
     expect(idOf(GOOD)).toMatch(/^aisle-lego-set-[0-9a-f]{8}$/);
   });
 });
+
+describe('6.1.2 — the form speaks the same notation the market does', () => {
+  it('accepts "240,000+" where a bare number goes', () => {
+    // eBay says "240,000+ results". The operator types what they are looking at.
+    const r = evaluateForm({ ...GOOD, active: '240,000+' }, fund());
+    expect(r.ok).toBe(true);
+  });
+
+  it('⛔ a typed floor refuses exactly like a fetched one', async () => {
+    // The whole reason the form learned the notation. Before this, an operator
+    // reading "240,000+" and typing 240000 got a confident answer about a
+    // market they had measured a lower bound of.
+    const v = ok({ ...GOOD, active: '10+' });
+    expect(v.failedGates.map((g) => g.code)).toContain('VELOCITY_COUNTS_UNBOUNDED');
+    expect(v.buy).toBe(false);
+  });
+
+  it('the SAME numbers without the plus are a buy', () => {
+    // ⚠️ The control. Without it the assertion above passes for a form that
+    // rejects anything with punctuation in it.
+    const v = ok({ ...GOOD, active: '10' });
+    expect(v.failedGates.map((g) => g.code)).not.toContain('VELOCITY_COUNTS_UNBOUNDED');
+    expect(v.buy).toBe(true);
+  });
+
+  it('a floored SOLD count is carried but changes nothing', () => {
+    const v = ok({ ...GOOD, sold90: '40+' });
+    expect(v.failedGates.map((g) => g.code)).not.toContain('VELOCITY_COUNTS_UNBOUNDED');
+    expect(v.buy).toBe(true);
+  });
+
+  it('comma grouping without a plus is still exact', () => {
+    const plain = ok({ ...GOOD, sold90: '40', active: '1,000' });
+    const same = ok({ ...GOOD, sold90: '40', active: '1000' });
+    expect(plain.expectedDaysToSale).toBe(same.expectedDaysToSale);
+    expect(plain.failedGates.map((g) => g.code)).not.toContain('VELOCITY_COUNTS_UNBOUNDED');
+  });
+
+  it('still refuses a count it cannot read, and says what it accepts', () => {
+    const p = problems({ ...GOOD, active: 'loads' });
+    expect(p).toHaveLength(1);
+    expect(p[0]?.field).toBe('active');
+    expect(p[0]?.message).toContain('240,000+');
+  });
+
+  it('⛔ a floored count changes the id, so it is a different decision', () => {
+    // The id is derived from the inputs. "10 active" and "at least 10 active"
+    // are different candidates and must not collide in the record.
+    const exact = evaluateForm({ ...GOOD, active: '10' }, fund());
+    const floored = evaluateForm({ ...GOOD, active: '10+' }, fund());
+    if (!exact.ok || !floored.ok) throw new Error('both should parse');
+    expect(floored.input.opportunityId).not.toBe(exact.input.opportunityId);
+  });
+});
+
+describe('6.1.2 — the id of an exact candidate did not move', () => {
+  it('⛔ an exact count hashes as it did before the floor flags existed', () => {
+    // The id is a digest of the draft, so adding an always-present field would
+    // change EVERY id this screen has ever produced — orphaning stored rows and
+    // double-counting one item in the rejection histogram. The flags are
+    // omitted when false, so this digest is the pre-6.1.2 one.
+    //
+    // ⚠️ Pinned as a literal on purpose. Deriving the expectation from the same
+    // code that produces it would be a round trip through one encoder, and
+    // would go on passing after the very change it exists to catch.
+    const r = evaluateForm(GOOD, fund());
+    if (!r.ok) throw new Error('GOOD should parse');
+    // Verified by running the PRE-6.1.2 `sourcing.ts` from HEAD against the
+    // same form and comparing: both print `aisle-lego-set-b37ef482`.
+    expect(r.input.opportunityId).toBe('aisle-lego-set-b37ef482');
+  });
+});

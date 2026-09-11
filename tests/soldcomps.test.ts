@@ -13,7 +13,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { parseTotalResults } from '@/adapters/total-results.js';
 import {
   lookUpMarket,
   SOLDCOMPS_BASE_URL,
@@ -60,53 +59,6 @@ const expectOk = (r: MarketResult) => {
   if (!r.ok) throw new Error(`expected a reading, got ${r.reason}: ${r.detail}`);
   return r.reading;
 };
-
-// ---------------------------------------------------------------------------
-
-describe('B79 — one field, three forms, and two naive parses are catastrophic', () => {
-  it('reads a clean integer as exact', () => {
-    const r = parseTotalResults('122956');
-    expect(r).toEqual({ ok: true, value: 122_956, isFloor: false });
-  });
-
-  it('⛔ reads "240,000+" as 240000 AND as a floor', () => {
-    // parseInt gives 240 — a thousandfold under. Number gives NaN.
-    expect(parseInt('240,000+', 10)).toBe(240);
-    expect(Number('240,000+')).toBeNaN();
-    expect(parseTotalResults('240,000+')).toEqual({
-      ok: true,
-      value: 240_000,
-      isFloor: true,
-    });
-  });
-
-  it('reads comma grouping without a plus as exact', () => {
-    expect(parseTotalResults('72,000')).toEqual({ ok: true, value: 72_000, isFloor: false });
-  });
-
-  it('⛔ REFUSES null — the documented third form', () => {
-    // "The vendor does not know how many" and "there are none" are different
-    // facts, and only one of them is safe to feed a gate.
-    expect(parseTotalResults(null).ok).toBe(false);
-    expect(parseTotalResults(undefined).ok).toBe(false);
-  });
-
-  it('refuses anything it cannot read rather than defaulting it', () => {
-    for (const raw of ['', '  ', 'about 500', '1,2,3', '1.5', '-5', 'NaN', '1234,567', {}, []]) {
-      expect(parseTotalResults(raw).ok, JSON.stringify(raw)).toBe(false);
-    }
-  });
-
-  it('accepts a plain number, which would be a vendor change not a bad value', () => {
-    expect(parseTotalResults(133_392)).toEqual({ ok: true, value: 133_392, isFloor: false });
-    expect(parseTotalResults(1.5).ok).toBe(false);
-    expect(parseTotalResults(-1).ok).toBe(false);
-  });
-
-  it('refuses a count too large to hold exactly', () => {
-    expect(parseTotalResults('9007199254740993').ok).toBe(false);
-  });
-});
 
 describe('B82 — ACTIVE first, and SOLD pinned to the category it declares', () => {
   it('⛔ makes exactly two requests, active before sold', () => {

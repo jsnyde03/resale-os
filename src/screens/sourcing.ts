@@ -15,6 +15,7 @@
 import { parseOpportunity, type OpportunityInput } from '../domain/opportunity.js';
 import { evaluateOpportunity, type Evaluation } from '../scoring/evaluate.js';
 import { soldNeededForHold } from '../core/velocity.js';
+import { parseCount } from '../core/counts.js';
 import { assessUnlock, fundAtNav, type UnlockAssessment } from './unlock.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
@@ -161,11 +162,31 @@ function dollars(raw: string, field: keyof SourcingForm, label: string): Cents |
   return Number(whole) * 100 + Number(frac.padEnd(2, '0'));
 }
 
-function count(raw: string, field: keyof SourcingForm, label: string): number | SourcingProblem {
+/**
+ * ⚡ **A typed count and a fetched one are the same string.**
+ *
+ * eBay shows *"240,000+ results"*, the data route passes that through, and the
+ * operator standing in front of the shelf is reading it off the same screen. So
+ * the form accepts the `+` too, and it means what it means everywhere else:
+ * **at least this many**, which makes the hold a lower bound and the gate
+ * refuse to pass on it (**B77**, **6.1.0**).
+ *
+ * ⛔ **Without this, the fill could not carry a floor at all** — `SourcingForm`
+ * is strings, because that is what a person can supply while holding an object,
+ * and a boolean beside `active` would have been a field nobody could type.
+ */
+function count(
+  raw: string,
+  field: keyof SourcingForm,
+  label: string,
+): { value: number; isFloor: boolean } | SourcingProblem {
   const trimmed = raw.trim();
   if (trimmed === '') return { field, message: `${label} is required` };
-  if (!/^\d+$/.test(trimmed)) return { field, message: `${label} must be a whole number` };
-  return Number(trimmed);
+  const parsed = parseCount(trimmed);
+  if (!parsed.ok) {
+    return { field, message: `${label} must be a whole number, or "240,000+" for at least` };
+  }
+  return { value: parsed.value, isFloor: parsed.isFloor };
 }
 
 const isProblem = (v: unknown): v is SourcingProblem =>
@@ -237,8 +258,19 @@ export function evaluateForm(
     expectedGrossCents: resale as Cents,
     marketplace: 'EBAY',
     postageCents: null,
-    soldLast90Days: sold90 as number,
-    activeListings: active as number,
+    soldLast90Days: (sold90 as { value: number }).value,
+    activeListings: (active as { value: number }).value,
+    // ⛔ A count the operator typed as "240,000+" is a floor exactly as much
+    // as one the API sent that way. 6.1.0's gate reads these.
+    //
+    // ⚠️ **Present only when TRUE, and that is deliberate.** The id below is a
+    // digest of this draft, so a field that is always present changes every id
+    // this screen has ever produced — orphaning stored rows and letting one
+    // item appear twice in the rejection histogram. Omitted-when-false keeps
+    // an exact count hashing exactly as it did before 6.1.2, while a floored
+    // one is a genuinely different candidate and should not collide with it.
+    ...((sold90 as { isFloor: boolean }).isFloor ? { soldLast90DaysIsFloor: true } : {}),
+    ...((active as { isFloor: boolean }).isFloor ? { activeListingsIsFloor: true } : {}),
     operatorDaysEstimate: null,
     compPricesCents: comps,
     compMedianAgeDays: 45,

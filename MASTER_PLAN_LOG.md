@@ -4719,3 +4719,44 @@ capped hard by the confidence gate.
 about the only key the project now has. ⛔ It also now says plainly that
 `EXPO_PUBLIC_` is not a secret store: the key is compiled into the bundle, which
 is acceptable for a single-operator private build and would not be otherwise.
+
+### 6.1.2 — the form learned the market's notation, and that was the cheap fix
+
+The before-scan re-cut this item and 6.1.3 before either was built. **The stated
+problem was that a typed count is assumed exact** — an operator reading
+`"240,000+"` off eBay types `72000` and silently discards 6.1.0's flag. The
+stated fix was to give the form a way to say *"at least"*.
+
+⚡ **The cheaper fix was to stop treating the two as different.** eBay shows the
+`+`, the data route passes it through, and the operator is reading the same
+screen. So `SourcingForm` — which is all strings, because that is what a person
+can supply while holding an object — accepts `"240,000+"` in the count fields,
+and one parse serves both callers. ⛔ **That also solved a problem the plan had
+not noticed:** a form of strings cannot carry a boolean, so without this the
+fill in 6.1.3 would have had no way to hand a floor to the gate at all.
+
+The parser therefore stopped being about one vendor's field name and moved to
+`src/core/counts.ts`, beside `parseDollars` — the existing precedent for a
+string parser in core. ⛔ **A screen importing `src/adapters` would have put the
+vendor back inside the screen**, which is the one thing the adapter boundary
+exists to prevent.
+
+### ⛔ The id is content-addressed, so an always-present field orphans every row
+
+Caught while writing the wiring, not after. `opportunityId` is a digest of the
+draft, so adding `soldLast90DaysIsFloor: false` and `activeListingsIsFloor:
+false` unconditionally would have changed **every id this screen has ever
+produced** — stored rows orphaned, and one item able to appear twice in 6.2's
+rejection histogram.
+
+The flags are therefore present only when TRUE. An exact count hashes exactly as
+it did before; a floored one is a genuinely different candidate and should not
+collide with the exact one.
+
+⚠️ **Verified rather than reasoned about.** The claim "omitting a false field
+leaves the digest untouched" is true by construction and this project has been
+wrong about true-by-construction before, so the pre-6.1.2 `sourcing.ts` was
+checked out from HEAD and run against the same form: both print
+`aisle-lego-set-b37ef482`. The test pins that literal — ⛔ **deriving the
+expectation from the code that produces it would be a round trip through one
+encoder, and would keep passing through the exact change it exists to catch.**

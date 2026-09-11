@@ -57,15 +57,16 @@ wired.
         unparseable total is refused, never defaulted; every failure is a value.
         Planted both claims and restored. ⚠️ **Not yet imported by the phone**,
         so `lint:phone` does not cover it until **6.1.3**.
-  - [ ] **6.1.2** ⛔ **Offline-first, and the API never gates.** A shop with no
-        signal is the normal case. ⚡ **And quota is a second kind of absent**
-        (**B78**): `x-usage-remaining` on every call, and a `quota_exceeded`
-        degrades to the manual path rather than breaking the screen.
-  - [ ] **6.1.3** Wire it into the aisle screen as FILLED fields the operator can
-        overwrite — never as a gate input the network owns.
-        ⚠️ **A typed count is assumed exact, and an operator reading `"72,000+"`
-        off eBay types `72000`** — which silently discards 6.1.0's flag. The
-        form needs the same "at least" the API has.
+  - [x] **6.1.2** ✅ **Done 2026-09-11.** `parseCount` in `src/core/counts.ts`,
+        used by the adapter AND the form — `"240,000+"` types as well as it
+        fetches. 638 tests (+8). ⚡ The flags are omitted when false, so every
+        id this screen has ever produced is unchanged — **measured against
+        HEAD**, not assumed.
+  - [ ] **6.1.3** ⛔ **The fill, and every way it can fail.** `MarketResult` →
+        filled fields the operator can overwrite, never a gate input the network
+        owns. Offline is the NORMAL case; `quota_exceeded` arrives mid-decision
+        (**B78**) and degrades to typing. The screen says which numbers came
+        from where (**B80**) and what is left of the month.
   - [ ] **6.1.4** On-device verification.
 
 **Exit:** the screen fills what it can from SoldComps, says where every number
@@ -379,6 +380,13 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   — the broad one was *refused*). The risk is **misattribution, not optimism**: a
   confident number about a different item. → the screen must show what was
   searched and how many matched, so a wrong keyword is visible. → **6.1.1**.
+- **B83** ⚠️ **Two implementations of dollars→cents.** `parseDollars` in
+  `core/money.ts` throws; `dollars()` in `screens/sourcing.ts` returns a form
+  problem instead. Both are correct and both avoid `Math.round(n * 100)`, so
+  this is duplication rather than drift — but "a second implementation of a
+  number the engine already owns" is the exact class this project gates against
+  elsewhere. Fix is a core parser returning a result union, with the form
+  wording layered on top. → when a third caller appears, not before.
 - **B81** ⚠️ **One more page would turn some B77 refusals back into decisions.**
   ACTIVE caps at 200/page, so an item with 250 active is refused for being a
   floor when **one extra request** would have the true count. ⛔ Not general:

@@ -42,11 +42,11 @@
  * holding the object. Every failure is a value, so the screen keeps working with
  * typed numbers exactly as well as it does today (6.1.2).
  *
- * ⛔ **It never defaults a number it could not read.** See `total-results.ts`.
+ * ⛔ **It never defaults a number it could not read.** See `core/counts.ts`.
  */
 
 import { parseDollars, type Cents } from '../core/money.js';
-import { parseTotalResults, type TotalResult } from './total-results.js';
+import { parseCount, type CountResult } from '../core/counts.js';
 
 export const SOLDCOMPS_BASE_URL = 'https://api.sold-comps.com/v1/scrape';
 
@@ -188,8 +188,8 @@ interface RawPage {
  * refuses to parse while `hasNextPage` is set is still a floor, because the
  * items in hand are provably not all of them.
  */
-function readCount(page: RawPage, itemsSeen: number): TotalResult {
-  const parsed = parseTotalResults(page.totalResults);
+function readCount(page: RawPage, itemsSeen: number): CountResult {
+  const parsed = parseCount(page.totalResults);
   if (parsed.ok) return parsed;
   // The vendor gave no usable total. The items on the page are a real count of
   // *something*, and `hasNextPage` says whether it is all of it.
