@@ -8,12 +8,17 @@ next.** Exactly one item is decomposed on it — the active one. Detail and
 rationale live in `MASTER_PLAN_LOG.md`; read the entry for anything you are
 about to change.
 
-**Status (2026-09-10): Gates 1-5 BUILT. The fund LIVES ON THE PHONE, the desktop
-is deleted, and Gate 6 — SOURCING — is active.** The aisle screen decides, names
-what would fix a refusal, and records every decision including the walk-aways.
+**Status (2026-09-11): Gates 1-5 BUILT. The fund LIVES ON THE PHONE and the
+desktop is deleted. Gate 6 — SOURCING — is active and half built.**
 
-Live on a real **$50** bankroll. **550 tests.** `npm run check` runs five gates:
-source bytes, import direction, phone bundle, typecheck, tests.
+The aisle screen **decides**: a price ceiling and the rule that set it, what would
+FIX a refusal (*"against 10 listed you need 48 sold in 90 days"*), whether a
+refusal is **not yet, at $150** or **never at any bankroll**, and it records every
+decision — the walk-aways most of all. Plus *what is stopping you* over the
+record, a watchlist of refusals that expire, and a settings screen for the rules.
+
+Live on a real **$50** bankroll. **589 tests, 37 files.** `npm run check` runs
+five gates: source bytes, import direction, phone bundle, typecheck, tests.
 
 ---
 
@@ -40,35 +45,32 @@ force-pushing does not take it back: **GitHub keeps the objects, fetchable by
 SHA.** Measured twice on this project. Write "the operator's county", never the
 county. Same for `C:/Users/<name>/...` paths.
 
-⛔ **`cli export` WRITES SUCH A FILE.** Its payload is the commands **plus
-`config`, and `config` carries `tax_profile`.** Until 2026-09-10 it defaulted to
-`resale-export.json` in the **repo root**, which nothing ignored — the documented
-way to move the fund onto the phone was one `git add -A` from publishing a real
-person's filing status, permanently, on a public repo. It now defaults into
+⛔ **A LEDGER EXPORT OR A PHONE BACKUP IS SUCH A FILE.** Its payload is the
+commands **plus `config`, and `config` carries `tax_profile`.** The CLI that
+wrote them is gone (5.10), but a backup pulled off the phone is the same payload.
+⚠️ The old `cli export` defaulted to the **repo root**, which nothing ignored —
+the documented way to move the fund onto the phone was one `git add -A` from
+publishing a real person's filing status, permanently, on a public repo. It
+defaulted into
 `data/`, and `.gitignore` covers `data/*.json` and `*-export.json` as well. ⚠️ **An
 export is not a document — it is the ledger plus the profile.** Treat it like the
 database, never like an artifact.
 
 **The ledger, the engine, every write and read screen, the sourcing screen,
-backups and the import all run on the device: 47/47 against Apple's SQLite** in
+backups and the import all run on the device: 50/50 against Apple's SQLite** in
 `.github/workflows/driver-contract-ios.yml`. The app ships via Codemagic to
 TestFlight.
 
-⛔ **THE DESKTOP LEDGER IS RETIRED AND REFUSES TO WRITE (2026-09-10).** The fund
-moved to the phone, and from that instant two databases shared one 55-event
-history. Append-only over a hash chain means **one event on either side forks
-them forever**, and `importLedger` refuses a mismatched chain *by design* — so
-the one tool built to move a fund is exactly the tool that cannot repair a fork.
-**The safety property and the hazard are the same property.**
+⛔ **`data/resale.db` IS A RETIRED SNAPSHOT AT 55 EVENTS, NOT THE FUND.** When the
+fund reached the phone, two databases briefly shared one history — and
+append-only over a hash chain means **one event on either side forks them
+forever**, with `importLedger` refusing a mismatched chain *by design*. The tool
+built to move a fund is exactly the tool that cannot repair a fork: **the safety
+property and the hazard are the same property.**
 
-`data/resale.db.retired` is the marker. Writes exit 1; `status`, `verify`,
-`ledger`, `items` and `export` still run, because **until a backup has actually
-left the phone this database is the fund's only other copy** — deleting it would
-trade a fork risk for a loss risk. ⚠️ **The marker is a FILE, deliberately not a
-`config` row:** `exportLedger` carries the whole config table and `importLedger`
-writes every key, so a row would have travelled and retired the live fund on
-arrival. ⛔ **The allowlist names what may RUN**, so a command added later is
-refused rather than admitted.
+⚠️ **The write-guard that made it safe is gone with the CLI** (5.10) — nothing on
+the desktop can write to that file any more, because nothing on the desktop can
+read it either. `data/resale.db.retired` remains as a note to a human.
 
 ⛔ **THE DESKTOP IS GONE (5.10, 2026-09-10).** `src/cli`, `src/app` and
 `src/server` — 3,295 lines — deleted, with the Next.js surface and six test
@@ -86,6 +88,8 @@ orientation.
 |---|---|
 | ~~**Move the fund**~~ | ✅ **Done 2026-09-10.** 55 events imported on device, every hash reproduced. |
 | ~~**Codemagic**~~ | ✅ **Done 2026-09-10 — built AND published to TestFlight on the first run.** ⚠️ Deployment is **manual**, so the 80-day rebuild is a reminder in MASTER_PLAN's Recurring table, not a scheduled workflow. |
+| ⚡ **SoldComps** | **Sign up at sold-comps.com — free, 100 req/month, no card, NO approval needed.** It is the BINDING half of the data route: three of the four gates that refuse everything are fed by SOLD data. **6.1.1 is unblocked and waiting only on this key.** |
+| ⏳ **eBay** | Developer account submitted 2026-09-10, ~1 business day. Then Production keyset (App ID / Dev ID / Cert ID) from *Your Account → Application Keys*. Unblocks **Browse** for the ACTIVE count only. ⚠️ Also file the Marketplace Insights ticket from the approved account — expect refusal. |
 | **Two repos** | Delete `resale-os-prescrub-2` and `resale-os-prescrub-private`. Both are private, both still hold the scrubbed tax profile, and the CLI token cannot delete. The history is bundled and restore-verified in the OneDrive backups folder. |
 | **B26** | Verify the operator's state and local rates against the published table. Half closed — the local rate is confirmed; the state marginal is not. |
 | **D2** | The owner split (20/10/70) is still a default. Not live below $100 NAV, and the fund is at $50 — four to six flips away. |
@@ -100,7 +104,7 @@ margin play needing hold tolerance a $50 fund does not have. Backlog **B28**.
 ### Five gates run on every check
 
 ```
-npm run check    # source bytes · import direction · PHONE BUNDLE · typecheck · 550 tests
+npm run check    # source bytes · import direction · PHONE BUNDLE · typecheck · 589 tests
 ```
 
 ⚡ **`lint:phone` walks the import graph** from every `src/` module the phone
@@ -244,11 +248,15 @@ Break any of these and the product stops being what it is.
   checking something, or toward not trusting it. Fix the first kind by inverting
   it to an exemption list, or by making it answer to something that DISCOVERS:
   `check-phone-bundle.mjs --print-layers`, asserted by `tests/ci-scope.test.ts`.
-- ⚠️ **The web can write CONFIG but never the ledger** (Gate 4 decision,
-  2026-09-08). `withConfigStore` is a *separate* door with five methods, not
-  `LedgerReader` plus writes — that shape invites one more capability each time.
-  Saving opportunities and changing their status from the phone is tier 3, still
-  closed, and is Gate 5's **5.5**.
+- ⚠️ **CONFIG IS A SEPARATE DOOR FROM THE LEDGER, and it stays separate.** The
+  web decision (Gate 4) was that `withConfigStore` is its own narrow surface, not
+  `LedgerReader` plus writes — **that shape invites one more capability each
+  time.** The web is gone; the rule survived the port. The phone's provider has
+  `setPolicy` / `setTaxProfile` / `saveOpportunity` as three named methods, none
+  of which can reach the ledger, and `commit` is still the only way money moves.
+  ⚠️ **Saving opportunities is no longer "tier 3, closed"** — it shipped in
+  6.0.3, which is what gave **B3**'s histogram and **6.5**'s watchlist anything to
+  work with.
 - ⛔ **A screen that needs a number it does not have gets it added to
   `src/core` with tests** — never computed in the screen. `src/screens/views.ts`
   is the read model and does no arithmetic on money; even formatting goes

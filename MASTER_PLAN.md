@@ -44,31 +44,11 @@ wired.
       **B3**'s histogram has something to count and **6.5**'s watchlist something
       to watch. Scores are device-local by decision (**D15**).
 
-- [~] **6.1** ⚠️ **RE-SEQUENCED 2026-09-10 — the data route (D12).** It was ordered
-      eBay-first and marked BLOCKED, which was **wrong**: eBay approval gates only
-      the *finding* half. ⚡ **Three of the four gates that refuse everything are
-      fed by SOLD data** — hold time (`90 × (active+1) / sold90`), confidence
-      (comps are 40% of it) and sell-through — and SoldComps needs **no eBay
-      account, no approval, no card**. And on a clearance rack the operator is
-      already holding the item; *finding* is the half he does not need.
-  - [ ] **6.1.1** ⚡ **SoldComps first — UNBLOCKED, and the binding half.** The
-        client behind an ADAPTER in `src/adapters/` (empty since the beginning; it
-        red-gates on arrival until its import rules are declared).
-        ⚠️ **B74 before a line is written:** `totalItems` is the count on the
-        CURRENT PAGE, not a grand total.
-  - [ ] **6.1.2** ⛔ **Offline-first, and the API never gates.** A shop with no
-        signal is the normal case: the network FILLS fields and a failure leaves
-        the screen exactly as usable as it is today. The fund must never wait on a
-        vendor to answer whether it may buy something.
-  - [~] **6.1.3** ⏳ **[NEEDS JASON — the only thing waiting]** eBay developer
-        account approval (submitted 2026-09-10, ~1 business day), then the
-        Production keyset. Unblocks **Browse** for the *active* count. Filing for
-        Marketplace Insights needs the approved account too, and is expected to be
-        refused.
-  - [ ] **6.1.4** Browse: the active count, and GTIN lookup — what **B69**'s
-        scanner would feed, since sealed retail is fungible and a barcode maps to
-        an exact comp set where a keyword search does not.
-  - [ ] **6.1.5** On-device verification.
+- [~] **6.1** ⏳ **The data route (D12) — SoldComps first, then eBay.** ⚡ **6.1.1
+      is UNBLOCKED and needs only a SoldComps key** (free, no approval): three of
+      the four gates that refuse everything are fed by SOLD data. eBay approval
+      gates only the ACTIVE count. ⚠️ **B74 before a line is written.** Sub-steps
+      in the log, retrieved at switch-in.
 
 **Exit:** the screen fills what it can from eBay, says where every number came
 from, and answers exactly as well as it does today when the network does not.

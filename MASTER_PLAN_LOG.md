@@ -4281,3 +4281,48 @@ recording it again**: `git rm` aborting while `npm run check` went green over a
 prune that had not happened; a python `print` dying before its `write`. **A step
 that fails silently in a chain of steps that continue.** The fix each time is the
 same and it is not cleverness \u2014 verify the effect, not the exit.
+
+### 6.1's decomposition, parked here until switch-in
+
+Collapsed out of the queue at the 2026-09-11 button-up: it was a second
+decomposed section sitting beside the active one, which is the shape that makes a
+plan rot — a reader cannot tell which sequence is live.
+
+- **6.1.1** ⚡ **SoldComps first — UNBLOCKED, and the binding half.** The client
+  behind an ADAPTER in `src/adapters/` (empty since the beginning; it red-gates
+  on arrival until its import rules are declared). ⚠️ **B74 before a line is
+  written:** `totalItems` is the count on the CURRENT PAGE, not a grand total.
+- **6.1.2** ⛔ **Offline-first, and the API never gates.** A shop with no signal is
+  the normal case: the network FILLS fields and a failure leaves the screen
+  exactly as usable as it is today.
+- **6.1.3** ⏳ **[NEEDS JASON]** eBay developer account approval, then the
+  Production keyset. Unblocks **Browse** for the ACTIVE count only. Filing for
+  Marketplace Insights needs the approved account and is expected to be refused.
+- **6.1.4** Browse: the active count, and GTIN lookup — what **B69**'s scanner
+  would feed, since sealed retail is fungible.
+- **6.1.5** On-device verification.
+
+### 2026-09-11 — buttoning up for a new session
+
+Audited the start-here docs against measurement rather than reading them.
+
+**Both were stale on numbers**: `CLAUDE.md` claimed 550 tests and 47/47,
+`README.md` claimed 526 and 44/44. Actual: **589 tests across 37 files, 50/50 on
+device.** ⚠️ Verified the device figure still covers HEAD by diffing against the
+last green run's commit — only `MASTER_PLAN*.md` changed since, and neither is in
+the lane's `paths:` filter, so the result is current rather than merely recent.
+
+⛔ **And one section was a trap.** `CLAUDE.md` still described the desktop
+write-guard in the present tense — *"writes exit 1; `status`, `verify`, `ledger`,
+`items` and `export` still run"* — for a CLI deleted at 5.10. A new session would
+have read instructions for commands that do not exist. **The guard was real for
+about four hours**, between the fund reaching the phone and the desktop being
+deleted; it is history now and reads as current. Collapsed to what remains true:
+`data/resale.db` is a retired snapshot, and nothing can write to it because
+nothing can read it.
+
+**`README.md`'s module tree omitted `src/screens/` and `src/domain/`** — the first
+created yesterday, the second there all along.
+
+The queue had **two decomposed sections**, 6.1's beside the active 6.6's. 6.1's
+moved here, which is where a not-yet-active decomposition belongs.

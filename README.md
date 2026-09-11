@@ -8,11 +8,17 @@ capital may be risked, tracks every item and transaction, splits profit between
 tax, reserves, the owner and reinvestment, and expands its own operating
 boundaries as the bankroll grows.
 
-**Status:** Gates 1 to 5 built. The deterministic capital engine, the ledger,
-opportunity scoring, prediction accuracy and verified backups — **all of it runs
-on the device**, verified 44/44 against Apple's SQLite in CI and shipped to
-TestFlight. **The desktop was deleted on 2026-09-10**: no CLI, no web app, no dev
-server. 526 tests green.
+**Status:** Gates 1 to 5 built; Gate 6 — sourcing — is half built. The
+deterministic capital engine, the ledger, opportunity scoring, prediction
+accuracy and verified backups — **all of it runs on the device**, verified 50/50
+against Apple's SQLite in CI and shipped to TestFlight. **The desktop was deleted
+on 2026-09-10**: no CLI, no web app, no dev server. 589 tests green.
+
+⚡ **The app decides, it does not only record.** It gives a price ceiling and the
+rule that set it; says what would FIX a refusal rather than only naming it; says
+whether a refusal is *not yet, at $150* or *never at any bankroll*; and keeps a
+record of every decision, the walk-aways included — which is what makes *"why is
+nothing passing?"* answerable from evidence.
 
 ⚡ **Why a phone.** The operator sources in shops. Nothing may be installed that
 reaches a home machine, a hosted ledger dies where there is no signal, and any
@@ -49,7 +55,7 @@ Requires Node >= 22.5 (for the built-in `node:sqlite` — there is nothing to co
 
 ```bash
 npm install
-npm run check          # five gates: bytes, imports, phone bundle, types, 526 tests
+npm run check          # five gates: bytes, imports, phone bundle, types, 589 tests
 cd mobile && npx expo start
 ```
 
@@ -314,13 +320,16 @@ at the boundary cannot rewrite its own rules on every sale.
 ```
 src/core/      PURE deterministic engine — money, ledger, capital, constraints
 src/core/tax/  annual tax model: SE tax, brackets, QBI, the incremental reserve
+src/domain/    an opportunity and everything derivable from it
 src/scoring/   Buy Score, Risk Score, confidence, max price, recommendation
+src/screens/   screen MODELS — decided outside the .tsx, so they are testable
+               where there is no browser and no device
 src/db/        driver, migrations, store, replay, hash chain
 src/ui/        pure form models the write screens are made of
 src/adapters/  source adapters (eBay, manual, CSV)          [Gate 6]
 src/market/    scarcity, demand, momentum, radar            [Gate 7]
 mobile/        the Expo app; the engine is imported from src/, unchanged
-tests/         526 tests; financial logic weighted heaviest
+tests/         589 tests; financial logic weighted heaviest
 ```
 
 A visually impressive screen with incorrect bankroll math is unacceptable, so
