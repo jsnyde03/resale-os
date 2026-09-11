@@ -50,6 +50,13 @@ on:
       - 'src/screens/**'
       - 'src/scoring/**'
       - 'src/domain/**'
+      # ⚡ And a FOURTH time, 2026-09-11 — 6.1.3 put `src/adapters/**` on the
+      # device and `tests/ci-scope.test.ts` went red within the minute, before
+      # a single commit. **Second time the gate caught it and first time it
+      # caught a brand-new layer**, which is the case the hand-written list is
+      # worst at: nobody forgets a directory they are busy creating, they
+      # forget the list that has to mention it.
+      - 'src/adapters/**'
       - 'mobile/**'
       - 'tests/driver-node.test.ts'
       - 'tests/engine-scenario-node.test.ts'

@@ -4760,3 +4760,58 @@ checked out from HEAD and run against the same form: both print
 `aisle-lego-set-b37ef482`. The test pins that literal — ⛔ **deriving the
 expectation from the code that produces it would be a round trip through one
 encoder, and would keep passing through the exact change it exists to catch.**
+
+### 6.1.3 — the fill, and making the seam structural rather than stated
+
+`fillFromMarket(form, result)` in the screen model, and a second button —
+**Look up the market** — on the aisle screen. ⛔ **Deliberately not part of
+"Check it":** a lookup spends metered requests and a check must stay free and
+instant, so folding them together would put a price on asking a question.
+
+⛔ **The network fills fields and never gates**, asserted rather than described:
+a failure leaves the form byte-identical to what the operator typed, for every
+one of the six reasons. The asking price is never filled — it is the tag in
+front of them — and **neither is the resale price**, which is derivable from the
+comps but is their judgement about condition; overwriting it with a median is how
+a fetched number quietly becomes the decision.
+
+### ⚡ The seam moved into the linter
+
+The before-scan asked the same question 6.1.2 did, one level up: **the screen
+needs the reading types, and importing them from `src/adapters` would put the
+vendor back inside the screen.** So they live in `src/core/market.ts` — what a
+market looks like, deliberately not who said so — and `lint:imports` now forbids
+`src/screens` → `src/adapters` outright. The composition happens in the `.tsx`,
+which sits above everything, the same shape as `FundProvider` composing the
+store.
+
+⚡ **And that closed 6.1.1's own after-scan gap for free.** The adapter is now
+imported by the phone, so `check-phone-bundle.mjs` reaches it: **34 roots, 56
+modules**, up from 33 and 53. "Written to run on a device" and "checked to run
+on a device" are the same claim again.
+
+### ⛔ A FOURTH stale paths filter, caught by the gate in under a minute
+
+`tests/ci-scope.test.ts` went red the moment `src/adapters` became reachable
+from `mobile/`: the iOS lane's `paths:` filter did not mention it, so **the
+device lane would not have run when the data route changed.**
+
+That filter has now gone stale four times — `src/ui`, `src/server/views.ts`,
+`src/scoring`, and this. ⚡ **Second time the gate caught it, and the first time
+it caught a brand-new layer**, which is the case a hand-written list is worst at:
+nobody forgets a directory they are busy creating, they forget the list that has
+to mention it.
+
+### ⛔ The form could parse a notation the keyboard could not type
+
+`keyboardType="number-pad"` has **no `+` and no `,`**. 6.1.2 taught the form to
+read `"240,000+"` and every test passed, because a test types into a string.
+Wiring the `.tsx` is what surfaced it: **the count fields would have accepted a
+notation only a machine could enter.** `Field` gained
+`numbers-and-punctuation`, with the reason written at the prop rather than at
+the call site.
+
+⚠️ **Worth naming as a class.** The model is tested where there is no device, by
+design — that is what makes `src/screens/` testable at all — and this is the
+kind of defect that design cannot see. It was found in the one step that is not
+covered by 649 tests.

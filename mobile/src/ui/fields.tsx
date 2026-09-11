@@ -33,7 +33,14 @@ export function Field({
   onChangeText: (t: string) => void;
   placeholder?: string;
   hint?: string;
-  keyboardType?: 'default' | 'decimal-pad' | 'number-pad';
+  /**
+   * ⛔ `numbers-and-punctuation` added 6.1.3, and it is not cosmetic.
+   * `number-pad` has **no `+` and no `,`**, and at 6.1.2 the count fields
+   * started accepting `"240,000+"` — the notation eBay shows and the data route
+   * returns. A field the form can parse and the keyboard cannot type is a
+   * feature that only works when a machine fills it in.
+   */
+  keyboardType?: 'default' | 'decimal-pad' | 'number-pad' | 'numbers-and-punctuation';
   autoCapitalize?: 'none' | 'words';
   /** Something is typed and it does not parse — say so without shouting. */
   invalid?: boolean;

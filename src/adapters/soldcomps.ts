@@ -43,10 +43,21 @@
  * typed numbers exactly as well as it does today (6.1.2).
  *
  * ⛔ **It never defaults a number it could not read.** See `core/counts.ts`.
+ *
+ * ⛔ **Everything it RETURNS is declared in `core/market.ts`, not here.** That
+ * is the seam: a screen renders a `MarketReading` without learning who
+ * produced it, and `lint:imports` forbids `src/screens` from reaching this
+ * file at all. The composition happens in the `.tsx`, where it belongs.
  */
 
 import { parseDollars, type Cents } from '../core/money.js';
 import { parseCount, type CountResult } from '../core/counts.js';
+import type {
+  MarketFailure,
+  MarketFailureReason,
+  MarketResult,
+  QuotaReading,
+} from '../core/market.js';
 
 export const SOLDCOMPS_BASE_URL = 'https://api.sold-comps.com/v1/scrape';
 
@@ -60,76 +71,6 @@ export const SOLD_WINDOW_DAYS = 90;
  */
 export const SOLD_PAGE_SIZE = 40;
 export const ACTIVE_PAGE_SIZE = 200;
-
-/** A count, and whether the vendor meant "at least". @see ParsedTotal */
-export interface CountReading {
-  readonly value: number;
-  readonly isFloor: boolean;
-}
-
-/**
- * ⚡ **B80: the keyword is an input to a money gate.** `totalResults` counts
- * whatever the keyword matched, so a vague name measures the broad market and a
- * precise one measures the item. ⚠️ It is not directionally biased — measured,
- * a broad search gave a 49-day hold and a specific one 18 — so the risk is
- * **misattribution, not optimism**: a confident, correctly computed number
- * about a different item. The screen shows all of this so a wrong keyword is
- * visible rather than silently authoritative.
- */
-export interface Provenance {
-  readonly keyword: string;
-  /** The category BOTH halves were counted in, or null if the vendor picked none. */
-  readonly categoryId: string | null;
-  readonly categoryName: string | null;
-  readonly soldItemsSeen: number;
-  readonly activeItemsSeen: number;
-  readonly soldAfter: string;
-  readonly fetchedAt: string;
-}
-
-/**
- * ⚡ **B78: the route is metered and paid, and the app should say so rather
- * than discover it.** Each item costs 2 requests, so the free 100/month is
- * ~50 items — two rack visits.
- */
-export interface QuotaReading {
-  readonly monthlyLimit: number | null;
-  readonly monthlyRemaining: number | null;
-  readonly resetAt: string | null;
-}
-
-export interface MarketReading {
-  readonly sold90: CountReading;
-  readonly active: CountReading;
-  /** From the sold page's `soldPrice`, exact cents. Empty when none parsed. */
-  readonly compPricesCents: readonly Cents[];
-  readonly compMedianAgeDays: number;
-  readonly provenance: Provenance;
-  readonly quota: QuotaReading;
-}
-
-export type MarketFailureReason =
-  /** No signal. The normal case in a shop, and not an error. */
-  | 'OFFLINE'
-  /** ⚠️ The month's requests are gone. Degrade to typing, do not break. */
-  | 'QUOTA_EXCEEDED'
-  /** 60/minute on every plan. A plan buys quota, never speed. */
-  | 'RATE_LIMITED'
-  /** ⛔ A count that would not parse. Refused rather than defaulted. */
-  | 'UNPARSEABLE'
-  | 'AUTH'
-  | 'VENDOR';
-
-export interface MarketFailure {
-  readonly ok: false;
-  readonly reason: MarketFailureReason;
-  /** Shown to the operator. Says what happened, not what to think about it. */
-  readonly detail: string;
-  /** Present whenever the vendor answered at all. */
-  readonly quota?: QuotaReading;
-}
-
-export type MarketResult = { readonly ok: true; readonly reading: MarketReading } | MarketFailure;
 
 export interface SoldCompsConfig {
   readonly apiKey: string;

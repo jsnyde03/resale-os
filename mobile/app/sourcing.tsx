@@ -2,7 +2,14 @@ import { useMemo, useState } from 'react';
 import { Link, useRouter } from 'expo-router';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
-import { evaluateForm, headline, type SourcingForm } from '../../src/screens/sourcing.js';
+import {
+  evaluateForm,
+  fillFromMarket,
+  headline,
+  type FillStatus,
+  type SourcingForm,
+} from '../../src/screens/sourcing.js';
+import { lookUpMarket } from '../../src/adapters/soldcomps.js';
 import { opportunityIdFrom } from '../../src/core/ids.js';
 import { formatCents } from '../../src/core/money.js';
 import {
@@ -88,6 +95,8 @@ export default function Sourcing() {
   const [hassle, setHassle] = useState<Hassle>(DEFAULT_HASSLE);
   const [result, setResult] = useState<ReturnType<typeof evaluateForm> | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [fill, setFill] = useState<FillStatus | null>(null);
+  const [looking, setLooking] = useState(false);
 
   const form: SourcingForm = useMemo(
     () => ({
@@ -112,6 +121,49 @@ export default function Sourcing() {
   // ⚡ B68: checking is also RECORDING. The decision is the thing worth keeping
   // — the walk-aways most of all, since they are most of the decisions and
   // nothing else will ever see them.
+  /**
+   * ⛔ **The key is read here and nowhere else.** `EXPO_PUBLIC_` is compiled
+   * into the bundle — acceptable for a single-operator private build, and not
+   * a secret store. An absent key is reported as an absent key rather than
+   * spent on a request that will come back 401.
+   */
+  const apiKey = process.env['EXPO_PUBLIC_SOLDCOMPS_KEY'] ?? '';
+
+  /**
+   * ⛔ **Look it up FILLS the fields. It does not check, and it cannot decide.**
+   *
+   * Two requests against the only automated route the fund has (D16), and
+   * every way they can fail is a value rather than an exception — offline is
+   * the normal case in a shop, and an exhausted month (B78) arrives
+   * mid-decision. Whatever happens, the fields stay editable and `Check it`
+   * answers exactly as well as it did before there was a data route.
+   */
+  async function lookUp() {
+    if (looking) return;
+    if (apiKey === '') {
+      setFill({
+        kind: 'UNAVAILABLE',
+        reason: 'AUTH',
+        message: 'No data key is set — type the counts from eBay',
+        canRetry: false,
+      });
+      return;
+    }
+    setLooking(true);
+    setResult(null);
+    try {
+      const out = fillFromMarket(form, await lookUpMarket(name, { apiKey }));
+      setSold(out.form.sold90);
+      setActive(out.form.active);
+      if (out.form.comps !== undefined) setComps(out.form.comps);
+      setFill(out.status);
+    } finally {
+      // ⚠️ The adapter does not throw, but a `finally` is what makes that a
+      // property of this screen rather than a promise it is trusting.
+      setLooking(false);
+    }
+  }
+
   function check() {
     const r = evaluateForm(form, state);
     setResult(r);
@@ -177,12 +229,65 @@ export default function Sourcing() {
             hint="Gross, before fees and postage."
             invalid={problemFor('resale') !== undefined}
           />
+          {/* ⚡ 6.1.3. Between the name and the counts, because it fills the
+              counts and it searches on the name. ⛔ It is a SECOND button, not
+              part of "Check it" — a lookup spends metered requests and a check
+              must stay free and instant. */}
+          <Button
+            label={looking ? 'Looking…' : 'Look up the market'}
+            onPress={() => {
+              void lookUp();
+            }}
+          />
+          {fill === null ? null : (
+            <Card style={{ borderWidth: 1, borderColor: fill.kind === 'FILLED' ? C.line : C.warn }}>
+              {fill.kind === 'FILLED' ? (
+                <View style={{ gap: 4 }}>
+                  {/* ⚡ B80: which market was measured. A wrong keyword gives a
+                      confident, correctly computed number about another item,
+                      so the words that were searched are shown, not implied. */}
+                  <Text style={{ color: C.text, fontSize: 13 }}>Measured {fill.measured}</Text>
+                  <Muted>
+                    {fill.provenance.soldItemsSeen} sold and {fill.provenance.activeItemsSeen}{' '}
+                    listed seen · sold since {fill.provenance.soldAfter}
+                  </Muted>
+                  {fill.anyFloored ? (
+                    /* ⛔ B77. "At least" is the whole reason the gate will
+                       refuse, so it is said before the verdict, not after. */
+                    <Text style={{ color: C.warn, fontSize: 13 }}>
+                      A count came back as “at least” — the hold is a best case, and it will be
+                      refused on that. Narrow the name until the counts are exact.
+                    </Text>
+                  ) : null}
+                  {fill.quota.monthlyRemaining === null ? null : (
+                    <Muted>
+                      {fill.quota.monthlyRemaining} of {fill.quota.monthlyLimit} lookups left this
+                      month
+                    </Muted>
+                  )}
+                </View>
+              ) : (
+                <View style={{ gap: 4 }}>
+                  <Text style={{ color: C.warn, fontSize: 13 }}>{fill.message}</Text>
+                  {fill.canRetry ? <Muted>Worth trying again.</Muted> : null}
+                  {fill.quota?.monthlyRemaining === null ||
+                  fill.quota?.monthlyRemaining === undefined ? null : (
+                    <Muted>
+                      {fill.quota.monthlyRemaining} of {fill.quota.monthlyLimit} lookups left this
+                      month
+                    </Muted>
+                  )}
+                </View>
+              )}
+            </Card>
+          )}
+
           <Field
             label="Sold in 90 days"
             value={sold}
             onChangeText={edit(setSold)}
             placeholder="40"
-            keyboardType="number-pad"
+            keyboardType="numbers-and-punctuation"
             hint="From an eBay sold search. The hold time is DERIVED from this — it is not something you can type."
             invalid={problemFor('sold90') !== undefined}
           />
@@ -191,7 +296,7 @@ export default function Sourcing() {
             value={active}
             onChangeText={edit(setActive)}
             placeholder="10"
-            keyboardType="number-pad"
+            keyboardType="numbers-and-punctuation"
             invalid={problemFor('active') !== undefined}
           />
           <Field

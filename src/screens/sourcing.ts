@@ -16,6 +16,14 @@ import { parseOpportunity, type OpportunityInput } from '../domain/opportunity.j
 import { evaluateOpportunity, type Evaluation } from '../scoring/evaluate.js';
 import { soldNeededForHold } from '../core/velocity.js';
 import { parseCount } from '../core/counts.js';
+import {
+  isWorthRetrying,
+  type CountReading,
+  type MarketFailureReason,
+  type MarketResult,
+  type Provenance,
+  type QuotaReading,
+} from '../core/market.js';
 import { assessUnlock, fundAtNav, type UnlockAssessment } from './unlock.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
@@ -28,7 +36,7 @@ import {
   type Condition,
   type Hassle,
 } from './condition.js';
-import { formatCents } from '../core/money.js';
+import { formatCents, toDollarsInput } from '../core/money.js';
 import type { Bps, Cents } from '../core/money.js';
 import type { FundState } from '../core/capital/state.js';
 import type { PriceBound } from '../scoring/max-price.js';
@@ -383,3 +391,125 @@ export function headline(verdict: SourcingVerdict): string {
 }
 
 export { formatCents };
+
+// ---------------------------------------------------------------------------
+// 6.1.3 — the fill
+// ---------------------------------------------------------------------------
+
+/**
+ * ⛔ **The network FILLS fields. It never gates, and it never decides.**
+ *
+ * A shop with no signal is the normal case, not an error state, and an
+ * exhausted month (**B78**) arrives mid-decision with the operator holding the
+ * object. So a lookup can only ever do one of two things: put numbers into
+ * fields the operator can overwrite, or say why it could not — and in both
+ * cases the screen answers exactly as well as it did before there was a data
+ * route at all.
+ *
+ * ⚠️ **`fetched` is not a synonym for `trusted`.** Every filled field is
+ * reported by name, so "where did this number come from" is answerable at a
+ * glance rather than by remembering which button was pressed last.
+ */
+export type FillStatus =
+  | {
+      readonly kind: 'FILLED';
+      /** Which form fields this lookup actually wrote. Possibly empty. */
+      readonly filled: readonly (keyof SourcingForm)[];
+      readonly provenance: Provenance;
+      readonly quota: QuotaReading;
+      /**
+       * ⚡ **B80's whole point, in one line the operator reads.** The keyword
+       * and category decide WHICH MARKET was measured, and a wrong keyword
+       * produces a confident, correctly computed number about a different item.
+       */
+      readonly measured: string;
+      /** ⚠️ Set when a count came back as "at least". The gate will refuse. */
+      readonly anyFloored: boolean;
+    }
+  | {
+      readonly kind: 'UNAVAILABLE';
+      readonly reason: MarketFailureReason;
+      /** One line, in the operator's language, ending in what to do instead. */
+      readonly message: string;
+      readonly canRetry: boolean;
+      readonly quota?: QuotaReading;
+    };
+
+/**
+ * ⚠️ **Each one ends by pointing at the manual path**, because that is the
+ * answer in all six cases and a message that only names the fault leaves the
+ * operator standing in an aisle wondering whether to wait.
+ */
+const UNAVAILABLE_WORDING: Readonly<Record<MarketFailureReason, string>> = {
+  OFFLINE: 'No signal — type the counts from eBay',
+  QUOTA_EXCEEDED: "This month's lookups are used up — type the counts from eBay",
+  RATE_LIMITED: 'Too many lookups in a minute — wait a moment, or type the counts',
+  UNPARSEABLE: 'The market data came back unreadable — type the counts from eBay',
+  AUTH: 'The data key was refused — check it in Settings, or type the counts',
+  VENDOR: 'The data source is having trouble — type the counts from eBay',
+};
+
+/** How a count renders back into a field the operator can edit. */
+const countToField = (c: CountReading): string => `${c.value}${c.isFloor ? '+' : ''}`;
+
+/**
+ * Turn a lookup into a form, without ever discarding what the operator typed.
+ *
+ * ⛔ **The asking price is NEVER filled.** It is the tag in front of them, no
+ * data source knows it, and a field that sometimes fills and sometimes does not
+ * is worse than one that never does.
+ *
+ * ⚠️ **Nor is `resale`.** It is derivable from the comps — but the operator
+ * decides what condition and completeness their item is in, and overwriting
+ * their judgement with a median is how a fetched number quietly becomes the
+ * decision. The comps raise confidence; the price stays theirs.
+ */
+export function fillFromMarket(
+  form: SourcingForm,
+  result: MarketResult,
+): { readonly form: SourcingForm; readonly status: FillStatus } {
+  if (!result.ok) {
+    return {
+      form,
+      status: {
+        kind: 'UNAVAILABLE',
+        reason: result.reason,
+        message: UNAVAILABLE_WORDING[result.reason],
+        canRetry: isWorthRetrying(result),
+        ...(result.quota === undefined ? {} : { quota: result.quota }),
+      },
+    };
+  }
+
+  const { reading } = result;
+  const filled: (keyof SourcingForm)[] = ['sold90', 'active'];
+  const next: { -readonly [K in keyof SourcingForm]: SourcingForm[K] } = {
+    ...form,
+    sold90: countToField(reading.sold90),
+    active: countToField(reading.active),
+  };
+
+  // ⚠️ An empty comp set is not written over whatever the operator typed —
+  // "the lookup found no prices" is not a reason to delete theirs.
+  if (reading.compPricesCents.length > 0) {
+    next.comps = reading.compPricesCents.map(toDollarsInput).join(',');
+    filled.push('comps');
+  }
+
+  const where =
+    reading.provenance.categoryName === null
+      ? 'all categories'
+      : reading.provenance.categoryName;
+
+  return {
+    form: next,
+    status: {
+      kind: 'FILLED',
+      filled,
+      provenance: reading.provenance,
+      quota: reading.quota,
+      measured: `"${reading.provenance.keyword}" in ${where}`,
+      anyFloored: reading.sold90.isFloor || reading.active.isFloor,
+    },
+  };
+}

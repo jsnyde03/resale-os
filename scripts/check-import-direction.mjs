@@ -36,7 +36,11 @@ const FORBIDDEN = {
   // surface. ⛔ `src/server` and `src/app` are BOTH being deleted at
   // 5.10.4, and an import of either would quietly re-tether the phone to
   // the desktop it is replacing.
-  'src/screens': ['src/cli', 'src/server', 'src/app'],
+  // ⛔ `src/adapters` added 6.1.3. A screen renders a `MarketReading`; it must
+  // not learn WHO produced one. The composition happens in the `.tsx`, which
+  // sits above everything — the same shape as `FundProvider` composing the
+  // store. Without this the seam is a comment, and comments do not hold.
+  'src/screens': ['src/cli', 'src/server', 'src/app', 'src/adapters'],
   // 6.1.1. The outside world. An adapter turns ONE vendor's response into
   // numbers with provenance, and knows nothing about opportunities, scores or
   // verdicts — `src/core` for money and nothing else. ⛔ That is what makes a

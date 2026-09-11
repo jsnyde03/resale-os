@@ -11,7 +11,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { evaluateForm, headline } from '@/screens/sourcing.js';
+import { evaluateForm, fillFromMarket, headline } from '@/screens/sourcing.js';
+import type { MarketFailureReason } from '@/core/market.js';
 import { evaluateOpportunity } from '@/scoring/evaluate.js';
 import { parseOpportunity } from '@/domain/opportunity.js';
 import { Fund, WITH_JOB, T0 } from './helpers.js';
@@ -438,5 +439,139 @@ describe('6.1.2 — the id of an exact candidate did not move', () => {
     // Verified by running the PRE-6.1.2 `sourcing.ts` from HEAD against the
     // same form and comparing: both print `aisle-lego-set-b37ef482`.
     expect(r.input.opportunityId).toBe('aisle-lego-set-b37ef482');
+  });
+});
+
+describe('6.1.3 — the network fills fields, and never decides', () => {
+  const reading = (over: Record<string, unknown> = {}) => ({
+    ok: true as const,
+    reading: {
+      sold90: { value: 300, isFloor: false },
+      active: { value: 240_000, isFloor: true },
+      compPricesCents: [5_800, 6_100, 6_000],
+      compMedianAgeDays: 20,
+      provenance: {
+        keyword: 'lego star wars',
+        categoryId: '183447',
+        categoryName: 'LEGO (R) Building Toys',
+        soldItemsSeen: 40,
+        activeItemsSeen: 200,
+        soldAfter: '2026-06-13',
+        fetchedAt: '2026-09-11T12:00:00.000Z',
+      },
+      quota: { monthlyLimit: 100, monthlyRemaining: 92, resetAt: '2026-10-11T11:28:53.674Z' },
+      ...over,
+    },
+  });
+
+  it('fills the counts and the comps, and says which', () => {
+    const { form, status } = fillFromMarket(GOOD, reading());
+    expect(form.sold90).toBe('300');
+    expect(form.comps).toBe('58.00,61.00,60.00');
+    if (status.kind !== 'FILLED') throw new Error('expected FILLED');
+    expect(status.filled).toEqual(['sold90', 'active', 'comps']);
+  });
+
+  it('⛔ round-trips a floored count back through the field as "240000+"', () => {
+    // The seam that makes 6.1.2 worth having: the fill writes a string the form
+    // can parse back, so the floor survives a trip through the UI.
+    const { form } = fillFromMarket(GOOD, reading());
+    expect(form.active).toBe('240000+');
+  });
+
+  it('⛔ and the floor still reaches the gate after that round trip', () => {
+    // ⚠️ Deliberately a SMALL floored count. At 240,000 active the hold gate
+    // fires first and `VELOCITY_COUNTS_UNBOUNDED` correctly stays quiet — it
+    // only speaks when the optimism was the deciding number — so asserting it
+    // there would have been asserting nothing. Found by the test failing.
+    const { form } = fillFromMarket(GOOD, reading({ active: { value: 10, isFloor: true } }));
+    expect(form.active).toBe('10+');
+    const v = ok(form);
+    expect(v.failedGates.map((g) => g.code)).toContain('VELOCITY_COUNTS_UNBOUNDED');
+
+    // The control: the identical reading, exact, is a buy.
+    const exact = fillFromMarket(GOOD, reading({ active: { value: 10, isFloor: false } }));
+    expect(exact.form.active).toBe('10');
+    expect(ok(exact.form).buy).toBe(true);
+  });
+
+  it('⛔ never fills the asking price or the resale price', () => {
+    // The tag is in front of them and no data source knows it; the resale price
+    // is their judgement about condition, not a median.
+    const { form } = fillFromMarket({ ...GOOD, price: '12.00', resale: '60.00' }, reading());
+    expect(form.price).toBe('12.00');
+    expect(form.resale).toBe('60.00');
+  });
+
+  it('does not delete typed comps when the lookup found none', () => {
+    const { form, status } = fillFromMarket(GOOD, reading({ compPricesCents: [] }));
+    expect(form.comps).toBe(GOOD.comps);
+    if (status.kind !== 'FILLED') throw new Error('expected FILLED');
+    expect(status.filled).not.toContain('comps');
+  });
+
+  it('B80 — says which market was measured, keyword and category', () => {
+    const { status } = fillFromMarket(GOOD, reading());
+    if (status.kind !== 'FILLED') throw new Error('expected FILLED');
+    expect(status.measured).toBe('"lego star wars" in LEGO (R) Building Toys');
+    expect(status.anyFloored).toBe(true);
+  });
+
+  it('says "all categories" when the vendor narrowed nothing', () => {
+    const { status } = fillFromMarket(
+      GOOD,
+      reading({
+        provenance: { ...reading().reading.provenance, categoryName: null, categoryId: null },
+      }),
+    );
+    if (status.kind !== 'FILLED') throw new Error('expected FILLED');
+    expect(status.measured).toBe('"lego star wars" in all categories');
+  });
+
+  it('⛔ a failure leaves the form EXACTLY as it was', () => {
+    // The offline-first promise, asserted rather than described: the screen is
+    // as usable as it was before there was a data route.
+    for (const reason of ['OFFLINE', 'QUOTA_EXCEEDED', 'AUTH', 'VENDOR', 'UNPARSEABLE'] as const) {
+      const { form, status } = fillFromMarket(GOOD, { ok: false, reason, detail: 'x' });
+      expect(form).toEqual(GOOD);
+      expect(status.kind).toBe('UNAVAILABLE');
+    }
+  });
+
+  it('⚠️ offers a retry only where pressing the button again could work', () => {
+    const retryable = (reason: MarketFailureReason) => {
+      const { status } = fillFromMarket(GOOD, { ok: false, reason, detail: 'x' });
+      if (status.kind !== 'UNAVAILABLE') throw new Error('expected UNAVAILABLE');
+      return status.canRetry;
+    };
+    expect(retryable('OFFLINE')).toBe(true);
+    expect(retryable('RATE_LIMITED')).toBe(true);
+    // ⛔ These do not clear by trying again, and offering it teaches the
+    // operator to ignore the button.
+    expect(retryable('QUOTA_EXCEEDED')).toBe(false);
+    expect(retryable('AUTH')).toBe(false);
+    expect(retryable('UNPARSEABLE')).toBe(false);
+    expect(retryable('VENDOR')).toBe(false);
+  });
+
+  it('every failure tells the operator what to do instead', () => {
+    for (const reason of [
+      'OFFLINE', 'QUOTA_EXCEEDED', 'RATE_LIMITED', 'AUTH', 'UNPARSEABLE', 'VENDOR',
+    ] as const) {
+      const { status } = fillFromMarket(GOOD, { ok: false, reason, detail: 'x' });
+      if (status.kind !== 'UNAVAILABLE') throw new Error('expected UNAVAILABLE');
+      expect(status.message.toLowerCase(), reason).toContain('type the counts');
+    }
+  });
+
+  it('B78 — carries what is left of the month, including on a refusal', () => {
+    const { status } = fillFromMarket(GOOD, {
+      ok: false,
+      reason: 'QUOTA_EXCEEDED',
+      detail: 'x',
+      quota: { monthlyLimit: 100, monthlyRemaining: 0, resetAt: '2026-10-11T11:28:53.674Z' },
+    });
+    if (status.kind !== 'UNAVAILABLE') throw new Error('expected UNAVAILABLE');
+    expect(status.quota?.monthlyRemaining).toBe(0);
   });
 });

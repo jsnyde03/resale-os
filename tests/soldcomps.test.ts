@@ -13,12 +13,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import {
-  lookUpMarket,
-  SOLDCOMPS_BASE_URL,
-  type MarketResult,
-  type SoldCompsConfig,
-} from '@/adapters/soldcomps.js';
+import { lookUpMarket, SOLDCOMPS_BASE_URL, type SoldCompsConfig } from '@/adapters/soldcomps.js';
+import type { MarketResult } from '@/core/market.js';
 
 const FIXTURES = join(process.cwd(), 'tests', 'fixtures', 'soldcomps');
 const fixture = (name: string): unknown =>

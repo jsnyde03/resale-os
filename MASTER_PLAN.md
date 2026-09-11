@@ -62,11 +62,11 @@ wired.
         fetches. 638 tests (+8). ⚡ The flags are omitted when false, so every
         id this screen has ever produced is unchanged — **measured against
         HEAD**, not assumed.
-  - [ ] **6.1.3** ⛔ **The fill, and every way it can fail.** `MarketResult` →
-        filled fields the operator can overwrite, never a gate input the network
-        owns. Offline is the NORMAL case; `quota_exceeded` arrives mid-decision
-        (**B78**) and degrades to typing. The screen says which numbers came
-        from where (**B80**) and what is left of the month.
+  - [x] **6.1.3** ✅ **Done 2026-09-11. Closes B78.** `fillFromMarket` +
+        *Look up the market* on the aisle screen. 649 tests (+11). ⛔ The seam is
+        STRUCTURAL: reading types in `core/market.ts`, and `lint:imports` now
+        forbids `src/screens` → `src/adapters`; the `.tsx` composes. ⚡ The
+        phone bundle gate covers the adapter now (34 roots).
   - [ ] **6.1.4** On-device verification.
 
 **Exit:** the screen fills what it can from SoldComps, says where every number
@@ -347,6 +347,7 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   saying so, which is the class this project keeps being bitten by. Cache by
   `(input, policy version, NAV)` or page it, and make the cap speak. → when the
   list gets long, not before.
+- ~~**B78**~~ ✅ **Closed 2026-09-11 in 6.1.3** — the screen shows lookups left, and an exhausted month degrades to typing.
 - **B78** ⚡ **THE DATA ROUTE IS METERED AND PAID — the app should say so, not
   discover it.** Each scored item costs **2 requests** (sold + active), so the
   free 100/month is **~33-50 items** and real sourcing exhausts it in two rack
@@ -387,6 +388,14 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   number the engine already owns" is the exact class this project gates against
   elsewhere. Fix is a core parser returning a result union, with the form
   wording layered on top. → when a third caller appears, not before.
+- **B84** ⚠️ **The search term and the item name are the same field.** *Look up
+  the market* searches on whatever the operator typed as the name — but the name
+  is what THEY call it and the search is what eBay calls it, and **B80** makes
+  the keyword an input to a money gate. Today the fix is to rename the item
+  until the counts look right, which is exactly the wrong incentive. A separate
+  "search as" field, defaulting to the name, decouples them. ⚡ **B69**'s barcode
+  scan would fill it directly, since a GTIN is a better keyword than any
+  phrase. → when the operator has actually mis-searched something, not before.
 - **B81** ⚠️ **One more page would turn some B77 refusals back into decisions.**
   ACTIVE caps at 200/page, so an item with 250 active is refused for being a
   floor when **one extra request** would have the true count. ⛔ Not general:
