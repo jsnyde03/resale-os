@@ -5363,3 +5363,50 @@ Its trigger reads *"before any TestFlight build"* and the first publish was
 the home screen. Verified: `mobile/app.json` has no `icon` key and there is no
 assets directory. It loses to 6.9 only because the artwork is Jason's taste
 rather than mine; the plumbing is twenty minutes whenever he has a picture.
+
+## 2026-09-11 — 6.9: a leaked handle was hiding real failures (B55)
+
+Seven closes moved into a `finally`. ⚡ **And the bug was proven rather than
+argued** — the same planted assertion failure, run in both shapes:
+
+```
+old shape   Error: EBUSY: resource busy or locked, unlink '...\live.db'
+            ⛔ the AssertionError does not appear AT ALL
+new shape   AssertionError: expected 'PLANTED' to be 'a deliberate failure...'
+```
+
+⛔ **The real failure is not merely obscured, it is replaced.** `rmSync` throws
+from the `finally`, and that throw is what the runner reports. A test failing for
+one reason reports another, which is the worst possible thing a test can do —
+and it is what cost an hour in 5.5.1, in `migration-rebuild.test.ts`, one of the
+seven files still doing it.
+
+### ⛔ 6.9.3 — the mitigation was never the fix, and now says so
+
+`rmSync(..., maxRetries: 5, retryDelay: 50)` **did not save the old shape**: the
+EBUSY still won. Five retries lose to a leaked handle, because a leaked handle is
+not a transient lock — it is held until the process exits.
+
+⚠️ **Kept anyway, deliberately.** It is plausible insurance for what it might
+actually be for — Windows releasing a lock lazily after a *clean* close — and one
+green run does not disprove a timing flake. ⛔ **But it must not be read as
+covering the leak**, so the reasoning is written once where the measurement
+happened and the other four files point at it rather than repeating it.
+
+### ⚡ 6.9.4 — audited, nothing to change, and that IS the result
+
+`migration-rebuild.test.ts` pins the migration name in nine places and every one
+survives the audit:
+
+- **Line 92 was already fixed in 5.5.1** — it derives the expected set from
+  `listMigrationFiles()` rather than listing it, with the reason in a comment.
+- **Line 156** — `expect(selfManaged).toEqual([REBUILD])` — is an **exhaustive
+  assertion about a set**, the same shape as `CONSTRAINT_CODES` exhaustiveness.
+  It fails the day a new self-managed migration appears, and **that is the
+  point**, not staleness.
+- The rest are uses of a named constant identifying *the* migration that rebuilds
+  a table.
+
+⚠️ **Worth recording that the answer was "no change".** A backlog entry asking
+for an audit is satisfied by doing the audit, and reporting nothing is a result —
+the failure mode is finding something to change so the item looks worked.

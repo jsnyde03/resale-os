@@ -111,6 +111,8 @@ describe('migration 005 rebuilds the events table under live data', () => {
       expect(store.verifyChain()).toEqual({ ok: true });
     } finally {
       store?.close();
+      // ⚠️ `maxRetries` is NOT leak protection — measured in
+      // `reporting.test.ts`, where the reasoning lives. 6.9.3.
       rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     }
   });
@@ -130,10 +132,16 @@ describe('migration 005 rebuilds the events table under live data', () => {
       expect(db.all('PRAGMA foreign_key_check')).toEqual([]);
 
       const store = new FundStore(db, fixedClock());
-      store.ensureSeeded();
-      store.commit({ type: 'CONTRIBUTION', amountCents: 5_000, occurredAt: T0 });
-      expect(store.verifyChain()).toEqual({ ok: true });
-      store.close();
+      try {
+        store.ensureSeeded();
+        store.commit({ type: 'CONTRIBUTION', amountCents: 5_000, occurredAt: T0 });
+        expect(store.verifyChain()).toEqual({ ok: true });
+      } finally {
+        // ⛔ 6.9. A failing chain assertion used to skip this close, leak the
+        // handle, and surface as an EBUSY from the rmSync below — which is
+        // precisely how 5.5.1's real failure got hidden, in this very file.
+        store.close();
+      }
     } finally {
       rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     }

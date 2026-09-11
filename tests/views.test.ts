@@ -76,6 +76,8 @@ function withFund(fn: (store: FundStore) => void): void {
       store.close();
     }
   } finally {
+      // ⚠️ `maxRetries` is NOT leak protection — measured in
+      // `reporting.test.ts`, where the reasoning lives. 6.9.3.
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
@@ -148,12 +150,15 @@ describe('the view layer reports, it does not compute', () => {
       const db = openDb(join(dir, 'test.db'));
       migrate(db, T0);
       const store = new FundStore(db, fixedClock());
-      store.ensureSeeded();
-      store.commit({ type: 'CONTRIBUTION', amountCents: 50_000, occurredAt: T0 });
-      // A confident wrong number is worse than an honest gap, and the screen
-      // has to be able to say which it is showing.
-      expect(taxView(store).incomeTaxAbstained).toBe(true);
-      store.close();
+      try {
+        store.ensureSeeded();
+        store.commit({ type: 'CONTRIBUTION', amountCents: 50_000, occurredAt: T0 });
+        // A confident wrong number is worse than an honest gap, and the screen
+        // has to be able to say which it is showing.
+        expect(taxView(store).incomeTaxAbstained).toBe(true);
+      } finally {
+        store.close(); // 6.9
+      }
     } finally {
       rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     }

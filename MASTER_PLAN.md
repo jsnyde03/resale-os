@@ -123,17 +123,21 @@ the real failure — which is what cost an hour in 5.5.1.
 ⚠️ **The mitigation is why nobody noticed:** `rmSync` carries `maxRetries: 5`,
 which hides the leak rather than removing it.
 
-- [ ] **6.9.1** Move every close into a `finally`, using the pattern already in
-      the tree — `views.test.ts:236`'s `try { fn(store); } finally { close(); }`.
-- [ ] **6.9.2** ⛔ **Plant it:** make an assertion fail *inside* one of those
-      blocks and prove the REAL failure is what surfaces, not an EBUSY.
-      ⚠️ Then plant the reverse — a passing block must not leak.
-- [ ] **6.9.3** ⚠️ **Then reconsider `maxRetries: 5`.** With the leak gone it is
-      either unnecessary or it is hiding a second one; decide which, rather than
-      leaving it as a charm.
-- [ ] **6.9.4** The second class: `migration-rebuild.test.ts` pins migration
-      NAMES in nine places. Separate the load-bearing pins from the ones that go
-      stale on the next migration.
+- [x] **6.9.1** ✅ **Done 2026-09-11.** All seven closes moved into a `finally`.
+- [x] **6.9.2** ✅ **Done 2026-09-11, and the bug is PROVEN not argued.** Same
+      planted failure, two shapes: in the old one the `AssertionError` **never
+      appears** — `EBUSY: resource busy or locked` replaces it outright; in the
+      new one it surfaces cleanly.
+- [x] **6.9.3** ✅ **Done 2026-09-11.** ⛔ **`maxRetries: 5` did not save the old
+      shape** — five retries lose to a leaked handle. Kept for what it plausibly
+      IS for (Windows releasing a lock lazily after a *clean* close), with that
+      written down once and pointed at from the rest, so nobody reads it as leak
+      cover again.
+- [x] **6.9.4** ✅ **Audited 2026-09-11 — no change needed, and that is the
+      finding.** 5.5.1 already fixed the one genuinely stale list; the remaining
+      pins are a named constant for *the* rebuild migration, plus an exhaustive
+      set assertion that is SUPPOSED to fail when a new self-managed migration
+      appears.
 - [ ] **6.9.5** On-device verification.
 
 **Exit:** a failing assertion in a temp-directory test reports itself, and a

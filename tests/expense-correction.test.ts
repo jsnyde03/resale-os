@@ -44,6 +44,8 @@ function withStore(fn: (store: FundStore) => void): void {
       store.close();
     }
   } finally {
+      // ⚠️ `maxRetries` is NOT leak protection — measured in
+      // `reporting.test.ts`, where the reasoning lives. 6.9.3.
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }

@@ -154,10 +154,19 @@ describe('backups are verified, not just copied', () => {
   it('copies the ledger and proves the copy opens and verifies', () => {
     const dir = mkdtempSync(join(tmpdir(), 'resale-backup-'));
     try {
+      // ⛔ **The close goes in a `finally`, and 6.9 is why.** These used to sit
+      // in the try body, so a failing assertion between the open and the close
+      // skipped the close, leaked the handle, and `rmSync` below threw EBUSY
+      // **over the top of the real failure** — which is what cost an hour in
+      // 5.5.1 and was then left unaudited everywhere else.
+      let expected: number;
       const store = storeAt(join(dir, 'live.db'));
-      runBusiness(store);
-      const expected = store.events().length;
-      store.close();
+      try {
+        runBusiness(store);
+        expected = store.events().length;
+      } finally {
+        store.close();
+      }
 
       const result = backupDatabase(join(dir, 'live.db'), join(dir, 'backups'), T0);
       expect(result.events).toBe(expected);
@@ -166,10 +175,21 @@ describe('backups are verified, not just copied', () => {
 
       // And the copy is genuinely usable, not just present.
       const restored = new FundStore(openDb(result.path));
-      expect(restored.verifyChain().ok).toBe(true);
-      expect(computeMetrics(restored.state()).navCents).toBeGreaterThan(0);
-      restored.close();
+      try {
+        expect(restored.verifyChain().ok).toBe(true);
+        expect(computeMetrics(restored.derivedState()).navCents).toBeGreaterThan(0);
+      } finally {
+        restored.close();
+      }
     } finally {
+      // ⚠️ **`maxRetries` is NOT leak protection, and that was measured.** With a
+      // handle leaked from the block above, this still threw
+      // `EBUSY: resource busy or locked` and **replaced the real assertion
+      // failure entirely** — five retries did not help, because a leaked handle
+      // is not a transient lock. It is kept for what it IS plausibly for:
+      // Windows releasing a file lazily after a CLEAN close. ⛔ Removing it was
+      // considered and rejected — one green run does not disprove a timing
+      // flake — but it must not be read as covering the leak. 6.9.3.
       rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     }
   });
@@ -204,8 +224,11 @@ describe('backups are verified, not just copied', () => {
     const dir = mkdtempSync(join(tmpdir(), 'resale-backup-'));
     try {
       const store = storeAt(join(dir, 'live.db'));
-      runBusiness(store);
-      store.close();
+      try {
+        runBusiness(store);
+      } finally {
+        store.close(); // 6.9: a throw in runBusiness must not leak the handle
+      }
       expect(listBackups(join(dir, 'nope'))).toEqual([]);
 
       backupDatabase(join(dir, 'live.db'), join(dir, 'backups'), '2026-09-08T12:00:00.000Z');
@@ -228,8 +251,11 @@ describe('a corrupt source cannot destroy a good backup', () => {
       const live = join(dir, 'live.db');
       const backups = join(dir, 'backups');
       const store = storeAt(live);
-      runBusiness(store);
-      store.close();
+      try {
+        runBusiness(store);
+      } finally {
+        store.close(); // 6.9
+      }
 
       const good = backupDatabase(live, backups, T0, LATEST_BACKUP_NAME);
       const goodBytes = good.bytes;
@@ -243,8 +269,11 @@ describe('a corrupt source cannot destroy a good backup', () => {
       expect(survivors.length).toBe(1);
       expect(survivors[0]!.bytes).toBe(goodBytes);
       const restored = new FundStore(openDb(survivors[0]!.path));
-      expect(restored.verifyChain().ok).toBe(true);
-      restored.close();
+      try {
+        expect(restored.verifyChain().ok).toBe(true);
+      } finally {
+        restored.close(); // 6.9
+      }
     } finally {
       rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     }
