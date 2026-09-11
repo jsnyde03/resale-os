@@ -8,12 +8,25 @@ next.** Exactly one item is decomposed on it — the active one. Detail and
 rationale live in `MASTER_PLAN_LOG.md`; read the entry for anything you are
 about to change.
 
-**Status (2026-09-11): Gates 1-6 BUILT, 6.5 and 6.6 closed. The fund LIVES ON
-THE PHONE, the desktop is deleted, and the app now VALUES what it is shown.**
+**Status (2026-09-11): Gates 1-6 BUILT and 6.5-6.11 closed. The fund LIVES ON
+THE PHONE, the desktop is deleted, the app VALUES what it is shown, and it now
+SCANS. ⚡ Gate 7.5 — DROP INTEL — is the active build.**
+
+⛔ **NOTHING BUILT AFTER 2026-09-10 IS ON THE PHONE.** Every gate above shipped
+to `origin/master` and **the last TestFlight publish was 2026-09-10**. The
+device is running a build with no data route, no scanner and no allocation
+screen. **The deploy is deliberately last** (Jason 2026-09-11: *"It'll be more
+meaningful once 6.11 and 7.5 are there"*), but nothing decided since is
+actionable until it happens.
 
 ⚡ **D11's condition reads as met** — it said the fund starts buying when the
 phone can *decide*, not just record, and it now decides with data it fetched
 itself. **Whether it starts buying is Jason's, and he has not said so.**
+
+🎯 **AND THE STRATEGY IS NOT THE CLEARANCE RACK** (Jason 2026-09-11): *"Most of
+my highest returns were not off the clearance rack previously. They were online
+drops."* ⛔ A new session must not optimise for racks. Scanning is the tool for
+*"I am holding this"*; **drops are where the money was**, and Gate 7.5 is that.
 
 The aisle screen **decides**: a price ceiling and the rule that set it, what would
 FIX a refusal (*"against 10 listed you need 48 sold in 90 days"*), whether a
@@ -27,8 +40,17 @@ what is left of the month. ⛔ **The network never gates**: offline is the norma
 case in a shop, every failure is a value, and a failed lookup leaves the screen
 exactly as usable as it was.
 
-Live on a real **$50** bankroll. **672 tests, 40 files.** `npm run check` runs
-five gates: source bytes, import direction, phone bundle, typecheck, tests.
+⚡ **And it scans.** Barcode → UPCitemdb → a keyword that is **proposed and
+editable** → market → verdict, with the tag price the only typed field.
+⛔ **A scan proposes and never decides**, for two measured reasons: two
+defensible keywords from one barcode gave sold medians **68% apart** (**B89**),
+and `000000000000` resolves — HTTP 200 — to *"ORGANIC BLUE CORN TORTILLA
+CHIPS"*, so a mis-scan succeeds *wrongly*. The title on screen beside the object
+in hand is the only check on that, and it is the operator's.
+
+Live on a real **$50** bankroll — ⏳ **$75 decided, awaiting a $25 CONTRIBUTION**
+(**D3**). **736 tests, 45 files.** `npm run check` runs **six** gates: source
+bytes, import direction, phone bundle, **the PLAN**, typecheck, tests.
 
 ---
 
@@ -75,7 +97,7 @@ export is not a document — it is the ledger plus the profile.** Treat it like 
 database, never like an artifact.
 
 **The ledger, the engine, every write and read screen, the sourcing screen,
-backups, the import and the DATA ROUTE all run on the device: 52/52 against
+backups, the import and the DATA ROUTE all run on the device: 54/54 against
 Apple's SQLite** in
 `.github/workflows/driver-contract-ios.yml`. The app ships via Codemagic to
 TestFlight.
@@ -103,15 +125,15 @@ orientation.
 
 ### What needs a human, not a session
 
-⚠️ **Three things, and none of them block the build.** Everything the data route
-needed is done — see the log for the fund move, Codemagic, the SoldComps key and
-eBay's refusal (**D16**).
+⛔ **The first one now BLOCKS everything**, which is new. The rest do not.
 
 | | |
 |---|---|
+| ⏳ **The $25 CONTRIBUTION** | **D3, decided 2026-09-11: the bankroll goes $50 → $75.** ⛔ **Measured: at $50 the fund can buy NOTHING** — a $40 purchase with excellent evidence is refused by three capital gates, ceiling $20 against a $24.51 modelled downside. **$50 is the only bankroll where that is true**; at $75 the same rules permit a $30 buy returning $26.71. ⚡ **No code ships with this** — it is a ledger event on the phone. Every figure here saying $50 stays true until it lands. |
+| ⏳ **The deploy** | Codemagic → TestFlight. **28+ commits** of the app's own code since the 2026-09-10 publish: the whole data route, the scanner, the allocation screen, the rules identity. ⚠️ **6.11.6 can only close here** — a simulator has no camera, so the scan is the first thing in this project the lane structurally cannot verify. |
+| **B26** | The operator's **state marginal rate** is still unverified (the local rate is confirmed). ⚡ Fixable in the app — the settings screen writes the tax profile, and a non-zero rate is refused without a stated basis. Ten minutes, and the tax reserve is computed from it. |
 | **Two repos** | Delete `resale-os-prescrub-2` and `resale-os-prescrub-private`. Both private, both still holding the scrubbed tax profile, and the CLI token cannot delete. History is bundled and restore-verified in the OneDrive backups folder. |
-| **B26** | The operator's **state marginal rate** is still unverified (the local rate is confirmed). ⚡ **Now fixable in the app** — 5.12's settings screen writes the tax profile, and a non-zero rate is refused without a stated basis. |
-| **D2** | The owner split (20/10/70) is still a default. Not live below $100 NAV and the fund is at $50 — four to six flips away, so decide it against real sales. ⚠️ **B73**: the allocation block has no screen yet, so answering D2 needs that first. |
+| **D2** | The owner split (20/10/70) is still a default. ⚡ **B73 is closed — 6.7 gave it a screen**, so the thing that blocked answering it is gone. Still not live below $100 NAV, so decide it against real sales rather than in the abstract. |
 
 ### Two things a new session should not re-litigate
 
@@ -148,8 +170,16 @@ margin play needing hold tolerance a $50 fund does not have. Backlog **B28**.
 ### Five gates run on every check
 
 ```
-npm run check    # source bytes · import direction · PHONE BUNDLE · typecheck · 672 tests
+npm run check    # source bytes · imports · PHONE BUNDLE · PLAN · typecheck · 736 tests
 ```
+
+⚡ **`lint:plan` is new, 2026-09-11, and it exists because nothing read the one
+document that says what is being built.** In a single session the plan
+accumulated **four malformed `## Queue` headings across eight pushed commits**,
+and shipped a log entry describing a decomposition the queue did not contain.
+It checks STRUCTURE only — duplicate or malformed headings, exactly one
+decomposed section, the queue table agreeing with it, unique sub-step ids.
+⛔ **It judges no prose**, and it caught a real inconsistency on its first run.
 
 ⚡ **`lint:phone` walks the import graph** from every `src/` module the phone
 actually imports and fails if anything on that closure reaches a `node:*`
@@ -160,6 +190,36 @@ places to look on this project has come up short.
 
 Each was **planted against and verified to red**, then the restore verified to
 green. A control that has never been planted is not a control.
+
+---
+
+## The two outside vendors, and the seam that survives them
+
+⛔ **The fund depends on two small third parties, and neither was a plan.**
+
+| | |
+|---|---|
+| **SoldComps** | `src/adapters/soldcomps.ts`. The ONLY automated market data (**D16** killed eBay). `keyword` search, **no barcode support at all**. Metered: **2 requests per scored item**, 100/month free. |
+| **UPCitemdb** | `src/adapters/upcitemdb.ts`. Barcode → title, brand, category. Exists *because* SoldComps takes no barcode. Keyless trial, ~100/day. ⚠️ **Never tested against a Walmart clearance SKU** — store brands and seasonal lines may simply not be in it, and `NOT_FOUND` is a normal outcome. |
+
+⚡ **`src/core/market.ts` and `src/core/product.ts` are the seam.** A screen
+renders a `MarketReading` or a `ProductIdentity` and never learns who produced
+one — **`lint:imports` forbids `src/screens` from reaching `src/adapters` at
+all**, and the `.tsx` composes them. Swapping a vendor is a new file in
+`src/adapters/`.
+
+⛔ **THE KEYWORD IN THE MIDDLE IS A MONEY DECISION.** Measured on LEGO 75038:
+the raw resolver title gave **96 sold, median $47.50**; the set-number keyword
+gave **147 sold, median $80.00** — **68% apart**, and that median becomes the
+resale price. ⚡ So `keywordFor` PROPOSES both and the operator picks. A scan
+that silently chose would be a confident wrong number arriving faster than
+typing did.
+
+⛔ **AND COMPS MUST MATCH THE CONDITION.** Unfiltered, the same product's comps
+ran **$1.99–$465** — a coefficient of variation of 1.24 against a
+`COMP_CV_WORTHLESS` of 0.50, so the dispersion term was **exactly zero** and the
+comps contributed **nothing** to the gate that decides everything. The operator's
+`SEALED` / `LIKE_NEW` / `USED_CHECKED` drives `itemCondition`. **B90.**
 
 ---
 
