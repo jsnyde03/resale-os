@@ -190,6 +190,7 @@ and the histogram never silently mixes the two.
 |---|---|---|
 | D1 | What the tax reserve covers | ✅ **Incremental annual tax, 2026-09-08.** SE tax + federal brackets + QBI + state. ⚠️ Income tax abstains until a `TaxProfile` is set — **D7** |
 | D14 | Which gate set decides a purchase, given the two paths disagree | ✅ **One evaluator everywhere — 2026-09-10.** `evaluateOpportunity` gates every purchase, typed or scored; `assessQuote`'s candidate stops being a decision path. ⚠️ **Deliberately stricter on the live fund:** a buy typed with no comps and middling sell-through now needs **D4**'s override with a reason. Measured first — 64 divergences in 96 cases, both directions (**B58**) |
+| D18 | Whether to build the full barcode-scan flow now | ⚡ **YES — build it, Jason 2026-09-11.** *"Without scanning at Walmart it'll be too tedious to go through the clearance rack and type everything in."* ⚠️ **I recommended the cheaper half first** (derive resale from comps, default the category — free, no camera, no second vendor) and measuring whether typing a short name was really the tedium; Jason chose the full flow. Recorded because the concern stands: **SoldComps takes no barcode** (no UPC/GTIN/EAN parameter — verified in its docs), so the scan needs a SECOND vendor to turn a UPC into a title. ⚡ **De-risked first rather than assumed**: UPCitemdb's keyless trial round-tripped three real LEGO UPCs to title **plus brand and category**, so the resolver works and kills the category field too. ⛔ **But the keyword derived from that title is a MONEY decision** — see **B89**. |
 | D17 | What Gate 7 becomes, now that its premise is gone | ⛔ **PARKED, and re-premised — 2026-09-11.** D12 chose *"Browse to find, SoldComps to value"* and **D16 deleted the finding half**, so Market Radar's input is one metered vendor at 2 requests per item. ⚡ **Gate 7 is re-premised as radar over the fund's OWN HISTORY** — D12's third leg, free, specific to what the operator actually encounters in stores, and better every flip — and **parked until there IS history**, because the fund has never bought anything. ⛔ **Building it now would mean guessing at its inputs.** ⚠️ Market-wide radar on the paid tier was considered and declined: 2,000 requests is 1,000 items a month, every tier caps at 60/min so a plan buys quota and never speed, and it would bet more of the product on the single vendor D16 just exposed. **Meanwhile the build stream takes the correctness backlog, starting with B54.** |
 | D16 | Whether to keep pursuing first-party eBay API access | ⛔ **NO — treat it as UNAVAILABLE, 2026-09-11.** The developer account was denied outright with a generic *"mismatched data"* reason, and Jason's reading is that eBay is issuing **blanket denials to individual developers**. ⚠️ **Do not re-apply, and do not design around getting in.** It is not an application-quality problem to fix. ⚡ This is what **D12** predicted — *"the resellers work around eBay and the direction of travel is tightening"* — arriving sooner than expected. Consequence: **SoldComps is the only automated route**, the manual path is not a fallback but a second leg, and `src/adapters/` stops being good practice and becomes the thing that makes a vendor swap survivable |
 | D15 | Whether a backup carries scoring history | ✅ **No — scores are DEVICE-LOCAL, 2026-09-10.** The export is the commands plus config, and **everything in it is verified by regenerating it**. Opportunities are neither, and not derivable — a score records what was decided, when, under which policy — so carrying them would spend that guarantee on advisory data. ⚠️ A lost phone loses the rejection histogram and the watchlist, and **none of the fund**. The app says so on the backups screen |
@@ -422,14 +423,13 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   number the engine already owns" is the exact class this project gates against
   elsewhere. Fix is a core parser returning a result union, with the form
   wording layered on top. → when a third caller appears, not before.
-- **B84** ⚠️ **The search term and the item name are the same field.** *Look up
-  the market* searches on whatever the operator typed as the name — but the name
-  is what THEY call it and the search is what eBay calls it, and **B80** makes
-  the keyword an input to a money gate. Today the fix is to rename the item
-  until the counts look right, which is exactly the wrong incentive. A separate
-  "search as" field, defaulting to the name, decouples them. ⚡ **B69**'s barcode
-  scan would fill it directly, since a GTIN is a better keyword than any
-  phrase. → when the operator has actually mis-searched something, not before.
+- **B84** ⛔ **PROMOTED FROM "when someone mis-searches" TO A PREREQUISITE,
+  2026-09-11.** The search term and the item name are the same field, and
+  **B89** measured what that costs once a scan fills the name: two defensible
+  keywords from one barcode gave medians 68% apart. A separate *"search as"*
+  field, defaulting to the derived keyword and editable, is what stops the scan
+  flow from being a confident wrong number delivered faster. → **inside the scan
+  flow (D18), not after it.**
 - **B85** ⚠️ **Nothing stops a second lookup of the SAME keyword.** *Look up the
   market* costs 2 of ~100 monthly requests per press. A double-tap is guarded
   (`if (looking) return`), and a press after EDITING the name is correct — but a
@@ -450,6 +450,20 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   repair path must not depend on the broken thing. → when a policy migration is
   needed for another reason.
 - ~~**B88**~~ ⚡ **Promoted to Gate 6.10, 2026-09-11**, the day it was filed — the histogram is the instrument for *"why is nothing passing?"* and it is currently mixing rule sets.
+- **B89** ⛔ **THE KEYWORD DERIVED FROM A SCAN IS A 68% SWING IN THE RESALE
+  PRICE.** Measured 2026-09-11 on one real product, LEGO set 75038, resolved
+  from its UPC: the resolver's raw title *"LEGO Star Wars 75038 - Jedi
+  Interceptor"* returns **96 sold, median $47.50**; cleaned to the set number,
+  *"lego 75038"* returns **147 sold, median $80.00**. ⚠️ **Same object, same
+  scan, 68% apart** — and that median sets the resale price, which sets profit,
+  ROI and the price ceiling. ⛔ **So a scan cannot silently produce an answer.**
+  The cleaning rule in the middle is not a formatting detail, it is the thing
+  that decides which market is measured (**B80**), and neither reading is
+  obviously right: the long title may be matching loose and incomplete sets
+  while the set number matches sealed ones, or the reverse. ⚡ **Consequence:
+  B84 stops being optional** — the operator must see the derived keyword and be
+  able to correct it, or the scan is a confident wrong number arriving faster.
+  → **a prerequisite of the scan flow, not a follow-up.**
 - **B81** ⚠️ **One more page would turn some B77 refusals back into decisions.**
   ACTIVE caps at 200/page, so an item with 250 active is refused for being a
   floor when **one extra request** would have the true count. ⛔ Not general:
