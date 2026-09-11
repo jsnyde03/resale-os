@@ -10,9 +10,9 @@ boundaries as the bankroll grows.
 
 **Status:** Gates 1 to 5 built; Gate 6 — sourcing — is half built. The
 deterministic capital engine, the ledger, opportunity scoring, prediction
-accuracy and verified backups — **all of it runs on the device**, verified 50/50
+accuracy and verified backups — **all of it runs on the device**, verified 51/51
 against Apple's SQLite in CI and shipped to TestFlight. **The desktop was deleted
-on 2026-09-10**: no CLI, no web app, no dev server. 589 tests green.
+on 2026-09-10**: no CLI, no web app, no dev server. 653 tests green.
 
 ⚡ **The app decides, it does not only record.** It gives a price ceiling and the
 rule that set it; says what would FIX a refusal rather than only naming it; says
@@ -55,7 +55,7 @@ Requires Node >= 22.5 (for the built-in `node:sqlite` — there is nothing to co
 
 ```bash
 npm install
-npm run check          # five gates: bytes, imports, phone bundle, types, 589 tests
+npm run check          # five gates: bytes, imports, phone bundle, types, 653 tests
 cd mobile && npx expo start
 ```
 
@@ -326,10 +326,14 @@ src/screens/   screen MODELS — decided outside the .tsx, so they are testable
                where there is no browser and no device
 src/db/        driver, migrations, store, replay, hash chain
 src/ui/        pure form models the write screens are made of
-src/adapters/  source adapters (eBay, manual, CSV)          [Gate 6]
+src/adapters/  the outside world. SoldComps is the ONLY automated
+               route (D16 killed eBay); an adapter may reach src/core
+               and nothing else                             [Gate 6]
+src/core/market.ts  what a market READING is — the seam an adapter
+               fills and a screen renders. Not src/market/ below
 src/market/    scarcity, demand, momentum, radar            [Gate 7]
 mobile/        the Expo app; the engine is imported from src/, unchanged
-tests/         589 tests; financial logic weighted heaviest
+tests/         653 tests; financial logic weighted heaviest
 ```
 
 A visually impressive screen with incorrect bankroll math is unacceptable, so

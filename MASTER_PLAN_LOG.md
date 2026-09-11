@@ -4815,3 +4815,119 @@ the call site.
 design — that is what makes `src/screens/` testable at all — and this is the
 kind of defect that design cannot see. It was found in the one step that is not
 covered by 649 tests.
+
+### 6.1.4 — the data route on Apple's stack: 51/51
+
+A case in the on-device screen contract, because the adapter is pure **except
+for two Web APIs and both are polyfills on a phone**: `URLSearchParams` builds
+every request and `Headers.get` reads the metered quota off every response.
+"Works in Node" is not the claim that matters for a screen used in an aisle, so
+both were named, exported and exercised on Hermes — along with `parseCount` over
+all three real forms, a floored count written back as `"10+"` and read by the
+form, the gate refusing on it, and the flag landing in `input_json`.
+
+⚠️ **`fetch` is deliberately not exercised** — it is React Native's own, it is
+async where this contract is sync, and a real request would spend metered quota
+on every CI run.
+
+---
+
+## 2026-09-11 — Gate 6's close, and 6.1's whole-item after-scan
+
+**Gate 6 closes as *"values and recommends"*, on Jason's call.** The finding half
+is struck as **UNAVAILABLE rather than deferred**, pinned to D16 — ⛔ *a gate
+left open on a capability that does not exist never closes.* The app values,
+recommends, explains the refusal and records every decision; the operator finds.
+The surviving thread is **B69**'s barcode scan, which is identification rather
+than discovery, and it is backlog.
+
+### ⚡ Four sub-items, four re-scopes — and the plan was written the same day
+
+The pattern worth keeping from 6.1 is not any one finding, it is that **every
+sub-item was corrected by measurement before it was built**, on a plan less than
+a day old:
+
+- **6.1.0 did not exist.** B77's fix could not live where the plan put it —
+  `PurchaseCandidate` had no way to say "lower bound", so it was a
+  `core → domain → scoring` change, not a line in the client.
+- **6.1.1 found B82**, which nothing had predicted, by reading two real responses
+  side by side.
+- **6.1.2 collapsed two items into one notation.** The stated fix was to give the
+  form a way to say "at least"; the cheaper one was to stop treating a typed
+  count and a fetched one as different things.
+- **6.1.3 moved the seam into the linter** rather than describing it.
+
+⛔ **The lesson is about plan age, not plan quality.** These sub-items were
+authored *with the measurements in hand*, that same evening, and four of four
+still needed correcting. The switch-in verification is not a defence against
+*stale* plans; it is a defence against plans, which are hypotheses whatever their
+date.
+
+### ⚡ The written record lost to the run record five times in one item
+
+The vendor's own docs misnamed its usage headers. **B77's worked example dropped
+the `+ 1`** — and at the true figures the "safe" reading already fails, so the
+illustration refused itself. B74's page-cap belief. **My own test expected
+`VELOCITY_COUNTS_UNBOUNDED` to fire where it correctly stayed quiet**, because
+`HOLD_TOO_LONG` had already refused. And a form that could parse a notation the
+keyboard could not type.
+
+⚠️ **Four of those five were written by someone who had just measured the
+thing.** The failure is not ignorance, it is the gap between measuring and
+writing it down.
+
+### ⚡ Three controls fired, and all three were built after a previous miss
+
+The clearest evidence yet that they pay rent:
+
+| control | what it caught | built after |
+|---|---|---|
+| "a layer with source and no import rules" | `src/adapters` arriving with no declared direction | `src/adapters` sitting empty and unruled for a whole gate |
+| `tests/ci-scope.test.ts` | the iOS lane's `paths:` filter, stale a **fourth** time | three earlier staleness misses |
+| `CONSTRAINT_CODES` exhaustiveness | a new code no test case could trigger | a code nobody would have trusted |
+
+⚡ **`ci-scope` caught a BRAND-NEW layer**, which is the case a hand-written list
+is worst at: nobody forgets a directory they are busy creating, they forget the
+list that has to mention it.
+
+### ⚡ B80 turned out to be self-penalising, and it was measurable
+
+Filed as an unmitigated risk: a confident, correctly-computed number about a
+different item. Measured on the captured page — **40 comps from $0.89 (a loose
+minifigure) to $572.56 (a rare set), median $40, a 643× spread**. Comps are 40%
+of confidence and the comp term scores how tightly they AGREE, so a keyword broad
+enough to price several products drives the coefficient of variation past
+`COMP_CV_WORTHLESS` and **zeroes the dispersion term by itself**.
+
+⚠️ **That does not make a vague keyword safe, it makes it visible.** The penalty
+lands on confidence, which caps the Buy Score, which is a gate. The screen still
+has to show what was searched, because the operator is the only one who can tell
+a broad match from a narrow one.
+
+### Two defects of my own, recorded rather than quietly fixed
+
+⛔ **6.1.0 added an instance of the class 6.6 exists to remove.**
+`boundsAreOptimistic` is checked with `=== true`, so a future caller that omits
+it gets no refusal. It is now the first sub-step of 6.6 rather than a footnote.
+
+⛔ **A failed lookup was clearing a verdict the operator already had.** The
+promise is that the network never makes this screen worse than it was without
+one, and losing an answer because a shop has no signal is exactly that. Fixed
+during the after-scan, not deferred.
+
+### The plan's own hygiene, which I had broken
+
+Closing a backlog item as a struck line **plus** the original verbose entry gave
+two entries per item, where this plan's convention is one struck entry with the
+detail here. Collapsed B74, B77, B78, B79, B80 and B82, and verified nothing
+adjacent was eaten. ⚠️ **The rule was being followed for the plan's ACTIVE items
+and not for its backlog** — a rule applied to the half you are looking at.
+
+### 6.6 promoted, and its own switch-in scan found both premises stale
+
+**Prevention, not repair.** D14 already deleted `assessQuote`, so "catastrophic
+across a whole surface" is history: exactly **one** production construction site
+remains, and it supplies four of the five optional fields unconditionally. So
+those four are optional only because Gate 1 predated Gate 2 — make them required
+and a forgetting caller fails to compile; make `sellThroughBps`, the one genuine
+abstention, say so; and "absent" stops being ambiguous by construction.

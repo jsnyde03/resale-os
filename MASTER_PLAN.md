@@ -44,33 +44,12 @@ wired.
       **B3**'s histogram has something to count and **6.5**'s watchlist something
       to watch. Scores are device-local by decision (**D15**).
 
-- [ ] **6.1** ⚡ **ACTIVE BUILD — the data route.** ⛔ eBay is gone (**D16**), so
-      **SoldComps is the only automated source** and serves both halves. The
-      contract is MEASURED, not assumed — four real requests on 2026-09-11.
-  - [x] **6.1.0** ✅ **Done 2026-09-11. Closes B77.** `VELOCITY_COUNTS_UNBOUNDED`
-        — an optimistic unknown is refused rather than waved through, and only
-        when it was the deciding number. 604 tests (+15), planted both
-        directions. ⚡ A floored count is a **NEVER**, not a not-yet.
-  - [x] **6.1.1** ✅ **Done 2026-09-11. Closes B79, B80, B82.** The client in
-        `src/adapters/`, import rules declared, 630 tests (+23) against captured
-        bytes. ACTIVE first then SOLD pinned to the category it declares; an
-        unparseable total is refused, never defaulted; every failure is a value.
-        Planted both claims and restored. ⚠️ **Not yet imported by the phone**,
-        so `lint:phone` does not cover it until **6.1.3**.
-  - [x] **6.1.2** ✅ **Done 2026-09-11.** `parseCount` in `src/core/counts.ts`,
-        used by the adapter AND the form — `"240,000+"` types as well as it
-        fetches. 638 tests (+8). ⚡ The flags are omitted when false, so every
-        id this screen has ever produced is unchanged — **measured against
-        HEAD**, not assumed.
-  - [x] **6.1.3** ✅ **Done 2026-09-11. Closes B78.** `fillFromMarket` +
-        *Look up the market* on the aisle screen. 649 tests (+11). ⛔ The seam is
-        STRUCTURAL: reading types in `core/market.ts`, and `lint:imports` now
-        forbids `src/screens` → `src/adapters`; the `.tsx` composes. ⚡ The
-        phone bundle gate covers the adapter now (34 roots).
-  - [ ] **6.1.4** On-device verification.
-
-**Exit:** the screen fills what it can from SoldComps, says where every number
-came from, and answers exactly as well as it does today when there is no signal.
+- [x] **6.1** ✅ **Done 2026-09-11. 51/51 on device. Closes B77-B80, B82.** The
+      data route: SoldComps behind an adapter, ACTIVE called first and SOLD
+      pinned to the category it declares, an unparseable count refused rather
+      than defaulted, and a floor that the gate will not pass on. The screen
+      fills what it can, says which market it measured, shows what is left of
+      the month, and answers exactly as well as it does today with no signal.
 
 - [x] **6.2** ✅ **Done 2026-09-10. Closes B3.** *What is stopping you* — the
       binding gate, from the record. ⚡ **The codes are stored STRUCTURALLY now**;
@@ -95,12 +74,36 @@ the screen warns when growing would LOSE a buy. Detail in the log.
 
 ---
 
-### Gate 6.6 — A GATE THAT ABSTAINS MUST SAY SO (B66) — queued
+### Gate 6.6 — A GATE THAT ABSTAINS MUST SAY SO (B66) ⚡ **ACTIVE BUILD**
 
-The structural class behind **B58**: `assessPurchase` skips any gate whose field
-is `undefined`, which is correct for `sellThroughBps` under an operator estimate
-and was catastrophic for the buy score across a whole surface. **The code cannot
-tell the two cases apart, and neither can a reader.** Sub-steps in the log.
+`assessPurchase` skips any gate whose field is `undefined`, and **the code cannot
+tell a deliberate abstention from a forgotten field — nor can a reader.**
+
+⚠️ **The switch-in scan found BOTH premises stale, and they make the item
+smaller and sharper.** D14 already deleted `assessQuote`, so "catastrophic across
+a whole surface" is history: there is exactly **one** production construction
+site, `evaluate.ts:111`, and it supplies `confidenceBps`, `buyScore`, `riskScore`
+and `boundsAreOptimistic` unconditionally. So four of the five optional fields
+are optional only because Gate 1 predated Gate 2. **This is prevention, not
+repair.**
+
+- [ ] **6.6.1** Make the four always-supplied fields **required**, so a caller
+      that forgets one fails to compile rather than losing a gate.
+      ⛔ **`boundsAreOptimistic` is mine, added at 6.1.0** — checked with
+      `=== true`, so an omitting caller gets no refusal. I added an instance of
+      the class this item exists to remove.
+- [ ] **6.6.2** Make `sellThroughBps` — the ONE genuine abstention — **say so**
+      rather than be absent, carrying its reason. After 6.6.1 nothing else is
+      ever absent, so "absent" stops being ambiguous by construction.
+- [ ] **6.6.3** Exhaustive **by construction**, off a declared object's keys —
+      the shape `validatePolicy` already uses, after a hand-written field list
+      let `minSellThroughBps` through as `NaN` and print *"vs a NaN% minimum"*.
+- [ ] **6.6.4** A control that plants an under-populated candidate and proves the
+      gate refuses to RUN rather than passing quietly.
+- [ ] **6.6.5** On-device verification.
+
+**Exit:** a gate cannot be skipped by accident, and one that abstains on purpose
+says which and why.
 
 ---
 
@@ -113,9 +116,9 @@ tell the two cases apart, and neither can a reader.** Sub-steps in the log.
 | 3 | Inventory & sale lifecycle, expenses, reserves, distributions, charge-offs, recoveries | ✅ Done 2026-09-08 |
 | 4 | Dashboard + rules/config UI | ✅ Done 2026-09-08 |
 | 5 | **The phone is the system** — engine ported, ledger on-device, desktop retired | ✅ **Done 2026-09-10**, phase after-scan included |
-| 6 | **Sourcing: the app values and recommends** — ⛔ the FINDING half died with **D16**; SoldComps values, the operator finds, own history accumulates | ⚡ **ACTIVE** — 6.0, 6.1, 6.2 built |
+| 6 | **Sourcing: the app values and recommends** — ⛔ the FINDING half was struck as UNAVAILABLE, not deferred (**D16**, Jason 2026-09-11); the operator finds | ✅ **Done 2026-09-11**, 51/51 on device |
 | 6.5 | **Not yet, or never?** — ⚡ the before-scan disproved the "watchlist that unlocks" premise: most refusals never clear at any bankroll | ✅ **Done 2026-09-10**, 50/50 on device |
-| 6.6 | **A gate that abstains must say so** (**B66**) — `assessPurchase` cannot tell a deliberate abstention from a missing field, and neither can a reader | ⚡ **NEXT** |
+| 6.6 | **A gate that abstains must say so** (**B66**) — `assessPurchase` cannot tell a deliberate abstention from a missing field, and neither can a reader | ⚡ **ACTIVE BUILD** |
 | 7 | Market Radar beta — scarcity, demand, momentum, market opportunity, confidence | ⚠️ Open — **re-read D12 first**: it assumed a feed, and there is one vendor |
 | 7.5 | **Drop intel** — dated retail drops, monitoring and alerting. ⛔ Checkout automation is OUT, see **D13** | Open |
 | 8 | *(architecture only until 1–7 are reliable)* authorization states, drop intel, autonomy | Not started, not startable |
@@ -348,40 +351,9 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   saying so, which is the class this project keeps being bitten by. Cache by
   `(input, policy version, NAV)` or page it, and make the cap speak. → when the
   list gets long, not before.
-- ~~**B78**~~ ✅ **Closed 2026-09-11 in 6.1.3** — the screen shows lookups left, and an exhausted month degrades to typing.
-- **B78** ⚡ **THE DATA ROUTE IS METERED AND PAID — the app should say so, not
-  discover it.** Each scored item costs **2 requests** (sold + active), so the
-  free 100/month is **~33-50 items** and real sourcing exhausts it in two rack
-  visits. ⚠️ **Upgrade on a measured trigger, not in advance**: a `429` with
-  `code: "quota_exceeded"` carries `reset_at`, and `X-Usage-*` / `X-RateLimit-*`
-  come back on every call — **show what is left**. ⛔ **Exhaustion must degrade to
-  the manual path, never break the screen** — the same rule as 6.1.2's
-  offline-first for a different reason: there the network is absent, here it is
-  refusing on purpose while the operator is mid-decision in a shop.
-  ⚡ **And compare credits before buying a plan**: $3/1,000 ($0.003/req) beats
-  Starter's $9/2,000 ($0.0045/req) below ~3,000/month, and every tier is capped
-  at 60/min, so a plan buys quota only — never speed. → **6.1.1**.
-- ~~**B79**~~ ✅ **Closed 2026-09-11 in 6.1.1.** `src/adapters/total-results.ts`, and the vendor documents a THIRD form, `null`, which is refused like any other.
-- **B79** ⛔ **THE SAME FIELD RETURNS TWO FORMATS, AND BOTH NAIVE PARSES ARE
-  CATASTROPHIC.** Measured 2026-09-11: `totalResults` is `"133392"` on a SOLD
-  search and **`"72,000+"`** on an ACTIVE one — formatted, with a comma and a
-  plus. **`parseInt("72,000+")` → 72** (a thousandfold under) and
-  **`Number(...)` → NaN**. With the true 72,000 that item is a **49-day hold**;
-  misparsed as 72 it reads **0 days** and clears every ceiling there is. ⚡ The
-  `+` means it is a FLOOR, which for ACTIVE is the safe direction **only if
-  parsed correctly** (B77). ⛔ Parse defensively, treat `+` as "at least", and
-  **reject a total that will not parse rather than defaulting it** — NaN reaching
-  a gate is how `minSellThroughBps` once printed *"vs a NaN% minimum"*.
-  → **6.1.1, in the adapter, with a test per format.**
-- ~~**B80**~~ ✅ **Closed 2026-09-11 in 6.1.1** — the reading carries `provenance`: keyword, category, and how many each half matched.
-- **B80** ⚠️ **The KEYWORD is an input to a money gate.** `totalResults` counts
-  whatever the keyword matched, so a vague name measures the broad market and a
-  precise one measures the item — *"lego star wars"* returns 133,392 sold against
-  72,000 active. ⚠️ **Not directionally biased**: I assumed a vague keyword would
-  look optimistic and the measurement said otherwise (broad 49d vs specific 18d
-  — the broad one was *refused*). The risk is **misattribution, not optimism**: a
-  confident number about a different item. → the screen must show what was
-  searched and how many matched, so a wrong keyword is visible. → **6.1.1**.
+- ~~**B78**~~ ✅ **Closed 2026-09-11 in 6.1.3.** The screen shows lookups left this month, and an exhausted quota degrades to typing instead of breaking.
+- ~~**B79**~~ ✅ **Closed 2026-09-11 in 6.1.1.** `src/core/counts.ts` — and the vendor documents a THIRD form, `null`, refused like any other.
+- ~~**B80**~~ ✅ **Closed 2026-09-11 in 6.1.1/6.1.3.** The reading carries `provenance` and the screen shows it. ⚡ **And the risk turned out to be self-penalising**: a broad keyword returns comps spanning 643x, which zeroes the dispersion term and caps confidence. Measured on real bytes.
 - **B83** ⚠️ **Two implementations of dollars→cents.** `parseDollars` in
   `core/money.ts` throws; `dollars()` in `screens/sourcing.ts` returns a form
   problem instead. Both are correct and both avoid `Math.round(n * 100)`, so
@@ -412,42 +384,9 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   worth having is *page once when `hasNextPage` is set and page 2 is likely to
   end it*, which needs a measured hit rate the fund does not have yet. → when
   6.1 has run against real racks, not before.
-- ~~**B82**~~ ✅ **Closed 2026-09-11 in 6.1.1** by calling ACTIVE first and pinning SOLD to the category it declares.
-- **B82** ⛔ **THE TWO HALVES OF THE RATIO MEASURE DIFFERENT POPULATIONS, AND THE
-  RESPONSE THAT IS WRONG IS THE ONE THAT LOOKS CLEAN.** Measured 2026-09-11:
-  the ACTIVE call silently restricts to a category it picks itself
-  (`autoSelectedCategory`), the SOLD call counts everything and reports
-  `autoSelectedCategory: null` — which reads as *"no restriction"* on both.
-  Pinning the category moved the sold total **147,764 → 122,956, 17%**, and
-  `categoryId=0` does **not** turn auto-selection off. `sold/(sold+active)` and
-  `90 × (active+1)/sold` are both computed across two populations.
-  ⚡ **Fix is free**: call ACTIVE first, pin SOLD to the category it declares.
-  → folded into **6.1.1**, which is why this is filed as measured rather than
-  deferred.
-- ~~**B77**~~ ✅ **Closed 2026-09-11 in 6.1.0** by `VELOCITY_COUNTS_UNBOUNDED`.
-  ⚠️ **Its worked example below was arithmetically wrong** — 300 sold against
-  500/200 active is **151d and 61d**, not 150 and 60, because the `+ 1` (your
-  own listing) and the ceiling were dropped. At 61d the "safe" reading is
-  already outside GROWTH's ceiling, so the example refused itself. The test uses
-  **302 sold**, where the capped reading really does pass and the true one does
-  not. **The finding was right and its illustration was not.**
-- **B77** ⛔ **THE TWO CAPS PUSH OPPOSITE WAYS, and one of them is unsafe.**
-  SoldComps caps SOLD at 40/page and ACTIVE at 200/page. Hold time is
-  `90 × (active + 1) / sold90`, so **undercounting SOLD refuses a good item
-  (safe); undercounting ACTIVE accepts a bad one (UNSAFE).** Measured 2026-09-11:
-  500 active / 300 sold is a 150-day hold; read with active capped at 200 it
-  reads **60 days** — inside GROWTH's ceiling, and wrong. Sell-through inflates
-  the same way. ⛔ **`hasNextPage` on the ACTIVE query means the count is a FLOOR
-  and the derived hold a LOWER BOUND** — the gate must refuse to pass on it, which
-  is the reverse of the sell-through rule. → **6.1.1, before any number reaches a
-  gate.**
-- ~~**B74**~~ ✅ **ANSWERED 2026-09-11 by two real requests.** `totalResults` IS
-  populated on a SOLD search and is a clean integer string (`"133392"`), so the
-  sold count costs **one request**. ⚠️ It **ignores `soldAfter`** — measured, a
-  7-day window and a 90-day window returned 133,392 and 133,495 — but eBay's sold
-  index only reaches back ~90 days, so the total **is** sold-in-90 by accident of
-  their retention rather than by our parameter. `soldAfter` still narrows the
-  ITEMS, which is what the comp prices come from. → **2 requests per item.**
+- ~~**B82**~~ ✅ **Closed 2026-09-11 in 6.1.1.** ACTIVE is called first and SOLD is pinned to the category it declares, so both halves of the ratio count the same population.
+- ~~**B77**~~ ✅ **Closed 2026-09-11 in 6.1.0.** `VELOCITY_COUNTS_UNBOUNDED` — a count that is a floor makes the hold a LOWER bound and sell-through an UPPER one, and the gate refuses to pass on it. ⚠️ Its worked example was wrong (the `+ 1` was dropped); the log has the corrected arithmetic.
+- ~~**B74**~~ ✅ **Answered 2026-09-11 by real requests, and spent in 6.1.1.** `totalResults` is populated on a SOLD search, so the count costs one request and an item costs two. ⚠️ It IGNORES `soldAfter` — the total is sold-in-90 by accident of eBay's ~90-day retention rather than by our parameter, which is **luck, and luck changes**. Detail in the log.
 - **B69** ⚡ **Barcode scanning in the aisle** (Jason, 2026-09-10). The SCAN is
   the easy part — `expo-camera` does it offline, one screen. ⛔ **But a barcode
   is a product identity, not a price**, and the sourcing screen's binding fields

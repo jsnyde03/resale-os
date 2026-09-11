@@ -8,8 +8,8 @@ next.** Exactly one item is decomposed on it — the active one. Detail and
 rationale live in `MASTER_PLAN_LOG.md`; read the entry for anything you are
 about to change.
 
-**Status (2026-09-11): Gates 1-5 BUILT. The fund LIVES ON THE PHONE and the
-desktop is deleted. Gate 6 — SOURCING — is active and half built.**
+**Status (2026-09-11): Gates 1-6 BUILT. The fund LIVES ON THE PHONE, the
+desktop is deleted, and the app now VALUES what it is shown.**
 
 The aisle screen **decides**: a price ceiling and the rule that set it, what would
 FIX a refusal (*"against 10 listed you need 48 sold in 90 days"*), whether a
@@ -17,7 +17,13 @@ refusal is **not yet, at $150** or **never at any bankroll**, and it records eve
 decision — the walk-aways most of all. Plus *what is stopping you* over the
 record, a watchlist of refusals that expire, and a settings screen for the rules.
 
-Live on a real **$50** bankroll. **589 tests, 37 files.** `npm run check` runs
+⚡ **And it looks the market up.** *Look up the market* fills the sold and active
+counts and the comps from SoldComps, says which market it measured, and shows
+what is left of the month. ⛔ **The network never gates**: offline is the normal
+case in a shop, every failure is a value, and a failed lookup leaves the screen
+exactly as usable as it was.
+
+Live on a real **$50** bankroll. **653 tests, 40 files.** `npm run check` runs
 five gates: source bytes, import direction, phone bundle, typecheck, tests.
 
 ---
@@ -57,7 +63,8 @@ export is not a document — it is the ledger plus the profile.** Treat it like 
 database, never like an artifact.
 
 **The ledger, the engine, every write and read screen, the sourcing screen,
-backups and the import all run on the device: 50/50 against Apple's SQLite** in
+backups, the import and the DATA ROUTE all run on the device: 51/51 against
+Apple's SQLite** in
 `.github/workflows/driver-contract-ios.yml`. The app ships via Codemagic to
 TestFlight.
 
@@ -110,6 +117,15 @@ and becomes the thing that makes a vendor swap survivable. Alternatives exist if
 that vendor fails — Apify actors, CompSniper — unevaluated, and the adapter
 boundary is what buys the option.
 
+⛔ **And the boundary is enforced, not described.** What a market LOOKS like is
+`src/core/market.ts`; who said so is `src/adapters/`; `lint:imports` forbids
+`src/screens` from reaching an adapter at all, and the `.tsx` composes the two.
+⚠️ **Gate 6 closed WITHOUT the finding half** (Jason, 2026-09-11) — it was
+struck as unavailable rather than deferred, because a gate left open on a
+capability that does not exist never closes. The app values, recommends,
+explains and records; the operator finds. The surviving thread is **B69**'s
+barcode scan, which is identification rather than discovery.
+
 ### The other thing a new session should not re-litigate
 
 ⛔ **Categories are deliberately deferred** (D5, 2026-09-08). The system gates on
@@ -120,7 +136,7 @@ margin play needing hold tolerance a $50 fund does not have. Backlog **B28**.
 ### Five gates run on every check
 
 ```
-npm run check    # source bytes · import direction · PHONE BUNDLE · typecheck · 589 tests
+npm run check    # source bytes · import direction · PHONE BUNDLE · typecheck · 653 tests
 ```
 
 ⚡ **`lint:phone` walks the import graph** from every `src/` module the phone
@@ -171,6 +187,39 @@ Break any of these and the product stops being what it is.
 
 ## Things that cost real time to rediscover
 
+- ⛔ **`**B77**/**B79**` inside a block comment is `*/`.** Two bolded ids
+  separated by a slash produce the comment terminator, the doc comment ends
+  thirty lines early, and TypeScript reports eight syntax errors starting at a
+  line that looks like prose. Nothing about the source reads as wrong. Same
+  class as the NUL in `hash.ts` and the Python `\b`: **a character sequence that
+  means something to a parser and nothing to a reader.** Write "and", not "/".
+- ⛔ **A VENDOR'S OWN DOCS ARE NOT THE WIRE.** SoldComps documents its usage
+  headers as `X-Usage-Current` / `X-Usage-Limit`; it sends `x-usage-limit`,
+  `x-usage-remaining`, `x-usage-used` and `x-usage-reset`. The measured note in
+  the backlog was right and the published documentation was wrong. ⚠️ Read a
+  real response before writing the parser, and **commit the bytes** —
+  `tests/fixtures/soldcomps/` exists because `"240,000+"` is not something
+  anyone would have hand-written into a fixture.
+- ⛔ **TWO COUNTS FROM ONE SOURCE CAN MEASURE TWO POPULATIONS, AND THE ONE THAT
+  LOOKS CLEAN IS THE WRONG ONE.** The ACTIVE query silently restricts itself to a
+  category it picks; the SOLD query counts everything and reports
+  `autoSelectedCategory: null` — which reads as *"nothing was narrowed"* on
+  both. Pinning moved the sold total 17%, and `categoryId=0` does not turn
+  auto-selection off. `sold/(sold+active)` across two populations is not a ratio
+  of anything. **Call ACTIVE first and pin SOLD to what it declares.** B82.
+- ⚠️ **A CONTENT-ADDRESSED ID MEANS AN ALWAYS-PRESENT FIELD ORPHANS EVERY ROW.**
+  `opportunityId` is a digest of the draft, so adding `activeListingsIsFloor:
+  false` unconditionally would have changed every id the sourcing screen has
+  ever produced — stored scores orphaned, one item counted twice in the
+  rejection histogram. Add such a field **only when true**, and verify by
+  running the previous version against the same input rather than reasoning
+  about it.
+- ⚠️ **The screen MODELS are tested where there is no device, which is the point
+  and also the blind spot.** 6.1.2 taught the count fields to read `"240,000+"`,
+  649 tests passed, and `keyboardType="number-pad"` **has no `+` and no `,`** —
+  a notation only a machine could enter. A test types into a string. **Wiring
+  the `.tsx` is the only step that finds this class**, so do not treat it as
+  transcription.
 - ⛔ **Policy lives in the DATABASE, not in the code.** Changing a default in
   `policy.ts` does nothing to a fund that already exists — `ensureSeeded()` only
   writes when the row is absent. A $100 floor passed 139 tests while the live
