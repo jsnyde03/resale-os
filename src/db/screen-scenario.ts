@@ -26,7 +26,9 @@ import { evaluatePurchase } from '../scoring/purchase.js';
 import { itemIdFrom } from '../core/ids.js';
 import { adjustModel, reverseModel, sellModel, spendModel } from '../ui/forms.js';
 import { policyEdit, policyFieldsFrom, taxEdit, taxFieldsFrom } from '../ui/settings.js';
-import { evaluateForm } from '../screens/sourcing.js';
+import { evaluateForm, fillFromMarket } from '../screens/sourcing.js';
+import { buildScrapeUrl, readQuota } from '../adapters/soldcomps.js';
+import { parseCount } from '../core/counts.js';
 import { rejectionsView } from '../screens/rejections.js';
 import { watchlist } from '../screens/watchlist.js';
 import { parseOpportunity } from '../domain/opportunity.js';
@@ -716,6 +718,105 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
       // ⚠️ A zero-event backup file is worse than none: it looks like a backup
       // in a directory listing, and restores to nothing.
       ok(refused, 'backing up an empty ledger must be refused');
+    },
+  },
+  {
+    name: 'sourcing: the data route reads the same on Hermes as it does in Node',
+    run: (db) => {
+      // ⛔ **This is the half 649 tests cannot reach.** The adapter is pure
+      // except for two Web APIs, and both are POLYFILLS on a phone:
+      // `URLSearchParams` builds every request and `Headers.get` reads the
+      // metered quota off every response. "Works in Node" is not the claim
+      // that matters for a screen used in an aisle.
+      //
+      // ⚠️ `fetch` itself is deliberately NOT exercised — it is React Native's
+      // own, it is async where this contract is sync, and a real request would
+      // spend metered quota on every CI run.
+
+      // --- URLSearchParams: the request it builds -------------------------
+      const url = buildScrapeUrl('https://example.test/v1/scrape', {
+        keyword: 'lego star wars',
+        sold: 'true',
+        count: '40',
+        categoryId: '183447',
+      });
+      ok(url.includes('keyword=lego+star+wars'), `spaces must encode, got ${url}`);
+      ok(url.includes('categoryId=183447'), `the B82 pinning must survive, got ${url}`);
+      eq(url.split('?')[1]?.split('&').length, 4, 'every parameter should be present');
+
+      // --- Headers.get: the quota it reads --------------------------------
+      const quota = readQuota(
+        new Headers({
+          'x-usage-limit': '100',
+          'x-usage-remaining': '92',
+          'x-usage-reset': '2026-10-11T11:28:53.674Z',
+        }),
+      );
+      eq(quota.monthlyLimit, 100, 'the monthly cap comes off the header');
+      eq(quota.monthlyRemaining, 92, 'and what is left of it');
+      eq(quota.resetAt, '2026-10-11T11:28:53.674Z', 'and when it resets');
+
+      // --- the parse, over all three real forms ---------------------------
+      const exact = parseCount('122956');
+      ok(exact.ok && exact.value === 122956 && !exact.isFloor, 'a clean integer is exact');
+      const floored = parseCount('240,000+');
+      ok(floored.ok && floored.value === 240000 && floored.isFloor, '"240,000+" is a floor');
+      ok(!parseCount(null).ok, 'a null total is refused, never defaulted');
+
+      // --- and the whole way through to a stored verdict -------------------
+      const store = funded(db, 50_000);
+      const filled = fillFromMarket(
+        {
+          name: 'lego star wars',
+          category: 'TOYS',
+          price: '12.00',
+          resale: '60.00',
+          sold90: '',
+          active: '',
+        },
+        {
+          ok: true,
+          reading: {
+            sold90: { value: 300, isFloor: false },
+            active: { value: 10, isFloor: true },
+            compPricesCents: [5_800, 6_100, 6_000],
+            compMedianAgeDays: 20,
+            provenance: {
+              keyword: 'lego star wars',
+              categoryId: '183447',
+              categoryName: 'LEGO (R) Building Toys',
+              soldItemsSeen: 40,
+              activeItemsSeen: 200,
+              soldAfter: '2026-06-13',
+              fetchedAt: '2026-09-11T12:00:00.000Z',
+            },
+            quota: { monthlyLimit: 100, monthlyRemaining: 92, resetAt: null },
+          },
+        },
+      );
+
+      // ⚡ The seam: a floored count is written back as a string the FORM can
+      // read, so "at least" survives a round trip through the UI.
+      eq(filled.form.active, '10+', 'a floored count round-trips through the field');
+      eq(filled.form.comps, '58.00,61.00,60.00', 'and the comps are filled');
+      ok(filled.status.kind === 'FILLED', 'the lookup should have filled');
+
+      const r = evaluateForm(filled.form, store.state());
+      ok(r.ok, 'the filled form should parse');
+      if (!r.ok) return;
+      ok(
+        r.verdict.failedGates.some((g) => g.code === 'VELOCITY_COUNTS_UNBOUNDED'),
+        'an "at least" count must refuse to pass the gate, on the device too',
+      );
+
+      new OpportunityRepository(db).save(r.input, r.evaluation, T0);
+      const row = new OpportunityReader(db).get(r.input.opportunityId);
+      ok(row !== undefined, 'the refusal is recorded like any other decision');
+      eq(
+        JSON.parse(row!.input_json).activeListingsIsFloor,
+        true,
+        'and the floor is what gets stored, not the bare number',
+      );
     },
   },
 ];

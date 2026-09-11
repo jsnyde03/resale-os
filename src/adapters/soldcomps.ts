@@ -86,7 +86,12 @@ const fail = (
   quota?: QuotaReading,
 ): MarketFailure => (quota === undefined ? { ok: false, reason, detail } : { ok: false, reason, detail, quota });
 
-function readQuota(headers: Headers): QuotaReading {
+/**
+ * ⛔ **Exported so the DEVICE contract can call it.** `Headers.get` is a Web API
+ * that React Native polyfills, and "works in Node" is not the claim that
+ * matters for a screen used in an aisle. Same for `buildScrapeUrl` below.
+ */
+export function readQuota(headers: Headers): QuotaReading {
   // ⚠️ **The vendor's own docs misname these.** They document `X-Usage-Current`
   // and `X-Usage-Limit`; the wire sends `x-usage-limit`, `x-usage-remaining`,
   // `x-usage-used` and `x-usage-reset`. Measured 2026-09-11 — the docs are
@@ -139,12 +144,22 @@ function readCount(page: RawPage, itemsSeen: number): CountResult {
   return parsed;
 }
 
+/**
+ * ⚠️ **`URLSearchParams` is the other Web API this file bets on**, and React
+ * Native's polyfill has historically been partial. Named and exported so the
+ * device contract can prove the query string it builds on Hermes is the one it
+ * builds in Node.
+ */
+export function buildScrapeUrl(baseUrl: string, params: Record<string, string>): string {
+  return `${baseUrl}?${new URLSearchParams(params)}`;
+}
+
 async function getPage(
   config: SoldCompsConfig,
   params: Record<string, string>,
 ): Promise<{ ok: true; page: RawPage; quota: QuotaReading } | MarketFailure> {
   const doFetch = config.fetch ?? globalThis.fetch;
-  const url = `${config.baseUrl ?? SOLDCOMPS_BASE_URL}?${new URLSearchParams(params)}`;
+  const url = buildScrapeUrl(config.baseUrl ?? SOLDCOMPS_BASE_URL, params);
 
   let res: Response;
   try {
