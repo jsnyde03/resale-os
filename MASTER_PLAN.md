@@ -132,7 +132,7 @@ as stale, and the histogram says when it is mixing rule sets. Detail in the log.
 
 ---
 
-### Gate 6.11 — THE SCAN FLOW ✅ **BUILT 2026-09-11** *(6.11.6 awaits the deploy)*
+### Gate 6.11 — THE SCAN FLOW ✅ **BUILT 2026-09-11** *(published 2026-09-11; 6.11.6 awaits a real scan)*
 
 ⚡ **Closes D18, B84, B89.** Barcode → identity → a keyword that is **proposed
 and editable** → market → verdict, with the tag price the only typed field.
@@ -282,7 +282,7 @@ ever announces that the day arrived. A threshold the app already computes does.
 | when | what |
 |---|---|
 | **Every January** | **The tax-table review.** A new tax year means new federal brackets, a new standard deduction and a new SS wage base. Add `TAX_TABLES_<year>`, generate it from GigWorkTracker's config **by script**, and re-run the 65-figure comparison — nothing re-checks that transcription automatically, because a cross-repo test would red-gate this project whenever the other app moves *(was B47)*. ⚠️ **GigWorkTracker needs the same review in the same month** — its ROADMAP §6 describes its half. Do them together or they drift *(was B48)*. |
-| **Every 80 days** | **Rebuild and re-publish to TestFlight.** Builds expire after **90 days**, so this fires before the expiry rather than after it. ⚠️ **Not a CI cron** — Jason deploys Codemagic manually (2026-09-10), so this is a reminder, not a workflow. The plan previously assumed a second scheduled workflow; that assumption is retired. First publish: **2026-09-10**, so the next is due **2026-11-29**. |
+| **Every 80 days** | **Rebuild and re-publish to TestFlight.** Builds expire after **90 days**, so this fires before the expiry rather than after it. ⚠️ **Not a CI cron** — Jason deploys Codemagic manually (2026-09-10), so this is a reminder, not a workflow. The plan previously assumed a second scheduled workflow; that assumption is retired. Last publish: **2026-09-11** (`a3a8c38`), so the next is due **2026-11-30**, before the build expires on **2026-12-10**. |
 | **At NAV $500 — the GROWTH promotion** | **Re-evaluate proxies for restock monitoring** (Jason, 2026-09-11: *"proxies should be reevaluated when the bankroll can support them"*). ⚡ **Pinned to `promoteAtCents` (50,000) rather than to a judgement call**, because the app already computes that line, already shows it, and already changes its own rules at it — so the fund reaches the trigger instead of someone remembering it. ⛔ What to re-ask then: whether **D13**'s ban on proxy rotation should stay whole-cloth or narrow to checkout only *(its stated harm is a checkout harm — see the D13 row)*, and whether a **monthly, recurring** proxy bill is covered several times over by **monthly realised profit** — not by NAV. ⚠️ At $50 the fund can buy nothing; at $500 in GROWTH the per-item cap is $100 and the minimum profit $15, which is the first bankroll where a subscription is arithmetic rather than absurd. |
 | **At each year boundary** | Any `TaxTablesAcceptance` expires by design. If the tables for the new year are not in yet, `tax show` starts warning again — that is the system asking, not a bug. |
 

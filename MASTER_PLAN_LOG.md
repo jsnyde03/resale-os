@@ -6324,3 +6324,45 @@ own test, restored and re-verified green.
 **788 tests, 48 files, six gates green.** Money in needs the next build
 to reach the phone, and the build still needs `EXPO_PUBLIC_SOLDCOMPS_KEY` added
 to a Codemagic group first.
+
+## 2026-09-11 — published to TestFlight at a3a8c38
+
+🎯 **Jason:** *"Published successfully."* Recorded as **reported, not verified** —
+nothing here can see Codemagic.
+
+### Why `a3a8c38` is an inference and not a guess
+
+Codemagic builds whatever `master` is at trigger time, and `origin/master` sat at
+`a3a8c38` from before the trigger to after the publish, confirmed by a fetch. ⛔ **That
+is why nothing was pushed between "trigger it" and "published"** — even a docs-only
+commit would have changed the hash the build log prints first, and made a correct build
+look like the wrong one to an operator told to stop on a mismatch.
+
+### Where the key went
+
+Into Codemagic's **`AppleConnect`** group, by Jason's choice. ⚠️ That group is
+**team-wide**: Hearthlight, debt-app-v1 and GigWorkTracker all import it — Hearthlight's
+yaml calls it the "account-level" key, GigWorkTracker's "reused from your other app". So
+the SoldComps key now sits in all four apps' build environments. None of the other three
+read `EXPO_PUBLIC_SOLDCOMPS_KEY`, and Metro inlines only the variables code actually
+accesses, so none of them **embed** it. A resale-os-only `ResaleOS` group was
+recommended and declined in favour of building immediately; GigWorkTracker had already
+set the precedent with its Sentry token.
+
+### What is confirmed, and what is not
+
+- ✅ **The publish** — Jason's report.
+- ✅ **The build path passes the environment through** — nothing in the yaml clears or
+  overrides it, and the IPA is built by `xcode-project build-ipa`, whose React Native
+  bundle phase inherits the build shell's variables. ⚠️ Ruled out the obvious failure;
+  did not watch a build carry the key.
+- ⏳ **Settings → Data keys reads *set*** — the only proof the key reached the bundle.
+- ⏳ **The $25 through Money in** — B95's screen, first time on a real device.
+- ⏳ **A real scan** — **6.11.6**, the one thing the simulator lane structurally cannot
+  verify.
+
+### The 80-day row moved
+
+Next publish due **2026-11-30** (2026-09-11 + 80); the build expires **2026-12-10**
+(+90). Moved only now, after the publish landed — recording a deploy before it happens
+is how a remembered result becomes an unrun one.
