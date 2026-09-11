@@ -5036,3 +5036,58 @@ nothing could red; I had written a comment saying that test caught exactly that
 case. ⛔ **The real control for 6.6.1 is `tsc`**, and it fired the moment the
 test helper stopped compiling. The behavioural tests are worth having for the
 revert case and are not the control.
+
+## 2026-09-11 — B75 recurred, and the fix had been wired to the wrong signal
+
+The device lane failed on the Gate 6 close commit while **its own descendant
+passed**, which is the shape that says "runner", not "code".
+
+⚠️ **Nothing was left unverified.** The 6.6 run is a superset tree and went
+green at **52/52** — 51 cases from Gate 6 plus 6.6's new one — so Gate 6's code
+is verified on device by a later commit, the same argument this project used at
+the 2026-09-11 morning button-up.
+
+### ⛔ The diagnosis, and the first hypothesis was wrong
+
+I said contention: two macOS runs in flight, which I had caused by pushing while
+one was running. **The timings say no.** The boot failed at 13:20:30 and the
+second run did not start until 13:22:04 — they overlapped only during the first
+run's teardown. ⚡ **A finding that arrives with a mechanism still needs
+measuring**, and this is the second time today that rule has caught me.
+
+The real cause, from the log: **`xcrun simctl bootstatus -b` EXITED 0 on a boot
+that printed `Status=4294967295, isTerminal=YES`.** B75's guard tests
+`bootstatus`'s exit code, so it never fired; the app was installed into a sick
+simulator and the failure surfaced 180 seconds later as *"the app did not run the
+contract"* — blaming the app for a boot problem, which is the exact wrong-blame
+B75 was written to stop.
+
+⛔ **And the comment beside that code already named the status.** The 2026-09-10
+entry recorded *"ended status 4294967295"* in the workflow itself, and the
+control built from it watched `$?`. **The observation was right and the signal it
+was wired to was wrong** — the same class as every "verify the effect, not the
+exit" entry in this repo, and a reminder that **a control that has never been
+planted is not a control**: this one was only ever exercised against a boot that
+exits non-zero, which is not the failure that happens.
+
+### ⛔ The first version of my fix would have failed every HEALTHY run
+
+Caught by planting before pushing, not after. Under `set -euo pipefail`:
+
+```bash
+bad=$(echo "$out" | grep -oE '...' | grep -v 'Status=0,' | tail -1)
+```
+
+On a healthy boot the second `grep` matches nothing, exits 1, and **a failing
+command substitution in an assignment aborts the step.** Measured directly — the
+script printed `before` and never reached `after`.
+
+⚡ **That is worse than the flake it was fixing**: a gate that fails on success
+gets switched off. `|| true` is now there with the reason written beside it,
+planted across all three paths — sick boot caught, healthy boot passes, an output
+shape nobody has seen passes — and the whole step syntax-checked with `bash -n`.
+
+⚠️ **Only an explicitly non-zero terminal status fails.** An unfamiliar output
+shape must not red-gate a healthy lane: the contract itself is the real gate and
+this is a flake detector, so the omission is deliberately allowed to fall toward
+not-checking rather than toward not-trusting.

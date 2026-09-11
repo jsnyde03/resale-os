@@ -337,14 +337,14 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   whole `allocation` block — owner split and the set-aside NAV threshold. ⚡
   **That block is what D2 needs**, and D2 is due at $100 NAV, which is four to
   six flips away. → before D2 is answered.
-- **B75** ⚠️ **The device lane flaked once, and the error blamed the wrong
-  thing.** `bootstatus ... || true` swallowed a failed boot, so a simulator stuck
-  2m22s in data migrations was installed into and launched anyway, surfacing 90s
-  later as *"the app did not run the contract"*. The **same commit passed on a
-  re-run**. Fixed 2026-09-10: a failed boot is now named, retried once, and
-  reported as the RUNNER; the result deadline is 180s. ⚠️ **Watch whether it
-  recurs** — one flake is an anecdote, and a gate that fails randomly stops being
-  read.
+- ~~**B75**~~ ✅ **Recurred 2026-09-11, diagnosed, and fixed for the right
+  reason.** ⛔ **The 2026-09-10 fix read the wrong signal**: `simctl bootstatus`
+  **exits 0** on a boot that prints `Status=4294967295, isTerminal=YES`, so the
+  guard never fired and the error again blamed the app. ⚠️ The comment beside it
+  already named that status while the code checked `$?`. Now reads the printed
+  status **and** confirms the device is `(Booted)`. ⛔ **And the first version of
+  the fix would have killed every HEALTHY run** — `set -e` plus a `grep` that
+  matches nothing — caught by planting before pushing. Detail in the log.
 - **B76** ⚠️ **The watchlist recomputes 21 evaluations per saved row.** Measured
   2026-09-10 on desktop: **62 ms at 10 rows, 91 ms at 50, 277 ms at 200** — fine
   at the scale the fund is at, noticeable on a phone at the cap. ⚠️ **And the
