@@ -44,13 +44,17 @@ wired.
       **B3**'s histogram has something to count and **6.5**'s watchlist something
       to watch. Scores are device-local by decision (**D15**).
 
-- [~] **6.1** ⏳ **The data route (D12) — SoldComps first, then eBay.** ⚡ **6.1.1
-      is UNBLOCKED and needs only a SoldComps key** (free, no approval): three of
-      the four gates that refuse everything are fed by SOLD data. eBay approval
-      gates only the ACTIVE count. ⚠️ **B74 before a line is written.** Sub-steps
-      in the log, retrieved at switch-in.
+- [~] **6.1** ⛔ **RE-PLANNED 2026-09-11: the eBay developer account was DENIED.**
+      Not just Marketplace Insights — the account, which takes Browse with it.
+      ⚡ **Survivable: SoldComps returns ACTIVE listings too** (`sold=false`, up to
+      200/page), so one vendor covers both halves and the denial costs the route,
+      not the data. ⚠️ **It buys a single-vendor dependency**, which makes D12's
+      *"the manual path stays wired"* load-bearing rather than cautious.
+      ⛔ **And the two caps are not symmetric — B77 before any number reaches a
+      gate.** Sub-steps in the log, retrieved at switch-in.
 
-**Exit:** the screen fills what it can from eBay, says where every number came
+**Exit:** the screen fills what it can from SoldComps, says where every number
+came from, and answers exactly as well as it does today when there is no signal.
 from, and answers exactly as well as it does today when the network does not.
 
 - [x] **6.2** ✅ **Done 2026-09-10. Closes B3.** *What is stopping you* — the
@@ -342,6 +346,16 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   saying so, which is the class this project keeps being bitten by. Cache by
   `(input, policy version, NAV)` or page it, and make the cap speak. → when the
   list gets long, not before.
+- **B77** ⛔ **THE TWO CAPS PUSH OPPOSITE WAYS, and one of them is unsafe.**
+  SoldComps caps SOLD at 40/page and ACTIVE at 200/page. Hold time is
+  `90 × (active + 1) / sold90`, so **undercounting SOLD refuses a good item
+  (safe); undercounting ACTIVE accepts a bad one (UNSAFE).** Measured 2026-09-11:
+  500 active / 300 sold is a 150-day hold; read with active capped at 200 it
+  reads **60 days** — inside GROWTH's ceiling, and wrong. Sell-through inflates
+  the same way. ⛔ **`hasNextPage` on the ACTIVE query means the count is a FLOOR
+  and the derived hold a LOWER BOUND** — the gate must refuse to pass on it, which
+  is the reverse of the sell-through rule. → **6.1.1, before any number reaches a
+  gate.**
 - **B74** ⛔ **SoldComps: a SOLD page caps at 40, and `totalItems` is the count on
   the CURRENT PAGE.** ⚠️ **I said 240 and that was wrong** — 240 is the ACTIVE
   limit; `count` is 1-40 for sold. The clearance rule needs `sold ≥ 4.3 × (active

@@ -4367,3 +4367,19 @@ the reverse of the existing sell-through rule, where an absent ratio makes the
 gate *abstain* rather than fail an unknown — because there, not knowing is
 neutral, and here not knowing is optimistic. **The direction the unknown leans is
 what decides whether abstaining is safe.**
+
+### ⛔ And I repeated the failure one turn after recording it
+
+The first 6.1 re-plan threw on a bad anchor and never wrote, while the log append
+and the commit ran anyway — **the same shape recorded one entry earlier**, about
+`git rm` aborting while the gates went green over a prune that had not happened.
+
+The cause is mechanical and so is the fix: the commands were separated by
+**newlines**, not `&&`, so a non-zero exit stopped nothing. Chained with `&&`, a
+failed edit aborts the commit instead of shipping a log entry describing work the
+queue does not contain. ⚡ **It proved itself immediately** — the very next
+attempt had a too-strict assert, threw, and nothing downstream ran.
+
+⚠️ **Knowing the lesson did not apply it.** It was written down, in this file, in
+the previous entry, and the next command repeated it. **A rule holds when it is
+built into the mechanism; as a thing to remember it lasted about ten minutes.**
