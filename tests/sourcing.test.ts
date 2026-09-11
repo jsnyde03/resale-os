@@ -575,3 +575,36 @@ describe('6.1.3 — the network fills fields, and never decides', () => {
     expect(status.quota?.monthlyRemaining).toBe(0);
   });
 });
+
+describe('6.6.2 — what the sourcing screen can and cannot abstain on', () => {
+  /**
+   * ⚠️ **Written as the opposite assertion, because the first one was wrong.**
+   *
+   * I asserted that an operator estimate makes this screen report sell-through
+   * as "not tested" — and it cannot. `SourcingForm` REQUIRES both counts, so
+   * `evaluateForm` always produces a COMPS velocity and the sell-through gate
+   * always runs. The abstention is real and reachable through
+   * `evaluateOpportunity` (asserted in `scoring.test.ts`), and **unreachable
+   * from this form**.
+   *
+   * ⛔ The display stays anyway, and that is a deliberate call rather than an
+   * oversight: it renders nothing when there is nothing, and the day this form
+   * gains an "I don't know, estimate it" path the screen already says so. That
+   * is different from `quote.candidate`, deleted at 6.6.1 — **a second way to
+   * BUILD a decision is a hazard; a display that is empty by construction is
+   * not.** These tests pin which of the two this is.
+   */
+  it('⛔ never abstains, because the form cannot produce an estimate', () => {
+    for (const form of [GOOD, { ...GOOD, sold90: '0', active: '0' }, { ...GOOD, active: '10+' }]) {
+      expect(ok(form).abstentions, JSON.stringify(form)).toEqual([]);
+    }
+  });
+
+  it('and the gate it would abstain on really did run', () => {
+    // The control for the above: "no abstentions" must mean "everything ran",
+    // not "nothing was checked".
+    expect(ok(GOOD).failedGates).toBeDefined();
+    const v = ok({ ...GOOD, sold90: '1', active: '99' });
+    expect(v.failedGates.map((g) => g.code)).toContain('SELL_THROUGH_TOO_LOW');
+  });
+});

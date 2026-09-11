@@ -380,9 +380,19 @@ export default function Sourcing() {
                   value={`${verdict.expectedDaysToSale}d${verdict.velocityIsEstimate ? ' (your guess)' : ''}`}
                   tone="dim"
                 />
-                <Row label="Sell-through" value={`${(verdict.sellThroughBps / 100).toFixed(0)}%`} tone="dim" />
+                {/* ⛔ B66: a rule that did not get to look must say so. Showing
+                    a sell-through figure with no note is how an operator comes
+                    to believe a gate protected them when it abstained. */}
+                {verdict.abstentions.some((a) => a.code === 'SELL_THROUGH_TOO_LOW') ? (
+                  <Row label="Sell-through" value="not tested" tone="warn" />
+                ) : (
+                  <Row label="Sell-through" value={`${(verdict.sellThroughBps / 100).toFixed(0)}%`} tone="dim" />
+                )}
                 <Row label="Confidence" value={`${(verdict.confidenceBps / 100).toFixed(0)}%`} tone="dim" />
                 <Row label="Buy / risk" value={`${verdict.buyScore} / ${verdict.riskScore}`} tone="dim" />
+                {verdict.abstentions.map((a) => (
+                  <Muted key={a.code}>Not tested: {a.because}</Muted>
+                ))}
               </Card>
 
               <Card>

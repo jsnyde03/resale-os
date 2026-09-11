@@ -91,15 +91,17 @@ repair.**
       forgets one fails to compile. ⛔ **`quote.candidate` deleted as dead** —
       D14 removed the only thing that assessed it, and it could not have
       satisfied the rule. 656 tests (+3); coverage moved BEFORE the deletion.
-- [ ] **6.6.2** Make `sellThroughBps` — the ONE genuine abstention — **say so**
-      rather than be absent, carrying its reason. After 6.6.1 nothing else is
-      ever absent, so "absent" stops being ambiguous by construction.
-- [ ] **6.6.3** Exhaustive **by construction**, off a declared object's keys —
-      the shape `validatePolicy` already uses, after a hand-written field list
-      let `minSellThroughBps` through as `NaN` and print *"vs a NaN% minimum"*.
-- [ ] **6.6.4** A control that plants an under-populated candidate and proves the
-      gate refuses to RUN rather than passing quietly.
-- [ ] **6.6.5** On-device verification.
+- [x] **6.6.2** ✅ **Done 2026-09-11.** `abstained(reason)` — the one gate that
+      may decline to run declares it, `ConstraintAssessment.abstentions` carries
+      it, and the screen says *"not tested"* instead of showing a figure.
+- [x] **6.6.3** ✅ **Done 2026-09-11.** Every code is accounted for as a result
+      **or** an abstention, swept across 11 candidate shapes — a code with no
+      gate now reds two tests. ⚠️ A compile-time version was considered and
+      **not** built; the reasoning is in the log.
+- [x] **6.6.4** ✅ **Done 2026-09-11.** Planted three ways: the 6.6.1 revert
+      (2 red), a code with no gate (2 red), and a re-added guard alone
+      (**0 red — the plant corrected the claim**).
+- [ ] **6.6.5** On-device verification — the case is written, pushing for it.
 
 **Exit:** a gate cannot be skipped by accident, and one that abstains on purpose
 says which and why.

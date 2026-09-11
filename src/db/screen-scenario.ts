@@ -29,6 +29,7 @@ import { policyEdit, policyFieldsFrom, taxEdit, taxFieldsFrom } from '../ui/sett
 import { evaluateForm, fillFromMarket } from '../screens/sourcing.js';
 import { buildScrapeUrl, readQuota } from '../adapters/soldcomps.js';
 import { parseCount } from '../core/counts.js';
+import { CONSTRAINT_CODES } from '../core/capital/constraints.js';
 import { rejectionsView } from '../screens/rejections.js';
 import { watchlist } from '../screens/watchlist.js';
 import { parseOpportunity } from '../domain/opportunity.js';
@@ -816,6 +817,60 @@ export const SCREEN_SCENARIO: readonly ScenarioCase[] = [
         JSON.parse(row!.input_json).activeListingsIsFloor,
         true,
         'and the floor is what gets stored, not the bare number',
+      );
+    },
+  },
+  {
+    name: 'gates: every rule is accounted for — as a result, or as a declared abstention',
+    run: (db) => {
+      // ⛔ **B66 on the device.** `assessPurchase` used to skip any gate whose
+      // field was `undefined`, and a deliberate abstention and a forgotten
+      // field were written identically — the shape that cost 64 divergences in
+      // 96 cases (B58/D14). After 6.6.1 nothing is absent by accident, and
+      // after 6.6.2 the one genuine abstention arrives with its reason.
+      //
+      // ⚠️ Run here because a gate that silently stops being evaluated changes
+      // no test that asserts on FAILURES — it just quietly stops refusing.
+      const store = funded(db, 50_000);
+
+      const r = evaluateForm(
+        { name: 'a real one', category: 'TOYS', price: '12.00', resale: '60.00',
+          sold90: '40', active: '10' },
+        store.state(),
+      );
+      ok(r.ok, 'the form should parse');
+      if (!r.ok) return;
+
+      const accounted = new Set([
+        ...r.evaluation.gates.results.map((x) => x.code),
+        ...r.evaluation.gates.abstentions.map((x) => x.code),
+      ]);
+      for (const code of CONSTRAINT_CODES) {
+        ok(accounted.has(code), `${code} produced neither a result nor an abstention`);
+      }
+
+      // ⚡ And the abstention is reachable, with its reason, through the path
+      // that can actually produce one — an operator estimate has no ratio.
+      const guessed = evaluateOpportunity(
+        parseOpportunity({
+          opportunityId: 'guess', name: 'a hunch', category: 'TOYS',
+          askingPriceCents: 1_200, expectedGrossCents: 6_000, operatorDaysEstimate: 5,
+        }),
+        store.state(),
+      );
+      eq(guessed.gates.abstentions.length, 1, 'exactly one gate should abstain');
+      eq(
+        guessed.gates.abstentions[0]?.code,
+        'SELL_THROUGH_TOO_LOW',
+        'and it is the one with no ratio to test',
+      );
+      ok(
+        (guessed.gates.abstentions[0]?.because ?? '').length > 0,
+        'an abstention with no reason is the silence this exists to remove',
+      );
+      ok(
+        !guessed.gates.results.some((x) => x.code === 'SELL_THROUGH_TOO_LOW'),
+        'an abstaining gate must not also report a verdict',
       );
     },
   },

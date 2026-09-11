@@ -12,7 +12,11 @@
 import type { Bps, Cents } from '../core/money.js';
 import type { FundState } from '../core/capital/state.js';
 import { computeMetrics, type CapitalMetrics } from '../core/capital/metrics.js';
-import { assessPurchase, type ConstraintAssessment } from '../core/capital/constraints.js';
+import {
+  abstained,
+  assessPurchase,
+  type ConstraintAssessment,
+} from '../core/capital/constraints.js';
 import {
   deriveEconomics,
   type OpportunityEconomics,
@@ -120,10 +124,14 @@ export function evaluateOpportunity(input: OpportunityInput, state: FundState): 
       confidenceBps: confidence.confidenceBps,
       buyScore: buy.score,
       riskScore: risk.score,
-      // Abstain on the ratio when there are no comps to compute it from.
-      ...(economics.velocity.source === 'COMPS'
-        ? { sellThroughBps: economics.velocity.sellThroughBps }
-        : {}),
+      // ⛔ **The abstention is DECLARED, not expressed by absence (6.6.2).**
+      // An operator estimate has no ratio, and a zero would refuse the item for
+      // being unpopular rather than for being unevidenced — but "absent" is
+      // also exactly what a forgotten field looks like, which is B66.
+      sellThroughBps:
+        economics.velocity.source === 'COMPS'
+          ? economics.velocity.sellThroughBps
+          : abstained('the hold came from your estimate, so there are no comps to take a ratio from'),
       // ⛔ NOT abstained on, and that is the point — an unknown that leans
       // optimistic has to be refused rather than waved through. B77.
       boundsAreOptimistic: economics.velocity.boundsAreOptimistic,

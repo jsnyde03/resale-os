@@ -4977,3 +4977,62 @@ immediately: making the fields required stopped this file's own helper from
 compiling. The tests are the behavioural half, and they are worth having for the
 revert case — but calling them the control would have been the fourth time this
 session that a written claim outran a measured one.
+
+### 6.6.2 — the one gate that may decline to run now declares it
+
+`abstained(reason)`, `ConstraintAssessment.abstentions`, and a screen that says
+**"Sell-through: not tested"** with the reason underneath instead of printing a
+figure. ⚠️ **That last part is the actual claim in B66.** The assessment knowing
+is not enough: an operator who sees a sell-through number and no note believes a
+rule looked at their item when it did not.
+
+### ⛔ And the abstention is UNREACHABLE from the sourcing screen
+
+Found by writing the test and having it fail. I asserted that an operator
+estimate makes the aisle screen report "not tested" — it cannot. `SourcingForm`
+**requires** both counts, so `evaluateForm` always produces a COMPS velocity and
+the gate always runs. The abstention is real and reachable through
+`evaluateOpportunity`; from this form it is not.
+
+⚠️ **The display stays, and that is a call rather than an oversight.** It renders
+nothing when there is nothing, and the day the form gains an *"I don't know,
+estimate it"* path the screen already says so. ⛔ **That is a different thing
+from `quote.candidate`, deleted one step earlier:** a second way to BUILD a
+decision is a hazard, because it can be used; a display that is empty by
+construction cannot mislead anyone. The tests now pin which of the two this is,
+in both directions — never abstains, and the gate it would abstain on really did
+run.
+
+### 6.6.3 — exhaustive by construction, and why NOT at compile time
+
+Every declared code must produce a result **or** an abstention. Planted a
+`CONSTRAINT_CODE` with no gate behind it: **two tests went red.** The other
+direction is already the compiler's — a gate whose code is not in the union does
+not build.
+
+⚠️ **Swept across 11 candidate shapes rather than one.** Two examples would miss
+a gate conditional on some third property, which is the exact shape being
+removed — checking for it with a single example would have been a control that
+cannot fail.
+
+⛔ **A compile-time version was considered and rejected.** Driving the gates off
+`CONSTRAINT_CODES` as a map of code → function would make a missing gate a type
+error rather than a test failure — stronger, and it would restructure the most
+load-bearing file in the project to buy the difference between "red in `tsc`"
+and "red in `vitest`", when both run in `npm run check` and both block a commit.
+**Recorded rather than left implicit**, because "we did the weaker thing" is
+worth being able to find later.
+
+### ⚠️ 6.6.4 — three plants, and one of them corrected me
+
+| plant | red |
+|---|---|
+| 6.6.1 reverted for one field (optional, guarded, caller drops it) | 2 tests |
+| a `CONSTRAINT_CODE` with no gate behind it | 2 tests |
+| **a re-added `!== undefined` guard, alone** | **0 — and my comment had claimed it would** |
+
+The third is the useful one. With the field required the guard is a no-op, so
+nothing could red; I had written a comment saying that test caught exactly that
+case. ⛔ **The real control for 6.6.1 is `tsc`**, and it fired the moment the
+test helper stopped compiling. The behavioural tests are worth having for the
+revert case and are not the control.

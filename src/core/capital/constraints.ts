@@ -34,6 +34,37 @@ export const CONSTRAINT_CODES = [
 
 export type ConstraintCode = (typeof CONSTRAINT_CODES)[number];
 
+/**
+ * ⛔ **A gate that declines to run must SAY so (6.6.2, B66).**
+ *
+ * Absence is how the old shape expressed this, and absence is ambiguous: a
+ * deliberate abstention and a forgotten field are written identically, and
+ * neither the code nor a reader can tell them apart. After 6.6.1 nothing is
+ * ever absent by accident, so this is the only remaining way a gate does not
+ * produce a verdict — and it arrives with its reason attached.
+ *
+ * ⚠️ **It is a value, not a silence**, which is what lets the screen show
+ * *"sell-through: not tested, because the hold came from your estimate"*
+ * instead of simply not mentioning a rule the operator believes is protecting
+ * them.
+ */
+export interface Abstention {
+  readonly abstained: true;
+  /** Why, in the operator's language. This gets shown. */
+  readonly because: string;
+}
+
+export const abstained = (because: string): Abstention => ({ abstained: true, because });
+
+export function isAbstention(v: unknown): v is Abstention {
+  return typeof v === 'object' && v !== null && (v as Abstention).abstained === true;
+}
+
+export interface DeclaredAbstention {
+  readonly code: ConstraintCode;
+  readonly because: string;
+}
+
 export interface ConstraintResult {
   readonly code: ConstraintCode;
   readonly passed: boolean;
@@ -74,10 +105,14 @@ export interface PurchaseCandidate {
   readonly buyScore: number;
   readonly riskScore: number;
   /**
-   * Sell-through from comps. Omitted for an operator estimate, where there is
-   * no ratio to test — the gate abstains rather than failing an unknown.
+   * Sell-through from comps, **or a declared abstention**.
+   *
+   * ⚠️ An operator estimate has no ratio to test, and a zero would refuse the
+   * item for being unpopular rather than for being unevidenced. ⛔ Since 6.6.2
+   * that is stated rather than expressed by absence — `abstained('...')` —
+   * because absence is also what a forgotten field looks like.
    */
-  readonly sellThroughBps?: Bps;
+  readonly sellThroughBps: Bps | Abstention;
   /**
    * ⛔ **Set when `expectedDaysToSale` is a LOWER bound and `sellThroughBps` an
    * UPPER one** — the market counts behind them were a floor, so both gates are
@@ -96,6 +131,8 @@ export interface PurchaseCandidate {
 export interface ConstraintAssessment {
   readonly results: readonly ConstraintResult[];
   readonly failures: readonly ConstraintResult[];
+  /** ⛔ Gates that deliberately did not run, and why. Never empty by accident. */
+  readonly abstentions: readonly DeclaredAbstention[];
   readonly passed: boolean;
   readonly metrics: CapitalMetrics;
 }
@@ -119,6 +156,7 @@ export function assessPurchase(
   const p = m.modePolicy;
   const cost = candidate.landedCostCents;
   const results: ConstraintResult[] = [];
+  const abstentions: DeclaredAbstention[] = [];
 
   // --- hold time ----------------------------------------------------------
   results.push(
@@ -252,14 +290,17 @@ export function assessPurchase(
     );
   }
 
-  if (candidate.sellThroughBps !== undefined) {
+  if (isAbstention(candidate.sellThroughBps)) {
+    abstentions.push({ code: 'SELL_THROUGH_TOO_LOW', because: candidate.sellThroughBps.because });
+  } else {
+    const ratio = candidate.sellThroughBps;
     results.push(
       result(
         'SELL_THROUGH_TOO_LOW',
-        candidate.sellThroughBps >= p.minSellThroughBps,
-        candidate.sellThroughBps,
+        ratio >= p.minSellThroughBps,
+        ratio,
         p.minSellThroughBps,
-        `sell-through ${(candidate.sellThroughBps / 100).toFixed(0)}% vs a ` +
+        `sell-through ${(ratio / 100).toFixed(0)}% vs a ` +
           `${(p.minSellThroughBps / 100).toFixed(0)}% minimum in ${m.mode}`,
       ),
     );
@@ -320,7 +361,7 @@ export function assessPurchase(
   }
 
   const failures = results.filter((r) => !r.passed);
-  return { results, failures, passed: failures.length === 0, metrics: m };
+  return { results, failures, abstentions, passed: failures.length === 0, metrics: m };
 }
 
 /**

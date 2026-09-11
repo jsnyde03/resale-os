@@ -122,6 +122,15 @@ export interface SourcingVerdict {
   /** Every gate that failed, for the histogram at 4.7 and for arguing with. */
   readonly failedGates: readonly { code: string; message: string; actual: number; limit: number }[];
   /**
+   * ⛔ **Gates that deliberately did NOT run, and why (6.6.2, B66).**
+   *
+   * ⚠️ An abstention is not a pass and it is not a failure — it is a rule the
+   * operator believes is protecting them that did not get to look. Saying
+   * nothing is how "absent" and "forgotten" became indistinguishable in the
+   * first place, so this is surfaced rather than logged.
+   */
+  readonly abstentions: readonly { code: string; because: string }[];
+  /**
    * ⚡ **What would FIX the hold, not just the fact that it failed.**
    *
    * `HOLD_TOO_LONG` is the gate that refuses most real candidates, and the
@@ -364,6 +373,7 @@ export function evaluateForm(
       expectedRoiBps: e.economics.expectedRoiBps,
       expectedDaysToSale: e.economics.velocity.expectedDaysToSale,
       sellThroughBps: e.economics.velocity.sellThroughBps,
+      abstentions: e.gates.abstentions.map((a) => ({ code: a.code, because: a.because })),
       buyScore: e.result.buyScore,
       riskScore: e.result.riskScore,
       confidenceBps: e.result.confidenceBps,

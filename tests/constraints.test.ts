@@ -3,6 +3,7 @@ import { Fund, purchase } from './helpers.js';
 import {
   assessPurchase,
   maxAffordableLandedCost,
+  abstained,
   CONSTRAINT_CODES,
   type ConstraintCode,
   type PurchaseCandidate,
@@ -25,6 +26,10 @@ function candidate(overrides: Partial<PurchaseCandidate> = {}): PurchaseCandidat
     buyScore: 90,
     riskScore: 10,
     boundsAreOptimistic: false,
+    // ⛔ **Also required since 6.6.2** — but it may be an `abstained(...)`,
+    // which is the one thing a gate is allowed not to answer. The default is a
+    // real ratio so the helper keeps meaning "a candidate that passes".
+    sellThroughBps: 9_000,
     ...overrides,
   };
 }
@@ -121,10 +126,25 @@ describe('each rejection code fires', () => {
     expect(failed(a)).toContain('SELL_THROUGH_TOO_LOW');
   });
 
-  it('abstains on sell-through when there are no comps to compute it from', () => {
-    // An operator estimate has no ratio. The gate must not fail an unknown.
-    const a = assessPurchase(fund().state, candidate());
+  it('abstains on sell-through when there are no comps — and SAYS so', () => {
+    // ⛔ 6.6.2. The gate must not fail an unknown, and it must not stay silent
+    // about not having run: absence is also what a forgotten field looks like.
+    const a = assessPurchase(
+      fund().state,
+      candidate({ sellThroughBps: abstained('no comps, the hold is your estimate') }),
+    );
     expect(a.results.map((r) => r.code)).not.toContain('SELL_THROUGH_TOO_LOW');
+    expect(a.abstentions).toEqual([
+      { code: 'SELL_THROUGH_TOO_LOW', because: 'no comps, the hold is your estimate' },
+    ]);
+    // ⚠️ An abstention is not a failure. It must not refuse the purchase.
+    expect(a.passed).toBe(true);
+  });
+
+  it('declares nothing when every gate ran', () => {
+    // The control. Without it the assertion above passes for an implementation
+    // that declares an abstention on every candidate.
+    expect(assessPurchase(fund().state, candidate()).abstentions).toEqual([]);
   });
 
   it('BUY_SCORE_TOO_LOW under 65', () => {
@@ -419,12 +439,36 @@ describe('6.6.1 — a gate can no longer be skipped by accident', () => {
     for (const code of ALWAYS_EVALUATED) expect(codes, code).toContain(code);
   });
 
-  it('⚠️ sell-through is still the ONE that may be absent, and only that one', () => {
-    // 6.6.2 makes it SAY so rather than be absent. Until then, this pins the
-    // fact that exactly one gate can go missing — so if a second one ever
-    // starts disappearing, this test names it instead of a verdict being wrong.
-    const evaluated = new Set(assessPurchase(fund().state, candidate()).results.map((r) => r.code));
-    const missing = CONSTRAINT_CODES.filter((c) => !evaluated.has(c));
-    expect(missing).toEqual(['SELL_THROUGH_TOO_LOW']);
+  it('⛔ every gate is accounted for — as a result, or as a declared abstention', () => {
+    // ⛔ **6.6.2 closed this: NOTHING is missing any more.** Every gate either
+    // produces a result or declares an abstention, so a code appearing in
+    // neither list is a defect rather than a convention.
+    //
+    // ⚠️ **Swept across a RANGE of candidates, not one.** Two candidates would
+    // miss a gate that is conditional on some third property — which is exactly
+    // the shape being removed here, so checking for it with one example would
+    // have been a control that cannot fail.
+    const f = fund();
+    const shapes = [
+      candidate(),
+      candidate({ sellThroughBps: abstained('no comps') }),
+      candidate({ expectedDaysToSale: 22 }),
+      candidate({ expectedDaysToSale: 1 }),
+      candidate({ landedCostCents: 0 }),
+      candidate({ landedCostCents: 9_000 }),
+      candidate({ modeledDownsideCents: 0 }),
+      candidate({ expectedNetProfitCents: 0, expectedRoiBps: 0 }),
+      candidate({ confidenceBps: 0, buyScore: 0, riskScore: 100 }),
+      candidate({ boundsAreOptimistic: true }),
+      candidate({ category: 'NEVER_SEEN_BEFORE' }),
+    ];
+    for (const c of shapes) {
+      const a = assessPurchase(f.state, c);
+      const accounted = new Set([
+        ...a.results.map((r) => r.code),
+        ...a.abstentions.map((x) => x.code),
+      ]);
+      expect(CONSTRAINT_CODES.filter((x) => !accounted.has(x)), JSON.stringify(c)).toEqual([]);
+    }
   });
 });
