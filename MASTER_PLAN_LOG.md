@@ -5648,3 +5648,62 @@ scan changes nothing, and that the scanned form is still judged by the gates
 rather than by the scanner. **The camera itself closes at the deploy**, on a real
 device with a real barcode, and saying so is better than a green tick that means
 nothing.
+
+## 2026-09-11 — Gate 7.5: drop intel
+
+⚡ **Started ahead of the deploy on Jason's call**: *"I'm not at Walmart and
+won't be for awhile. 7.5 therefore is the most important next piece."* The deploy
+unblocks a rack visit, and there is no rack visit coming.
+
+### ⚡ A drop has no discovery problem — that is the whole reason it is tractable
+
+The fund cannot browse retail: eBay refused it a developer account (**D16**) and
+Walmart's APIs are partner-only. **A drop is different in kind.** The product,
+the retailer, the date and the price are *announced*, publicly, before it
+happens. No API denial touches that, which is why this gate is buildable while
+market-wide radar (**D17**) is parked.
+
+### ⛔ What it has instead is a valuation problem, and that is 7.5.1
+
+The thing has never been sold, so there are no comps for it — only for whatever
+came before. ⚠️ **Everything in `compConfidence` measures PRECISION, not
+ACCURACY**: count, dispersion and recency. A tight, plentiful, recent comp set
+for last year's model scores near the top **while describing a product nobody is
+buying**, and the number it supports becomes the resale price.
+
+⚡ So `CompEvidence.analogous` **caps** the comp term at
+`ANALOGOUS_COMP_CEILING_BPS` (5,000) rather than scaling it:
+
+- **Capped, not scaled**, because a weak predecessor set is already low and must
+  not be punished twice. The cap says one thing — *"not about this product"*.
+- **Above the no-comps default** (3,000), because last year's model really is
+  better evidence than nothing, or nobody would use one.
+- The same shape as `OPERATOR_ESTIMATE_CONFIDENCE_BPS`, which sits below every
+  mode floor so a guess cannot clear a gate alone.
+
+⚠️ **And `Comparable.why` is a required field, not decoration.** An analogy
+nobody can inspect is a guess with a number attached; the operator has to be able
+to disagree with the comparison, which means seeing it.
+
+### ⛔ A real bug, on the worst possible day
+
+`dropTiming` diffed a drop DATE against the current MOMENT, so a drop happening
+**today** came out at -1 days and read as **passed**. The day it happens is the
+single worst day to be wrong about. Fixed by normalising `now` to its own UTC
+midnight, and pinned at **both ends of that day** — 00:00:00 and 23:59:59 — since
+a fix that works at noon proves nothing about either edge.
+
+⚠️ **My test expectation encoded the bug**: I had written 19 days for Sept 11 →
+Oct 1, which is 20. The assertion was derived from the broken implementation
+rather than from a calendar.
+
+### ⛔ "Nothing to compare this to" is not a refusal
+
+`DropReadiness` separates `READY`, `NO_COMPARABLE` and `PASSED`. A refusal is an
+answer; *"there is nothing to value this against"* is not, and reporting them the
+same way is how a fund learns to ignore its own screen.
+
+⚡ **And a drop shortfall is DATED**, which makes it a different question from
+6.5's "not yet, or never". A clearance item refused on capital is refused at this
+bankroll forever; a drop says **"you need this much by then"**, and whether that
+is reachable is a fact about time rather than about rules.

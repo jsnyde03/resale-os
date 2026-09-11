@@ -43,13 +43,41 @@ export interface CompEvidence {
   readonly pricesCents: readonly Cents[];
   /** Median age of those sales, in days. */
   readonly medianAgeDays: number;
+  /**
+   * ⛔ **True when these comps are for a DIFFERENT product (Gate 7.5).**
+   *
+   * A drop has not been sold yet, so it is priced by analogy — last year's
+   * model, the previous colourway. ⚠️ **Everything else in `compConfidence`
+   * measures PRECISION, not ACCURACY**: count, dispersion and recency. A tight,
+   * plentiful, recent comp set for the predecessor scores near the top, and the
+   * number it supports is about something the operator is not buying.
+   *
+   * ⛔ So an analogy is CAPPED rather than discounted. However good the
+   * predecessor's comps are, they are not about this product, and the cap says
+   * exactly that. A weak predecessor set is already low and is not punished
+   * twice.
+   */
+  readonly analogous?: boolean;
 }
+
+/**
+ * The most an analogy may contribute.
+ *
+ * ⚡ Set deliberately ABOVE `CONFIDENCE_DEFAULTS.compBps` (3,000) — last year's
+ * model really is better evidence than nothing — and well below what measured
+ * comps reach, so an analogy informs a decision without being able to carry
+ * one. The same shape as `OPERATOR_ESTIMATE_CONFIDENCE_BPS`, which is capped
+ * below every mode floor for the same reason.
+ */
+export const ANALOGOUS_COMP_CEILING_BPS: Bps = 5_000;
 
 export interface CompConfidence {
   readonly countTermBps: Bps;
   readonly dispersionTermBps: Bps;
   readonly recencyTermBps: Bps;
   readonly confidenceBps: Bps;
+  /** ⛔ True when these comps describe a different product. @see CompEvidence */
+  readonly analogous: boolean;
   /** Coefficient of variation of the comp prices. Reused by the Risk Score. */
   readonly coefficientOfVariation: number;
 }
@@ -68,6 +96,7 @@ export function compConfidence(evidence: CompEvidence | null): CompConfidence {
       dispersionTermBps: 0,
       recencyTermBps: 0,
       confidenceBps: CONFIDENCE_DEFAULTS.compBps,
+      analogous: evidence?.analogous === true,
       coefficientOfVariation: COMP_CV_WORTHLESS,
     };
   }
@@ -77,11 +106,16 @@ export function compConfidence(evidence: CompEvidence | null): CompConfidence {
   const dispersionTerm = 1 - clamp01(cv / COMP_CV_WORTHLESS);
   const recencyTerm = 1 - clamp01(evidence.medianAgeDays / COMP_RECENCY_HORIZON_DAYS);
 
+  const measured = toBpsFrom01(0.4 * countTerm + 0.4 * dispersionTerm + 0.2 * recencyTerm);
+
   return {
     countTermBps: toBpsFrom01(countTerm),
     dispersionTermBps: toBpsFrom01(dispersionTerm),
     recencyTermBps: toBpsFrom01(recencyTerm),
-    confidenceBps: toBpsFrom01(0.4 * countTerm + 0.4 * dispersionTerm + 0.2 * recencyTerm),
+    // ⛔ An analogy is capped, never scaled. @see CompEvidence.analogous
+    confidenceBps:
+      evidence.analogous === true ? Math.min(measured, ANALOGOUS_COMP_CEILING_BPS) : measured,
+    analogous: evidence.analogous === true,
     coefficientOfVariation: cv,
   };
 }
