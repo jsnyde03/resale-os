@@ -5332,3 +5332,34 @@ whole tree**, all in the one case that is about the cache.
 ⚡ **The middle row is the one that matters**, and it is the row the boot guard
 never had: proof that the check does not fire on correct input. B87 is four hours
 old and this item was written to not repeat it.
+
+### 6.8.5 — 53/53 on device, and the exempted case passes there too
+
+Confirmed from the artifact rather than the log: `engine: a second store writes,
+and the first cannot see it until told` — **PASS**. That is the case carrying the
+three `cache-assertion` exemptions and the control added at 6.8.2, so the
+exemption mechanism and the new control both hold on Apple's SQLite.
+
+### Gate 6.8's after-scan, and the replenishment
+
+⚡ **The pattern across 6.6, 6.7 and 6.8 is now three for three: the backlog
+entry's stated fix was wrong each time, and the switch-in scan caught it each
+time.** 6.6's premise was historical (D14 had removed the second surface); 6.7.3
+needed no model work at all; 6.8's "worth a lint" would have banned 16 correct
+uses. ⛔ **A backlog entry records a problem accurately and a solution
+speculatively** — it is written at the moment of discovery, when the problem is
+in front of you and the fix is not.
+
+**Next active build: 6.9 (B55)**, premises measured before promotion rather than
+after: **seven handles closed inside a TRY body**, and nine pinned migration
+names. ⚠️ Its most interesting line is 6.9.3 — `rmSync(..., maxRetries: 5)` is
+the mitigation that stopped anyone noticing the leak, and once the leak is gone
+it is either unnecessary or hiding a second one. **Deciding which is the point;
+leaving it as a charm is not.**
+
+⚠️ **Runner-up, and it is overdue rather than merely open: B57**, the app icon.
+Its trigger reads *"before any TestFlight build"* and the first publish was
+2026-09-10 — so it fired after the fact, and the fund shows a **white square** on
+the home screen. Verified: `mobile/app.json` has no `icon` key and there is no
+assets directory. It loses to 6.9 only because the artwork is Jason's taste
+rather than mine; the plumbing is twenty minutes whenever he has a picture.

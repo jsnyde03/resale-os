@@ -101,37 +101,47 @@ model always took one; only the screen was pinned to the active mode.
 
 ---
 
-### Gate 6.8 — A TEST THAT READS THE CACHE IS TESTING THE ENGINE AGAINST ITSELF (B54) ⚡ **ACTIVE BUILD**
+### Gate 6.8 — A TEST MAY NOT ASSERT ON THE CACHE ✅ **DONE 2026-09-11, 53/53 on device**
 
-`store.state()` answers from a cache, so a test that asserts on it can pass over
-a value the write path dropped. It cost a real hour in 5.5.1. ⚡ **Measured at
-switch-in: 75 `store.state()` call sites against 7 `derivedState()`, and no
-lint.**
-
-⛔ **The filed fix — "worth a lint" — is wrong as stated, and 6.8.1 is deciding
-the right one.** `expect(store.state().balances.LIQUID)` is a perfectly good
-assertion *about the engine*; it is only wrong as a claim about **persistence**.
-A blanket ban would red-gate correct tests.
-
-- [x] **6.8.1** ✅ **Done 2026-09-11.** The rule is narrower than the backlog
-      said: **a test may not ASSERT on `state()`** — passing it to a scorer is
-      fine, because that claim is about the engine. 75 sites became **29**.
-- [x] **6.8.2** ✅ **Done 2026-09-11.** All 29 swapped to `derivedState()`.
-      ⚡ **One reddened** — and it was right to: the case whose whole subject is
-      that the cache goes stale. Exempted by name, and given the control it was
-      missing.
-- [x] **6.8.3** ✅ **Done 2026-09-11.** `lint:imports` bans the assertion,
-      with a `cache-assertion` marker **on the line** as the named exception.
-- [x] **6.8.4** ✅ **Done 2026-09-11.** Planted three ways: the ban fires, a
-      legitimate non-assertion use stays legal (**the control**), and removing
-      a marker reds.
-- [ ] **6.8.5** On-device verification — the scenario files changed, so the lane
-      covers it.
-
-**Exit:** a test cannot claim something persisted while reading the engine's
-cache, and the check that says so has been planted in both directions.
+⚡ **Closes B54, and the filed fix was wrong.** "Ban `state()` in tests" would
+have red-gated 16 legitimate uses; the enforceable rule is **a test may not
+ASSERT on it**, which cut 75 sites to 29. Swapping all 29 was a free audit and
+**one reddened correctly** — the case whose subject IS the stale cache, now
+exempted by a `cache-assertion` marker on the line and given the control it
+lacked. Planted three ways including the control. Detail in the log.
 
 ---
+
+### Gate 6.9 — HANDLES CLOSED INSIDE A TRY, AND PINNED MIGRATION NAMES (B55) ⚡ **ACTIVE BUILD**
+
+⛔ **Seven sites close a database handle inside the TRY body**, measured
+2026-09-11: `migration-rebuild.test.ts:136`, `reporting.test.ts:160/171/208/232/247`,
+`views.test.ts:156`. **If an assertion between the open and the close fails, the
+close never runs**, the handle leaks, and `rmSync` throws EBUSY over the top of
+the real failure — which is what cost an hour in 5.5.1.
+
+⚠️ **The mitigation is why nobody noticed:** `rmSync` carries `maxRetries: 5`,
+which hides the leak rather than removing it.
+
+- [ ] **6.9.1** Move every close into a `finally`, using the pattern already in
+      the tree — `views.test.ts:236`'s `try { fn(store); } finally { close(); }`.
+- [ ] **6.9.2** ⛔ **Plant it:** make an assertion fail *inside* one of those
+      blocks and prove the REAL failure is what surfaces, not an EBUSY.
+      ⚠️ Then plant the reverse — a passing block must not leak.
+- [ ] **6.9.3** ⚠️ **Then reconsider `maxRetries: 5`.** With the leak gone it is
+      either unnecessary or it is hiding a second one; decide which, rather than
+      leaving it as a charm.
+- [ ] **6.9.4** The second class: `migration-rebuild.test.ts` pins migration
+      NAMES in nine places. Separate the load-bearing pins from the ones that go
+      stale on the next migration.
+- [ ] **6.9.5** On-device verification.
+
+**Exit:** a failing assertion in a temp-directory test reports itself, and a
+migration added tomorrow does not break a test that was never about it.
+
+---
+
+## Queue---
 
 ## Queue---
 
@@ -148,7 +158,8 @@ cache, and the check that says so has been planted in both directions.
 | 6.5 | **Not yet, or never?** — ⚡ the before-scan disproved the "watchlist that unlocks" premise: most refusals never clear at any bankroll | ✅ **Done 2026-09-10**, 50/50 on device |
 | 6.6 | **A gate that abstains must say so** (**B66**) | ✅ **Done 2026-09-11**, 52/52 on device |
 | 6.7 | **The allocation block** (**B73**) — owner split and set-aside threshold; **unblocks D2** | ✅ **Done 2026-09-11**, 53/53 on device |
-| 6.8 | **A test that reads the cache is testing the engine against itself** (**B54**) | ⚡ **ACTIVE BUILD** |
+| 6.8 | **A test may not assert on the cache** (**B54**) | ✅ **Done 2026-09-11**, 53/53 on device |
+| 6.9 | **Handles closed inside a try, and pinned migration names** (**B55**) | ⚡ **ACTIVE BUILD** |
 | 7 | **Radar over the fund's OWN HISTORY** — scarcity, demand, momentum, confidence, from what the operator has actually seen. ⛔ Not market-wide; that premise died with **D16** | ⏸️ **PARKED until there is history** (**D17**) |
 | 7.5 | **Drop intel** — dated retail drops, monitoring and alerting. ⛔ Checkout automation is OUT, see **D13** | Open |
 | 8 | *(architecture only until 1–7 are reliable)* authorization states, drop intel, autonomy | Not started, not startable |
@@ -485,21 +496,6 @@ Filed, not forgotten. Nothing here is in a gate until it is promoted.
   ⏳ **Needs Jason: delete `resale-os-prescrub-2` and `resale-os-prescrub-private`**
   — both private, both still holding the data, and the CLI token cannot delete.
 - ~~**B54**~~ ⚡ **Promoted to Gate 6.8, 2026-09-11.** Measured at switch-in: 75 `store.state()` sites against 7 `derivedState()`, no lint.
-- **B55** ⚠️ **Two classes, both measured 2026-09-11 (pre-scouted, not switched
-  in).** The migration-rebuild test hard-coded `[REBUILD]` as everything stage 2
-  would run, so migration 006 broke it — and because the store was closed
-  *after* the assertions, the real failure surfaced as an EBUSY from the temp
-  directory cleanup. Both fixed in 5.5.1; the audit was never done.
-  ⛔ **Seven sites still close a handle inside the TRY body** —
-  `migration-rebuild.test.ts:136`, `reporting.test.ts:160/171/208/232/247`,
-  `views.test.ts:156`. **If an assertion between the open and the close fails,
-  the close never runs**, the handle leaks into the `finally`, and `rmSync`
-  throws EBUSY over the top of the real failure. ⚠️ `rmSync` currently papers
-  over it with `maxRetries: 5` — which hides the leak rather than removing it.
-  ⚡ The fix has a pattern already in the tree: `views.test.ts:236`'s
-  `try { fn(store); } finally { store.close(); }`.
-  ⚠️ Second class: `migration-rebuild.test.ts` still pins migration NAMES in
-  nine places; check which of those are load-bearing and which go stale on the
-  next migration. → next after 6.8, per **D17**.
+- ~~**B55**~~ ⚡ **Promoted to Gate 6.9, 2026-09-11**, premises measured first: seven handles closed inside a try body, and nine pinned migration names.
 - ~~**B20**~~ ✅ **Superseded 2026-09-10 by 5.12.** `policy set` is deleted; the
   need it named is now the whole missing surface.
