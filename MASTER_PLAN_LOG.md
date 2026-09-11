@@ -5800,3 +5800,114 @@ things this session paid to find out.
 scan case confirmed by name from the artifact. Gate 7.5 is the active build with
 7.5.1 done; **7.5.3 — where the drop calendar comes from — is a decision waiting
 on Jason.**
+
+## 2026-09-11 — 7.5.2: the drop screen, and a cap nothing could set
+
+### ⛔ 7.5.1 built the analogy cap and nothing could reach it
+
+`CompEvidence.analogous` existed, was documented and was tested — by
+`drop.test.ts` calling `compConfidence` directly. But `evaluate.ts` built its
+`CompEvidence` from `compPricesCents` and `compMedianAgeDays` alone, and
+`opportunityInputSchema` had no field for the flag, so **no evaluation anywhere
+in the app could set it**. Four references in `confidence.ts`, four in the test,
+zero in between.
+
+⚠️ **It is the tested-helper-is-not-a-used-helper shape**, and this project has
+now hit it twice. The switch-in scan caught it because the plan was read as a
+hypothesis — *"7.5.1 is done"* is true of the cap and false of the gate.
+
+Measured before asserting, on a thin-but-tidy predecessor set with weak demand:
+
+| | comp term | confidence | 4,500 BOOTSTRAP floor |
+|---|---|---|---|
+| unflagged (what the app could express) | 6,947 | **4,954** | passes |
+| flagged | 5,000 | **4,175** | **refused** |
+
+So the wire is not cosmetic: it is the difference between a buy and a refusal in
+exactly the low-evidence case a drop lives in.
+
+### ⚡ And the analogy ceilings the DEMAND half too — Jason, 2026-09-11
+
+A drop's sold and active counts come from the predecessor as surely as its
+prices do, and `velocity.confidenceBps` is a **sample size** — precision, the
+identical hazard `compConfidence` was capped for. Capping one half and not the
+other let a strong predecessor carry a drop to **89.3%** confidence.
+
+Measured on that drop: **89.26% → 71.50%** (comps capped alone) **→ 59.00%**
+(both). Jason chose both.
+
+⛔ **The rule lives in `scoreConfidence`, not in the caller.** A flag that each
+caller has to remember to apply to two terms is a flag that gets half-applied;
+`compConfidence` reports `analogous` and `scoreConfidence` ceilings the demand
+term from it, so there is no way to wire one and not the other.
+
+⚠️ `ANALOGOUS_COMP_CEILING_BPS` was renamed `ANALOGOUS_EVIDENCE_CEILING_BPS` —
+it stopped being about comps.
+
+### The screen: four states, because collapsing any two of them lies
+
+`NO_COMPARABLE` (nothing similar has sold), `NOT_VALUED` (there is a comparable
+and nobody has looked it up), `PASSED` (kept, never judged) and `JUDGED`. A
+refusal is an answer; *"there is nothing to value this against"* is not, and
+*"nobody has looked yet"* is a fact about the operator's afternoon rather than
+about the market.
+
+⛔ **An empty comp set is `NOT_VALUED`, not a verdict.** A median over nothing is
+0, which prices the drop at zero and then refuses it — a confident refusal
+manufactured from no evidence at all.
+
+⚡ **The shortfall is DATED, and it reuses 6.5's scan rather than subtracting.**
+The bankroll a drop needs is not its price: the per-item cap, deployable capital
+and the minimum-profit floor all move with NAV, and the unlock is **not
+monotonic**. The same money with a different deadline is a different answer —
+*"you need $100 by Dec 1"* versus *"and there is not enough time"* — which is
+what `IMMINENT_DAYS` was for.
+
+### ⛔ The abstentions test was vacuous, and only planting showed it
+
+6.6 established that a gate which did not get to look must say so, so the drop
+verdict carries `abstentions` too. The first test compared the screen's list to
+a real evaluation's — and **passed with the wiring deleted**, because only ONE
+gate can abstain (sell-through, when the hold came from an operator estimate)
+and a drop always supplies the comparable's counts. `[]` equalled `[]`.
+
+⚠️ Fixed by injecting an evaluator that abstains — the seam is already there
+because the screen takes its evaluator as a parameter — and the plant then red.
+**A pass that cannot fail looks exactly like a pass.**
+
+### Planted, five ways, each restored and re-verified green
+
+The wire (3 red), the demand cap (1), passed-is-never-judged (1), the empty comp
+set (1), the bare "Pass" with no reason (1), the dropped abstentions (1).
+⚠️ The restores were done by reversing each edit rather than by `git checkout`,
+which would have discarded the uncommitted work along with the plant.
+
+### Folded in from the after-scan
+
+- **A refusal now always says why.** `reasons[0]` is a HEADER —
+  *"Rejected on 4 capital rules:"* — so a screen showing it shows a colon. The
+  drop line was printing a bare *"Pass at $25."* in the branch where the ceiling
+  sits ABOVE MSRP and therefore explains nothing. It picks the failing gate the
+  way `evaluateForm` already does, rather than inventing a second convention.
+- **The abstentions**, per 6.6, one screen over.
+- A dead `shortfallCents === 0` branch removed: `assessUnlock` only reports
+  AT_NAV above the current bankroll, so it was a guard pretending to be caution.
+
+Filed rather than built: **B91** (the dated shortfall inherits the coarse NAV
+ladder) and **B92** (`sourcing.ts` duplicates `median`).
+
+### D19 — a scraped release feed, recommended against and overruled
+
+I recommended manual entry first: zero vendor risk after **D16**, and the
+storage shape is identical whichever fills it, so a feed would be an addition
+rather than a rewrite. **Jason chose the feed.** Recorded because the concern
+stands — it is a THIRD outside dependency, the source differs per vertical, and
+a scrape breaks silently. It goes behind `src/adapters/`, which is exactly the
+seam D16 made load-bearing. Which source, per vertical, is **7.5.4**.
+
+### State at close
+
+**757 tests, 46 files, six gates green.** 7.5.2 and 7.5.3 closed; the active
+build is **7.5.4**, the feed adapter. ⛔ Still true and still blocking: the $25
+contribution (**D3**) and the deploy — nothing built since 2026-09-10 is on the
+phone.

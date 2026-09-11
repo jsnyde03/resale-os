@@ -10,7 +10,8 @@ about to change.
 
 **Status (2026-09-11): Gates 1-6 BUILT and 6.5-6.11 closed. The fund LIVES ON
 THE PHONE, the desktop is deleted, the app VALUES what it is shown, and it now
-SCANS. ⚡ Gate 7.5 — DROP INTEL — is the active build.**
+SCANS. ⚡ Gate 7.5 — DROP INTEL — is the active build: 7.5.1-7.5.3 closed, and
+the next step is the release-feed adapter (D19).**
 
 ⛔ **NOTHING BUILT AFTER 2026-09-10 IS ON THE PHONE.** Every gate above shipped
 to `origin/master` and **the last TestFlight publish was 2026-09-10**. The
@@ -49,7 +50,7 @@ CHIPS"*, so a mis-scan succeeds *wrongly*. The title on screen beside the object
 in hand is the only check on that, and it is the operator's.
 
 Live on a real **$50** bankroll — ⏳ **$75 decided, awaiting a $25 CONTRIBUTION**
-(**D3**). **736 tests, 45 files.** `npm run check` runs **six** gates: source
+(**D3**). **757 tests, 46 files.** `npm run check` runs **six** gates: source
 bytes, import direction, phone bundle, **the PLAN**, typecheck, tests.
 
 ---
@@ -171,7 +172,7 @@ margin play needing hold tolerance a $50 fund does not have. Backlog **B28**.
 ### Five gates run on every check
 
 ```
-npm run check    # source bytes · imports · PHONE BUNDLE · PLAN · typecheck · 736 tests
+npm run check    # source bytes · imports · PHONE BUNDLE · PLAN · typecheck · 757 tests
 ```
 
 ⚡ **`lint:plan` is new, 2026-09-11, and it exists because nothing read the one

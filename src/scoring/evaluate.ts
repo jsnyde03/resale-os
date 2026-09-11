@@ -56,10 +56,19 @@ export function evaluateOpportunity(input: OpportunityInput, state: FundState): 
 
   // Confidence first: it caps the Buy Score, so nothing downstream can be more
   // certain than the evidence behind it.
+  // ⛔ **The analogy flag travels with the evidence, not beside it.** Carried
+  // even when there are no prices: "the counts are last year's, and I have no
+  // comps at all" is a real state of a drop, and dropping the flag there would
+  // hand the demand term its uncapped sample size. @see CompEvidence.analogous
+  const analogous = input.evidenceIsAnalogous ? { analogous: true as const } : {};
   const confidence = scoreConfidence({
     comps:
-      input.compPricesCents.length > 0
-        ? { pricesCents: input.compPricesCents, medianAgeDays: input.compMedianAgeDays }
+      input.compPricesCents.length > 0 || input.evidenceIsAnalogous
+        ? {
+            pricesCents: input.compPricesCents,
+            medianAgeDays: input.compMedianAgeDays,
+            ...analogous,
+          }
         : null,
     demandConfidenceBps: economics.velocity.confidenceBps,
     ...(input.conditionConfidenceBps !== null

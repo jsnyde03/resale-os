@@ -79,6 +79,17 @@ export const opportunityInputSchema = z
     operatorDaysEstimate: z.number().int().positive().nullable().default(null),
     compPricesCents: z.array(centsSchema).default([]),
     compMedianAgeDays: z.number().int().nonnegative().default(45),
+    /**
+     * ⛔ **The evidence is about a DIFFERENT product (Gate 7.5).** A drop has
+     * never been sold, so both its comps and its counts come from last year's
+     * model — and everything measured about them is PRECISION, not accuracy.
+     * Ceilings both halves; @see `CompEvidence.analogous`.
+     *
+     * ⚠️ **Defaults to false, so every existing caller scores exactly as it
+     * did.** The aisle screen digests the draft it builds rather than the
+     * parsed input, so a new default here moves no stored opportunity id.
+     */
+    evidenceIsAnalogous: z.boolean().default(false),
 
     // --- judgement calls ---------------------------------------------------
     hassleBps: bpsSchema.default(2_000),

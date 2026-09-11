@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { dropReadiness, dropShortfall, dropTiming, IMMINENT_DAYS, type Drop } from '@/core/drop.js';
-import { compConfidence, ANALOGOUS_COMP_CEILING_BPS } from '@/scoring/confidence.js';
+import { compConfidence, ANALOGOUS_EVIDENCE_CEILING_BPS } from '@/scoring/confidence.js';
 
 const NOW = new Date('2026-09-11T12:00:00.000Z');
 
@@ -28,7 +28,7 @@ describe('⛔ an analogy is capped, because comps measure precision not accuracy
 
   it('scores excellent comps excellently when they are about THIS product', () => {
     const c = compConfidence(tight);
-    expect(c.confidenceBps).toBeGreaterThan(ANALOGOUS_COMP_CEILING_BPS);
+    expect(c.confidenceBps).toBeGreaterThan(ANALOGOUS_EVIDENCE_CEILING_BPS);
     expect(c.analogous).toBe(false);
   });
 
@@ -36,7 +36,7 @@ describe('⛔ an analogy is capped, because comps measure precision not accuracy
     // A tight, plentiful, recent set for last year's model scores near the top
     // while describing a product nobody is buying. That is the whole hazard.
     const c = compConfidence({ ...tight, analogous: true });
-    expect(c.confidenceBps).toBe(ANALOGOUS_COMP_CEILING_BPS);
+    expect(c.confidenceBps).toBe(ANALOGOUS_EVIDENCE_CEILING_BPS);
     expect(c.analogous).toBe(true);
   });
 
@@ -51,7 +51,7 @@ describe('⛔ an analogy is capped, because comps measure precision not accuracy
 
   it('and the ceiling sits above "no comps at all"', () => {
     // An analogy really is better evidence than nothing, or nobody would use one.
-    expect(ANALOGOUS_COMP_CEILING_BPS).toBeGreaterThan(compConfidence(null).confidenceBps);
+    expect(ANALOGOUS_EVIDENCE_CEILING_BPS).toBeGreaterThan(compConfidence(null).confidenceBps);
   });
 });
 

@@ -160,16 +160,21 @@ buying.
       which **caps** an analogy rather than scaling it. ⛔ Caught a real bug: a
       drop happening **today** read as passed, because a date was diffed against
       a moment. 736 tests (+14).
-- [ ] **7.5.2** The screen model: what is coming, what is a buy **at MSRP**, and
-      ⚡ **what the bankroll needs by WHEN** — a drop shortfall is dated, unlike
-      6.5's "not yet, or never".
-- [ ] **7.5.3** ⛔ **[DECISION] Where the calendar comes from.** Manual entry, a
-      scraped release feed, or a vertical-specific source — Jason named sneakers,
-      consoles, LEGO and cards, and the source differs per vertical.
-- [ ] **7.5.4** Storage, so a drop survives the app closing.
-- [ ] **7.5.5** Alerting. ⚠️ `expo-notifications` is a second native module;
+- [x] **7.5.2** ✅ **Done 2026-09-11.** `screens/drops.ts` — judged **at MSRP** on
+      the comparable's market, four states, and a **dated** shortfall.
+      ⛔ Wired `evidenceIsAnalogous` end to end: 7.5.1's cap could reach no
+      evaluator, and it decides the confidence gate. Caps the **demand** half
+      too (Jason). 757 tests (+21).
+- [x] **7.5.3** ✅ **[DECISION] answered 2026-09-11 — a scraped release feed
+      (D19).** ⚠️ I recommended manual-first; Jason chose the feed.
+- [ ] **7.5.4** The feed adapter — which source, per vertical, behind
+      `src/adapters/` (**D19**). Sneakers, consoles, LEGO, cards.
+- [ ] **7.5.5** Storage and the screen itself (`mobile/app/drops.tsx`).
+      ⚠️ `drop-<dropId>` is stable across re-evaluations, unlike the aisle
+      screen's draft digest — settle that before a score is stored.
+- [ ] **7.5.6** Alerting. ⚠️ `expo-notifications` is a second native module;
       **D13 bounds this to monitoring and alerting, never checkout.**
-- [ ] **7.5.6** On-device verification.
+- [ ] **7.5.7** On-device verification.
 
 **Exit:** the app says what is coming, what it would pay, and what the fund must
 reach by the date — and never tries to buy anything.
@@ -207,6 +212,7 @@ reach by the date — and never tries to buy anything.
 |---|---|---|
 | D1 | What the tax reserve covers | ✅ **Incremental annual tax, 2026-09-08.** SE tax + federal brackets + QBI + state. ⚠️ Income tax abstains until a `TaxProfile` is set — **D7** |
 | D14 | Which gate set decides a purchase, given the two paths disagree | ✅ **One evaluator everywhere — 2026-09-10.** `evaluateOpportunity` gates every purchase, typed or scored; `assessQuote`'s candidate stops being a decision path. ⚠️ **Deliberately stricter on the live fund:** a buy typed with no comps and middling sell-through now needs **D4**'s override with a reason. Measured first — 64 divergences in 96 cases, both directions (**B58**) |
+| D19 | Where the drop calendar comes from | ⚡ **A SCRAPED RELEASE FEED — 2026-09-11.** ⚠️ **Recommended against, and overruled**: I argued manual entry first — zero vendor risk after **D16**, and the storage shape is identical whichever feeds it, so a feed would be an addition rather than a rewrite. Jason chose the feed. ⛔ **What it commits to:** a THIRD outside dependency after SoldComps and UPCitemdb, a source that differs per vertical (sneakers, consoles, LEGO, cards), and a scrape whose breakage is silent. It goes behind `src/adapters/` for exactly the reason D16 made that seam load-bearing. **Which source, per vertical, is 7.5.4** |
 | D18 | Whether to build the full barcode-scan flow now | ⚡ **YES — build it, Jason 2026-09-11.** *"Without scanning at Walmart it'll be too tedious to go through the clearance rack and type everything in."* ⚠️ **I recommended the cheaper half first** (derive resale from comps, default the category — free, no camera, no second vendor) and measuring whether typing a short name was really the tedium; Jason chose the full flow. Recorded because the concern stands: **SoldComps takes no barcode** (no UPC/GTIN/EAN parameter — verified in its docs), so the scan needs a SECOND vendor to turn a UPC into a title. ⚡ **De-risked first rather than assumed**: UPCitemdb's keyless trial round-tripped three real LEGO UPCs to title **plus brand and category**, so the resolver works and kills the category field too. ⛔ **But the keyword derived from that title is a MONEY decision** — see **B89**. ⚡ **Jason's reasoning, and it reframes the app:** *"Scanning is vital to this app until I actually get recommendations of what to purchase."* Today the app is a **checker** — you bring it an item and it judges. He wants a **recommender**. ⛔ D16 killed market-wide discovery, but **scan-the-rack-and-rank IS a recommender** scoped to the shelf in front of him, and that version survives. So 6.11 builds single-item scan and **keeps the session additive** rather than precluding it — scored opportunities already persist, so "rank what I scanned today" is mostly free afterwards. ⚠️ Batch scanning makes the quota binding immediately: 40 items = 80 requests against a free tier of 100. |
 | D17 | What Gate 7 becomes, now that its premise is gone | ⛔ **PARKED, and re-premised — 2026-09-11.** D12 chose *"Browse to find, SoldComps to value"* and **D16 deleted the finding half**, so Market Radar's input is one metered vendor at 2 requests per item. ⚡ **Gate 7 is re-premised as radar over the fund's OWN HISTORY** — D12's third leg, free, specific to what the operator actually encounters in stores, and better every flip — and **parked until there IS history**, because the fund has never bought anything. ⛔ **Building it now would mean guessing at its inputs.** ⚠️ Market-wide radar on the paid tier was considered and declined: 2,000 requests is 1,000 items a month, every tier caps at 60/min so a plan buys quota and never speed, and it would bet more of the product on the single vendor D16 just exposed. **Meanwhile the build stream takes the correctness backlog, starting with B54.** |
 | D16 | Whether to keep pursuing first-party eBay API access | ⛔ **NO — treat it as UNAVAILABLE, 2026-09-11.** The developer account was denied outright with a generic *"mismatched data"* reason, and Jason's reading is that eBay is issuing **blanket denials to individual developers**. ⚠️ **Do not re-apply, and do not design around getting in.** It is not an application-quality problem to fix. ⚡ This is what **D12** predicted — *"the resellers work around eBay and the direction of travel is tightening"* — arriving sooner than expected. Consequence: **SoldComps is the only automated route**, the manual path is not a fallback but a second leg, and `src/adapters/` stops being good practice and becomes the thing that makes a vendor swap survivable |
@@ -256,6 +262,16 @@ being "done".
 ## Deferred backlog (v1)
 
 Filed, not forgotten. Nothing here is in a gate until it is promoted.
+
+- **B91** ⚠️ **A dated shortfall inherits `SCAN_NAVS_CENTS`'s grid.** 7.5.2 tells
+  the operator the next bankroll on that ladder at which a drop clears — so at
+  small NAV it can say *"you need $100 by Dec 1"* when $92 would do, and the
+  target is a savings goal with a date on it. ⛔ Bisection is invalid (the unlock
+  is not monotonic); a denser ladder near the current NAV is the fix. → 7.5 or
+  later.
+- **B92** `screens/sourcing.ts` carries a private `medianCents` that duplicates
+  `core/math.ts`'s `median` (it rounds; core's does not). Two implementations of
+  the number that sets the resale estimate. Surfaced by 7.5.2, which used core's.
 
 - ~~**B3**~~ ✅ **Closed 2026-09-10 in 6.2**, on the phone, once **B68** gave it
   something to count.

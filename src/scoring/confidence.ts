@@ -44,7 +44,7 @@ export interface CompEvidence {
   /** Median age of those sales, in days. */
   readonly medianAgeDays: number;
   /**
-   * ⛔ **True when these comps are for a DIFFERENT product (Gate 7.5).**
+   * ⛔ **True when this evidence is for a DIFFERENT product (Gate 7.5).**
    *
    * A drop has not been sold yet, so it is priced by analogy — last year's
    * model, the previous colourway. ⚠️ **Everything else in `compConfidence`
@@ -56,12 +56,18 @@ export interface CompEvidence {
    * predecessor's comps are, they are not about this product, and the cap says
    * exactly that. A weak predecessor set is already low and is not punished
    * twice.
+   *
+   * ⚡ **And it ceilings the DEMAND term too — see `scoreConfidence` (Jason,
+   * 2026-09-11).** The sold and active counts behind a drop come from the same
+   * predecessor, and `velocity.confidenceBps` is a sample size: precision
+   * again. Capping one half and not the other let a drop report **89%**
+   * confidence off evidence for a product nobody is buying.
    */
   readonly analogous?: boolean;
 }
 
 /**
- * The most an analogy may contribute.
+ * The most an analogy may contribute — to **either** half of the evidence.
  *
  * ⚡ Set deliberately ABOVE `CONFIDENCE_DEFAULTS.compBps` (3,000) — last year's
  * model really is better evidence than nothing — and well below what measured
@@ -69,7 +75,7 @@ export interface CompEvidence {
  * one. The same shape as `OPERATOR_ESTIMATE_CONFIDENCE_BPS`, which is capped
  * below every mode floor for the same reason.
  */
-export const ANALOGOUS_COMP_CEILING_BPS: Bps = 5_000;
+export const ANALOGOUS_EVIDENCE_CEILING_BPS: Bps = 5_000;
 
 export interface CompConfidence {
   readonly countTermBps: Bps;
@@ -114,7 +120,7 @@ export function compConfidence(evidence: CompEvidence | null): CompConfidence {
     recencyTermBps: toBpsFrom01(recencyTerm),
     // ⛔ An analogy is capped, never scaled. @see CompEvidence.analogous
     confidenceBps:
-      evidence.analogous === true ? Math.min(measured, ANALOGOUS_COMP_CEILING_BPS) : measured,
+      evidence.analogous === true ? Math.min(measured, ANALOGOUS_EVIDENCE_CEILING_BPS) : measured,
     analogous: evidence.analogous === true,
     coefficientOfVariation: cv,
   };
@@ -146,7 +152,16 @@ export interface ConfidenceBreakdown {
 export function scoreConfidence(inputs: ConfidenceInputs): ConfidenceBreakdown {
   const comp = compConfidence(inputs.comps ?? null);
   const compBps = comp.confidenceBps;
-  const demandBps = inputs.demandConfidenceBps ?? CONFIDENCE_DEFAULTS.demandBps;
+  const measuredDemandBps = inputs.demandConfidenceBps ?? CONFIDENCE_DEFAULTS.demandBps;
+  // ⛔ **The analogy ceilings BOTH halves, and the rule lives HERE so no caller
+  // can wire one of them.** A drop's sold and active counts are the
+  // predecessor's as surely as its comp prices are, and `demandConfidenceBps`
+  // is a sample size — precision, not accuracy, the same hazard `compConfidence`
+  // caps for. ⚠️ Measured 2026-09-11 on a strong predecessor: 89.3% uncapped,
+  // 71.5% with comps capped alone, **59.0%** with both. Jason chose both.
+  const demandBps = comp.analogous
+    ? Math.min(measuredDemandBps, ANALOGOUS_EVIDENCE_CEILING_BPS)
+    : measuredDemandBps;
   const conditionBps = inputs.conditionConfidenceBps ?? CONFIDENCE_DEFAULTS.conditionBps;
   const sourceBps = inputs.sourceConfidenceBps ?? CONFIDENCE_DEFAULTS.sourceBps;
 
