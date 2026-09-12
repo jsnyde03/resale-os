@@ -292,6 +292,20 @@ ever announces that the day arrived. A threshold the app already computes does.
 
 Filed, not forgotten. Nothing here is in a gate until it is promoted.
 
+- **B99** ⚡ **Show pictures, so the keyword stops being a guess** (Jason,
+  2026-09-12: *"Is it possible for images to show when I scan so that I ensure
+  that I pick the correct search term?"*). ⛔ **Both vendors already send them in
+  responses the fund has already paid for.** UPCitemdb documents an `images`
+  array per item and the adapter keeps only title/brand/category; SoldComps
+  returns 26 fields per sold item — title and images among them — and the adapter
+  reads only `soldPrice` and `endedAt`. **No extra requests.**
+  ⚡ **The COMP thumbnails are the valuable half**: a product image answers *"is
+  this what I am holding"*, but four pictures of what actually sold under a search
+  answer *"is this search measuring my item"* — **B89**'s 68% decision, which no
+  list of numbers can show. ⚠️ **Documented, not measured**: field names need one
+  live call per vendor to confirm, and the market one spends 2 of ~50 monthly
+  lookups. ⛔ **An image may never gate** — offline is the normal case in a shop,
+  and a picture that will not load must not stop a verdict.
 - **B98** ⚠️ **The class behind B97 is still open: a screen copies a model's
   result field by field.** The guard catches a dropped field in the aisle screen
   and nowhere else. The class fix is one form-state object per screen — a single

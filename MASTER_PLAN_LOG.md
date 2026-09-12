@@ -6541,3 +6541,34 @@ model's result field by field — is fixed by one form-state object, or a pure
 waiting on.
 
 **794 tests, 49 files, six gates green.**
+
+## 2026-09-12 — B99 filed: pictures, so the keyword stops being a guess
+
+🎯 **Jason:** *"Is it possible for images to show when I scan so that I ensure that I
+pick the correct search term?"* — asked the day after his first real scan came back
+with prices he did not trust.
+
+⚡ **Both vendors already send images, in responses the fund has already paid for.**
+UPCitemdb's item object documents an `images` array; the adapter keeps `title`,
+`brand` and `category` and drops the rest. SoldComps returns **26 fields per sold
+item**, title and images among them; the adapter reads `soldPrice` and `endedAt`, and
+the items are typed as open records, so everything else is silently ignored. **The
+feature costs no extra requests** — only the mapping and the rendering.
+
+⚡ **The comp thumbnails are the half that answers his actual question.** A product
+image checks identity — *is this what I am holding* — which the title already does
+reasonably well. Pictures of **what sold under the search** check the search itself,
+which is **B89**'s 68% decision and the thing a column of numbers structurally cannot
+show. Four thumbnails of loose bricks and instruction booklets would end the doubt in a
+second.
+
+⚠️ **Documented, not measured.** The field names come from vendor documentation, and
+confirming them costs one live call each — 2 of ~50 monthly lookups on the market side.
+Not spent unasked.
+
+⛔ **The rule that has to come with it:** an image may never gate. Offline is the normal
+case in a shop, every failure is a value, and a picture that will not load must leave
+the screen exactly as usable as it was. Same law as the data route.
+
+**Not built now**, by recommendation: `ca1dba7` is checked and ready and Jason is going
+to Walmart. It batches with **B98** afterwards.
