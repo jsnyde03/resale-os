@@ -19,6 +19,7 @@ import { parseCount } from '../core/counts.js';
 import {
   isWorthRetrying,
   type CompCondition,
+  type CompSample,
   type CountReading,
   type MarketFailureReason,
   type MarketResult,
@@ -434,6 +435,11 @@ export type FillStatus =
        * produces a confident, correctly computed number about a different item.
        */
       readonly measured: string;
+      /**
+       * ⚡ **B99: a few of the sold listings to look at.** Display only — the
+       * numbers the gate reads are unchanged by anything here.
+       */
+      readonly compSamples: readonly CompSample[];
       /** ⚠️ Set when a count came back as "at least". The gate will refuse. */
       readonly anyFloored: boolean;
     }
@@ -590,6 +596,7 @@ export function fillFromMarket(
       filled,
       provenance: reading.provenance,
       quota: reading.quota,
+      compSamples: reading.compSamples ?? [],
       measured: `"${reading.provenance.keyword}" in ${where}, ${COMP_CONDITION_WORDS[reading.provenance.compCondition]}`,
       anyFloored: reading.sold90.isFloor || reading.active.isFloor,
     },

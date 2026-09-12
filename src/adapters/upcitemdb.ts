@@ -86,6 +86,7 @@ interface RawItem {
   readonly title?: unknown;
   readonly brand?: unknown;
   readonly category?: unknown;
+  readonly images?: unknown;
 }
 
 /**
@@ -95,6 +96,19 @@ interface RawItem {
  * searches a market that does not exist.
  */
 const PLACEHOLDER = /^(?:n\/?a|none|unknown|null|-)$/i;
+
+/**
+ * ⚡ **B99.** The vendor documents `images` as an array of URLs, and the captured
+ * response carries one. The first usable entry is taken; anything else is null,
+ * because a product with no picture is an ordinary product.
+ */
+const firstImage = (v: unknown): string | null => {
+  if (!Array.isArray(v)) return null;
+  for (const entry of v) {
+    if (typeof entry === 'string' && entry.trim().startsWith('http')) return entry.trim();
+  }
+  return null;
+};
 
 const str = (v: unknown): string | null => {
   if (typeof v !== 'string') return null;
@@ -153,6 +167,7 @@ export async function lookUpProduct(
       title,
       brand: str(item?.brand),
       category: str(item?.category),
+      imageUrl: firstImage(item?.images),
     },
   };
 }

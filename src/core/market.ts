@@ -81,11 +81,37 @@ export interface QuotaReading {
   readonly resetAt: string | null;
 }
 
+/**
+ * ⚡ **B99: one of the listings the prices came from, to LOOK at.**
+ *
+ * ⛔ **Display only.** `compPricesCents` stays the sole input to scoring, so
+ * nothing here can move a verdict — and each sample carries the price that was
+ * ALREADY parsed for the comps, so a picture can never disagree with the number
+ * the gate read.
+ *
+ * ⚡ **The keyword is the reason this exists (B89).** Two defensible searches ran
+ * 68% apart, and a column of prices cannot show which market it measured. Four
+ * thumbnails of loose bricks and instruction booklets can, at a glance.
+ */
+export interface CompSample {
+  readonly priceCents: Cents;
+  readonly title: string;
+  /** 500px. ⚠️ Null when the vendor sent none — an image is never required. */
+  readonly thumbnailUrl: string | null;
+}
+
 export interface MarketReading {
   readonly sold90: CountReading;
   readonly active: CountReading;
   readonly compPricesCents: readonly Cents[];
   readonly compMedianAgeDays: number;
+  /**
+   * ⚡ A few of the sold listings, for the operator to look at (**B99**).
+   * Optional so every existing construction of a reading keeps compiling, and
+   * capped by the adapter — a shop connection should not be asked for forty
+   * images.
+   */
+  readonly compSamples?: readonly CompSample[];
   readonly provenance: Provenance;
   readonly quota: QuotaReading;
 }

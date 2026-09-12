@@ -55,7 +55,7 @@ CHIPS"*, so a mis-scan succeeds *wrongly*. The title on screen beside the object
 in hand is the only check on that, and it is the operator's.
 
 Live on a real **$50** bankroll — ⏳ **$75 decided, awaiting a $25 CONTRIBUTION**
-(**D3**). **794 tests, 49 files.** `npm run check` runs **six** gates: source
+(**D3**). **807 tests, 50 files.** `npm run check` runs **six** gates: source
 bytes, import direction, phone bundle, **the PLAN**, typecheck, tests.
 
 ---
@@ -104,8 +104,8 @@ database, never like an artifact.
 
 **The ledger, the engine, every write and read screen, the sourcing screen,
 backups, the import, the DATA ROUTE, the SCAN and the DROPS all run on the
-device: 56/56 against Apple's SQLite, confirmed by name** (run 34631425815,
-2026-09-11 — the scan and drops cases both named in the verdict) in
+device: 57/57 against Apple's SQLite, confirmed by name** (run 34646974459 on
+`ca1dba7` — the scan, drops and money-in cases all named in the verdict) in
 `.github/workflows/driver-contract-ios.yml`. The app ships via Codemagic to
 TestFlight.
 
@@ -177,7 +177,7 @@ margin play needing hold tolerance a $50 fund does not have. Backlog **B28**.
 ### Five gates run on every check
 
 ```
-npm run check    # source bytes · imports · PHONE BUNDLE · PLAN · typecheck · 794 tests
+npm run check    # source bytes · imports · PHONE BUNDLE · PLAN · typecheck · 807 tests
 ```
 
 ⚡ **`lint:plan` is new, 2026-09-11, and it exists because nothing read the one

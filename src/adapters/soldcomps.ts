@@ -54,6 +54,7 @@ import { parseDollars, type Cents } from '../core/money.js';
 import { parseCount, type CountResult } from '../core/counts.js';
 import type {
   CompCondition,
+  CompSample,
   MarketFailure,
   MarketFailureReason,
   MarketResult,
@@ -72,6 +73,15 @@ export const SOLD_WINDOW_DAYS = 90;
  */
 export const SOLD_PAGE_SIZE = 40;
 export const ACTIVE_PAGE_SIZE = 200;
+
+/**
+ * ⚡ **B99: how many sold listings come back with pictures.**
+ *
+ * ⛔ Capped deliberately. A sold page holds up to 40 items, and a phone on a
+ * shop's signal should not be asked for 40 images to answer one question. Six is
+ * enough to see whether the search is measuring the right thing.
+ */
+export const COMP_SAMPLES_SHOWN = 6;
 
 export interface SoldCompsConfig {
   readonly apiKey: string;
@@ -254,12 +264,26 @@ export async function lookUpMarket(
   // and where a seller baked shipping into a free-postage listing it UNDERSTATES
   // the resale, which refuses a good item rather than accepting a bad one.
   const compPricesCents: Cents[] = [];
+  const compSamples: CompSample[] = [];
   const ageDays: number[] = [];
   for (const item of soldItems) {
     const price = item['soldPrice'];
     if (typeof price === 'string') {
       try {
-        compPricesCents.push(parseDollars(price));
+        const cents = parseDollars(price);
+        compPricesCents.push(cents);
+        // ⛔ **B99, and it reuses the price that was just parsed** — a sample
+        // that parsed its own price could disagree with the comps the gate
+        // reads. Capped; see COMP_SAMPLES_SHOWN.
+        if (compSamples.length < COMP_SAMPLES_SHOWN) {
+          const title = item['title'];
+          const thumb = item['thumbnailUrl'];
+          compSamples.push({
+            priceCents: cents,
+            title: typeof title === 'string' ? title : '',
+            thumbnailUrl: typeof thumb === 'string' && thumb.trim() !== '' ? thumb.trim() : null,
+          });
+        }
       } catch {
         // One malformed price is not a reason to refuse the market. An empty
         // comp set is already capped hard by the confidence gate.
@@ -280,6 +304,7 @@ export async function lookUpMarket(
       sold90: { value: soldCount.value, isFloor: soldCount.isFloor },
       active: { value: activeCount.value, isFloor: activeCount.isFloor },
       compPricesCents,
+      compSamples,
       // The schema's own default, used when no date survived.
       compMedianAgeDays: ageDays.length === 0 ? 45 : medianOf(ageDays),
       provenance: {

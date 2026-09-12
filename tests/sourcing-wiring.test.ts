@@ -26,6 +26,7 @@ import {
 import type { CompCondition } from '@/core/market.js';
 
 const SCREEN = readFileSync('mobile/app/sourcing.tsx', 'utf8').replace(/\r\n/g, '\n');
+const SCAN_SCREEN = readFileSync('mobile/app/scan.tsx', 'utf8').replace(/\r\n/g, '\n');
 
 /** The screen's setter for each form field the lookup can fill. */
 const SETTER: Readonly<Partial<Record<keyof SourcingForm, string>>> = {
@@ -105,6 +106,27 @@ describe('⛔ the condition is chosen before the prices are fetched (B96)', () =
     expect(SCREEN.indexOf("label=\"Scan a barcode\"")).toBeLessThan(
       SCREEN.indexOf('label="Condition"'),
     );
+  });
+});
+
+describe('⚡ the pictures reach both screens (B99)', () => {
+  // ⛔ Same shape as the B97 guard above, for the same reason: the model can
+  // carry a value the screen never renders, and nothing else would notice.
+  it('the scan screen renders the product image', () => {
+    expect(SCAN_SCREEN).toContain('outcome.imageUrl');
+    expect(SCAN_SCREEN).toContain('<Image');
+  });
+
+  it('the aisle screen renders the sold listings it was given', () => {
+    expect(SCREEN).toContain('fill.compSamples');
+    expect(SCREEN).toContain('sample.thumbnailUrl');
+  });
+
+  it('⛔ and neither screen makes a picture a condition of anything', () => {
+    // A picture that will not load must leave the screen as usable as it was.
+    // Both render sites are guarded on the URL being present, never awaited.
+    expect(SCAN_SCREEN).toContain('outcome.imageUrl === null ? null : (');
+    expect(SCREEN).toContain('sample.thumbnailUrl === null ? null : (');
   });
 });
 

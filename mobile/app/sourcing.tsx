@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 import {
   evaluateForm,
@@ -368,6 +368,36 @@ export default function Sourcing() {
                       refused on that. Narrow the name until the counts are exact.
                     </Text>
                   ) : null}
+                  {fill.compSamples.length === 0 ? null : (
+                    /* ⚡ **B99: what the search actually matched.** The keyword is
+                       a money decision (B89: two readings 68% apart) and a column
+                       of prices cannot show which market it measured. ⛔ Never
+                       gates: a picture that will not load leaves a title and a
+                       price, which is what this screen had before. */
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      style={{ marginTop: 8 }}
+                    >
+                      {fill.compSamples.map((sample, i) => (
+                        <View key={`${i}-${sample.title}`} style={{ width: 96, marginRight: 10 }}>
+                          {sample.thumbnailUrl === null ? null : (
+                            <Image
+                              source={{ uri: sample.thumbnailUrl }}
+                              style={{ width: 96, height: 96, borderRadius: 6 }}
+                              resizeMode="contain"
+                            />
+                          )}
+                          <Text style={{ color: C.text, fontSize: 12, marginTop: 4 }}>
+                            {formatCents(sample.priceCents)}
+                          </Text>
+                          <Text numberOfLines={2} style={{ color: C.faint, fontSize: 11 }}>
+                            {sample.title}
+                          </Text>
+                        </View>
+                      ))}
+                    </ScrollView>
+                  )}
                   {fill.quota.monthlyRemaining === null ? null : (
                     <Muted>
                       {fill.quota.monthlyRemaining} of {fill.quota.monthlyLimit} lookups left this

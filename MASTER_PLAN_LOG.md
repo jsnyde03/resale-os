@@ -6572,3 +6572,64 @@ the screen exactly as usable as it was. Same law as the data route.
 
 **Not built now**, by recommendation: `ca1dba7` is checked and ready and Jason is going
 to Walmart. It batches with **B98** afterwards.
+
+## 2026-09-12 — B99 built: pictures, so the keyword stops being a guess
+
+🎯 **Jason:** *"Let's build it now. I won't be making another trip until this
+evening."* So B96, B97 and B99 all ride one build instead of two.
+
+### ⚡ The field names were measured, not read
+
+The plan was to confirm them with one live call per vendor — 2 of ~50 monthly
+lookups on the market side. ⛔ **Unnecessary: the repo already holds verbatim
+captured responses** under `tests/fixtures/`, committed 2026-09-11. All 39 recorded
+sold items carry `thumbnailUrl`, `fullResThumbnailUrl` and `title`; the barcode
+response carries `images`. The mapping is now tested against those bytes, so it
+fails if the vendors' shape drifts — which documentation could never have caught.
+
+### ⛔ Display only, and the money path is pinned as untouched
+
+`compPricesCents` remains scoring's sole input. Each sample **reuses the price
+already parsed for the comps**, so a picture cannot disagree with the number the gate
+read, and a test asserts the sample prices are the first N comp prices exactly.
+Another asserts every comp on the page is still counted, not just the six shown.
+⚡ **Six**, because a sold page holds 40 and a phone on a shop's signal should not be
+asked for 40 images to answer one question.
+
+### ⛔ And a picture is not a check on identity
+
+The fixture named `not-found.json` is not a miss at all — it is the captured
+`000000000000` response: *"ORGANIC BLUE CORN TORTILLA CHIPS"*, `brand: "N/A"`, and
+**an image of Aveda hair product**. The existing suite loads it as `PLACEHOLDER`;
+only the filename misled. ⚡ It makes the better test: **a mis-scan comes back with a
+confident picture too**, which is exactly why the title stays what the operator reads.
+The image makes that check faster, never optional.
+
+⚠️ **My test asserted the fixture meant something it did not** — and I looked at the
+file rather than adjusting the assertion to make it pass. The no-image branch is now
+a constructed response, which is honest: the field NAME is pinned against real bytes,
+and this pins the null.
+
+### Never gates
+
+Both render sites are guarded on the URL being present — no spinner, no error state,
+nothing awaited. A picture that will not load in a shop leaves a title and a price,
+which is what the screen had before. The guard file asserts both guards by source.
+
+### Planted — and two of the plants had to be redesigned first
+
+Seven swaps: the thumbnail mapping, the cap, the shared price, the product image, the
+empty-list guarantee, and the two screens' rendering. **10 tests red, every one a B99
+claim and nothing else**, then restored with zero planted tokens left in any file.
+
+⚠️ **The two screen plants were written wrong and would have proved nothing.** Blanking
+the `uri` — `source={{ uri: undefined }}` — leaves `outcome.imageUrl` and
+`sample.thumbnailUrl` in the source, and those strings are exactly what the guards match
+on, so both would have stayed green while the pictures were gone. ⛔ **A plant that
+cannot red is not a control.** Rewritten to rename the token itself, which is what the
+guard actually reads; the renamed form appears twice in each file — a null check and a
+`uri` — so the swap asserts a count of two and moves both, or a restore would leave half
+the plant behind.
+
+**807 tests, 50 files, six gates green.** ⏳ The docs' 56/56 is corrected to
+the **57/57** both lanes actually reported, by name, including the money-in case.

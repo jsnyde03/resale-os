@@ -43,6 +43,12 @@ export type ScanOutcome =
       /** ⛔ Shown FIRST. It is the only thing that catches a mis-scan. */
       readonly title: string;
       readonly brand: string | null;
+      /**
+       * ⚡ **B99: the product's picture, or null.** ⛔ It does not replace the
+       * title — the title is what catches a mis-scan, and a picture of the
+       * WRONG product is just as convincing as a picture of the right one.
+       */
+      readonly imageUrl: string | null;
       /** The search that will run unless the operator edits it. */
       readonly keyword: string;
       /** ⚠️ The other defensible reading, or null. B89: these ran 68% apart. */
@@ -105,6 +111,7 @@ export function scanOutcome(barcode: string, result: ProductResult): ScanOutcome
     barcode: identity.barcode,
     title: identity.title,
     brand: identity.brand,
+    imageUrl: identity.imageUrl ?? null,
     keyword: suggestion.keyword,
     alternativeKeyword: suggestion.alternative,
     categoryPath: identity.category,

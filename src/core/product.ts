@@ -45,6 +45,13 @@ export interface ProductIdentity {
   readonly brand: string | null;
   /** The vendor's category path, if it gave one. Used to prefill, never to gate. */
   readonly category: string | null;
+  /**
+   * ⚡ **B99: the vendor's first picture, or null.** A product with no image is
+   * normal, and ⛔ the TITLE remains the check that catches a mis-scan — the
+   * picture only makes it faster to make. Optional so every existing
+   * construction of an identity keeps compiling.
+   */
+  readonly imageUrl?: string | null;
 }
 
 export type ProductFailureReason =

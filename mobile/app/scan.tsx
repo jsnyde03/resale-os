@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
-import { Pressable, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 
 import { scanOutcome, type ScanOutcome } from '../../src/screens/scan.js';
 import { lookUpProduct } from '../../src/adapters/upcitemdb.js';
@@ -100,6 +100,16 @@ export default function Scan() {
           <Card>
             {/* ⛔ The title FIRST and largest. It is the only check on a
                 mis-scan, and it only works if it is read. */}
+            {outcome.imageUrl === null ? null : (
+              /* ⛔ **B99, and it never gates.** No spinner and no error state: if
+                 the picture does not load — a shop's signal, a dead URL — the
+                 title below is the check it has always been. */
+              <Image
+                source={{ uri: outcome.imageUrl }}
+                style={{ width: '100%', height: 170, borderRadius: 8, marginBottom: 10 }}
+                resizeMode="contain"
+              />
+            )}
             <Text style={{ color: C.text, fontSize: 17, marginBottom: 8 }}>{outcome.title}</Text>
             <Muted>Is that what you are holding?</Muted>
             <View style={{ height: 12 }} />
